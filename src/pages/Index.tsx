@@ -9,22 +9,80 @@ import UserManagement from "@/pages/UserManagement";
 import ResidentManagement from "@/pages/ResidentManagement";
 import DashboardView from "@/components/DashboardView";
 import ModulePlaceholder from "@/components/ModulePlaceholder";
+import AdmissionChecklist from "@/components/forms/AdmissionChecklist";
+import BelongingsInventory from "@/components/forms/BelongingsInventory";
+import LifeHistory from "@/components/forms/LifeHistory";
+import DailyLog from "@/components/forms/DailyLog";
+import KitchenChecklist from "@/components/forms/KitchenChecklist";
+import FridgeTemps from "@/components/forms/FridgeTemps";
+import FoodIntake from "@/components/forms/FoodIntake";
+import DisinfectionRecord from "@/components/forms/DisinfectionRecord";
+import VitalSigns from "@/components/forms/VitalSigns";
+import MedicationList from "@/components/forms/MedicationList";
+import MedicationAdmin from "@/components/forms/MedicationAdmin";
+import TherapyRecords from "@/components/forms/TherapyRecords";
+import IncidentReport from "@/components/forms/IncidentReport";
+import MedicalAppointments from "@/components/forms/MedicalAppointments";
+import TrainingRecord from "@/components/forms/TrainingRecord";
+import PerformanceEval from "@/components/forms/PerformanceEval";
+import PQRSFRecord from "@/components/forms/PQRSFRecord";
 import {
   ClipboardList, Stethoscope, Utensils, Heart, Activity,
   ShieldCheck, AlertTriangle, LogOut, Briefcase, TrendingUp, Settings
 } from "lucide-react";
 
-const MODULE_INFO: Record<string, { title: string; subtitle: string; icon: any; forms: string[] }> = {
-  '3': { title: '3. Alimentación', subtitle: 'Nutrición y cocina', icon: Utensils, forms: ['HB-F5: Checklist Cocina', 'HB-F6: Ingreso Alimentos', 'HB-F7: Temperatura Neveras', 'HB-F8: Desinfección'] },
-  '4': { title: '4. Bienestar', subtitle: 'Terapias y actividades', icon: Heart, forms: ['HB-F4: Bitácora Diaria', 'HB-F9: Terapias', 'HB-F10: Atención Psicosocial', 'HB-F11: Espiritual', 'HB-F12: Celebraciones', 'HB-F13: Actividades'] },
-  '5': { title: '5. Salud Diaria', subtitle: 'Enfermería', icon: Activity, forms: ['HB-F4: Bitácora', 'HB-F14: Medicamentos', 'HB-F15: Administración Med.', 'HB-F16: Signos Vitales'] },
-  '6': { title: '6. Sistema Salud', subtitle: 'Urgencias y citas', icon: Stethoscope, forms: ['HB-F17: Citas Médicas', 'HB-F18: Post-Hospitalización', 'HB-F19: Carpeta Urgencias', 'HB-F21: Autorización'] },
-  '7': { title: '7. Higiene', subtitle: 'Prevención', icon: ShieldCheck, forms: ['HB-F8a1: Desinfección General', 'Control Higiene Diaria', 'Vigilancia Infecciones'] },
-  '8': { title: '8. Seguridad', subtitle: 'Incidentes y riesgos', icon: AlertTriangle, forms: ['HB-F20: Incidentes/Caídas', 'Evaluación Riesgos', 'Rondas Seguridad', 'Simulacros'] },
-  '9': { title: '9. Egreso', subtitle: 'Traslados', icon: LogOut, forms: ['HB-F3: Inventario Egreso', 'Acta de Egreso', 'HB-F18: Seguimiento'] },
-  '10': { title: '10. Personal', subtitle: 'Talento humano', icon: Briefcase, forms: ['HB-F24: Capacitaciones', 'HB-F25: Evaluación Desempeño', 'Gestión Personal', 'Inducción'] },
-  '11': { title: '11. Calidad', subtitle: 'PQRSF e indicadores', icon: TrendingUp, forms: ['HB-F26: Tablero KPIs', 'HB-F23: PQRSF', 'Auditorías', 'Encuestas Satisfacción'] },
-  '12': { title: '12. Admin.', subtitle: 'Gerencia y finanzas', icon: Settings, forms: ['Plan de Cuentas', 'Transacciones', 'Facturación', 'Proveedores', 'Informes Financieros'] },
+const MODULE_INFO: Record<string, { title: string; subtitle: string; icon: any; forms: { id: string; label: string }[] }> = {
+  '3': { title: '3. Alimentación', subtitle: 'Nutrición y cocina', icon: Utensils, forms: [
+    { id: 'HB-F5', label: 'HB-F5: Checklist Cocina' }, { id: 'HB-F6', label: 'HB-F6: Ingreso Alimentos' },
+    { id: 'HB-F7', label: 'HB-F7: Temperatura Neveras' }, { id: 'HB-F8', label: 'HB-F8: Desinfección' },
+  ]},
+  '4': { title: '4. Bienestar', subtitle: 'Terapias y actividades', icon: Heart, forms: [
+    { id: 'HB-F4', label: 'HB-F4: Bitácora Diaria' }, { id: 'HB-F9', label: 'HB-F9: Terapias' },
+  ]},
+  '5': { title: '5. Salud Diaria', subtitle: 'Enfermería', icon: Activity, forms: [
+    { id: 'HB-F4', label: 'HB-F4: Bitácora' }, { id: 'HB-F14', label: 'HB-F14: Medicamentos' },
+    { id: 'HB-F15', label: 'HB-F15: Administración Med.' }, { id: 'HB-F16', label: 'HB-F16: Signos Vitales' },
+  ]},
+  '6': { title: '6. Sistema Salud', subtitle: 'Urgencias y citas', icon: Stethoscope, forms: [
+    { id: 'HB-F17', label: 'HB-F17: Citas Médicas' },
+  ]},
+  '7': { title: '7. Higiene', subtitle: 'Prevención', icon: ShieldCheck, forms: [
+    { id: 'HB-F8a1', label: 'HB-F8a1: Desinfección General' },
+  ]},
+  '8': { title: '8. Seguridad', subtitle: 'Incidentes y riesgos', icon: AlertTriangle, forms: [
+    { id: 'HB-F20', label: 'HB-F20: Incidentes/Caídas' },
+  ]},
+  '9': { title: '9. Egreso', subtitle: 'Traslados', icon: LogOut, forms: [
+    { id: 'HB-F3', label: 'HB-F3: Inventario Egreso' },
+  ]},
+  '10': { title: '10. Personal', subtitle: 'Talento humano', icon: Briefcase, forms: [
+    { id: 'HB-F24', label: 'HB-F24: Capacitaciones' }, { id: 'HB-F25', label: 'HB-F25: Evaluación Desempeño' },
+  ]},
+  '11': { title: '11. Calidad', subtitle: 'PQRSF e indicadores', icon: TrendingUp, forms: [
+    { id: 'HB-F23', label: 'HB-F23: PQRSF' },
+  ]},
+  '12': { title: '12. Admin.', subtitle: 'Gerencia y finanzas', icon: Settings, forms: [] },
+};
+
+const FORM_COMPONENTS: Record<string, React.FC<{ onBack: () => void }>> = {
+  'HB-F1': AdmissionChecklist,
+  'HB-F3': BelongingsInventory,
+  'HB-F22': LifeHistory,
+  'HB-F4': DailyLog,
+  'HB-F5': KitchenChecklist,
+  'HB-F6': FoodIntake,
+  'HB-F7': FridgeTemps,
+  'HB-F8': DisinfectionRecord,
+  'HB-F8a1': DisinfectionRecord,
+  'HB-F9': TherapyRecords,
+  'HB-F14': MedicationList,
+  'HB-F15': MedicationAdmin,
+  'HB-F16': VitalSigns,
+  'HB-F17': MedicalAppointments,
+  'HB-F20': IncidentReport,
+  'HB-F23': PQRSFRecord,
+  'HB-F24': TrainingRecord,
+  'HB-F25': PerformanceEval,
 };
 
 const Index = () => {
@@ -46,28 +104,52 @@ const Index = () => {
   if (!user) return <Login />;
 
   const renderContent = () => {
-    if (view === 'dashboard') return <DashboardView onModuleChange={setView} />;
-
-    if (view === '1') {
-      if (form === 'HB-F1') {
-        return (
-          <div className="animate-fade-in">
-            <FormHeader title="HB-F1: Checklist de Ingreso" subtitle="Verificación de documentos" onBack={() => setForm(null)} />
-            <p className="text-muted-foreground">Formulario en desarrollo...</p>
-          </div>
-        );
+    // If a specific form is selected
+    if (form) {
+      const FormComponent = FORM_COMPONENTS[form];
+      if (FormComponent) {
+        return <FormComponent onBack={() => setForm(null)} />;
       }
-      return <IngresoSubMenu onSelectForm={setForm} onBack={() => setView('dashboard')} />;
+      return (
+        <div className="animate-fade-in">
+          <FormHeader title={form} subtitle="Formulario en desarrollo" onBack={() => setForm(null)} />
+          <p className="text-muted-foreground">Este formulario estará disponible próximamente.</p>
+        </div>
+      );
     }
 
+    if (view === 'dashboard') return <DashboardView onModuleChange={setView} />;
+    if (view === '1') return <IngresoSubMenu onSelectForm={setForm} onBack={() => setView('dashboard')} />;
     if (view === '2') return <ValoracionGeriatrica onBack={() => setView('dashboard')} />;
     if (view === 'usuarios') return <UserManagement onBack={() => setView('dashboard')} />;
     if (view === 'residentes') return <ResidentManagement onBack={() => setView('dashboard')} />;
 
-    // Module placeholder for modules 3-12
+    // Module with sub-forms
     const info = MODULE_INFO[view];
+    if (info && info.forms.length > 0) {
+      return (
+        <div className="animate-fade-in">
+          <FormHeader title={info.title} subtitle={info.subtitle} onBack={() => setView('dashboard')} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {info.forms.map(f => {
+              const Icon = info.icon;
+              return (
+                <button key={f.id} onClick={() => setForm(f.id)}
+                  className="bg-card border-2 border-border rounded-2xl p-5 text-left hover:border-primary transition-all group min-h-[48px]">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
+                    <Icon size={20} className="text-primary" />
+                  </div>
+                  <p className="text-sm font-bold text-foreground">{f.label}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
     if (info) {
-      return <ModulePlaceholder {...info} onBack={() => setView('dashboard')} />;
+      return <ModulePlaceholder title={info.title} subtitle={info.subtitle} icon={info.icon} forms={[]} onBack={() => setView('dashboard')} />;
     }
 
     return <DashboardView onModuleChange={setView} />;
