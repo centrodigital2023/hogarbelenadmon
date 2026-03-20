@@ -189,6 +189,59 @@ export type Database = {
           },
         ]
       }
+      care_plans: {
+        Row: {
+          approved_by: string | null
+          created_at: string
+          created_by: string
+          generated_from: Json | null
+          id: string
+          interventions: Json | null
+          notes: string | null
+          objectives: Json | null
+          resident_id: string
+          status: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          approved_by?: string | null
+          created_at?: string
+          created_by: string
+          generated_from?: Json | null
+          id?: string
+          interventions?: Json | null
+          notes?: string | null
+          objectives?: Json | null
+          resident_id: string
+          status?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string
+          generated_from?: Json | null
+          id?: string
+          interventions?: Json | null
+          notes?: string | null
+          objectives?: Json | null
+          resident_id?: string
+          status?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "care_plans_resident_id_fkey"
+            columns: ["resident_id"]
+            isOneToOne: false
+            referencedRelation: "residents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       celebrations: {
         Row: {
           activity: string | null
@@ -505,6 +558,47 @@ export type Database = {
           },
         ]
       }
+      exam_results: {
+        Row: {
+          answers: Json
+          course_id: string
+          created_at: string
+          id: string
+          passed: boolean | null
+          score: number
+          total_questions: number
+          user_id: string
+        }
+        Insert: {
+          answers?: Json
+          course_id: string
+          created_at?: string
+          id?: string
+          passed?: boolean | null
+          score?: number
+          total_questions?: number
+          user_id: string
+        }
+        Update: {
+          answers?: Json
+          course_id?: string
+          created_at?: string
+          id?: string
+          passed?: boolean | null
+          score?: number
+          total_questions?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_results_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "training_courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_transactions: {
         Row: {
           account_id: string | null
@@ -707,6 +801,44 @@ export type Database = {
           },
         ]
       }
+      hygiene_kits: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          items: Json
+          kit_date: string
+          observations: string | null
+          resident_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          items?: Json
+          kit_date?: string
+          observations?: string | null
+          resident_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          items?: Json
+          kit_date?: string
+          observations?: string | null
+          resident_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hygiene_kits_resident_id_fkey"
+            columns: ["resident_id"]
+            isOneToOne: false
+            referencedRelation: "residents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       incidents: {
         Row: {
           cause_analysis: string | null
@@ -768,6 +900,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      institutional_documents: {
+        Row: {
+          created_at: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          name: string
+          original_name: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          name: string
+          original_name: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          name?: string
+          original_name?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
       }
       invoices: {
         Row: {
@@ -931,6 +1096,41 @@ export type Database = {
             columns: ["resident_id"]
             isOneToOne: false
             referencedRelation: "residents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      life_history_versions: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          life_history_id: string
+          modified_by: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          data: Json
+          id?: string
+          life_history_id: string
+          modified_by: string
+          version: number
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          life_history_id?: string
+          modified_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "life_history_versions_life_history_id_fkey"
+            columns: ["life_history_id"]
+            isOneToOne: false
+            referencedRelation: "life_histories"
             referencedColumns: ["id"]
           },
         ]
@@ -1124,6 +1324,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "medications_resident_id_fkey"
+            columns: ["resident_id"]
+            isOneToOne: false
+            referencedRelation: "residents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nursing_notes: {
+        Row: {
+          created_at: string
+          generated_by: string
+          id: string
+          is_ai_generated: boolean | null
+          is_consolidated: boolean | null
+          note: string
+          note_date: string
+          resident_id: string | null
+          shift: string | null
+        }
+        Insert: {
+          created_at?: string
+          generated_by: string
+          id?: string
+          is_ai_generated?: boolean | null
+          is_consolidated?: boolean | null
+          note: string
+          note_date?: string
+          resident_id?: string | null
+          shift?: string | null
+        }
+        Update: {
+          created_at?: string
+          generated_by?: string
+          id?: string
+          is_ai_generated?: boolean | null
+          is_consolidated?: boolean | null
+          note?: string
+          note_date?: string
+          resident_id?: string | null
+          shift?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nursing_notes_resident_id_fkey"
             columns: ["resident_id"]
             isOneToOne: false
             referencedRelation: "residents"
@@ -1590,6 +1834,30 @@ export type Database = {
         }
         Relationships: []
       }
+      system_settings: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: string | null
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: string | null
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: string | null
+        }
+        Relationships: []
+      }
       therapeutic_activities: {
         Row: {
           activity_date: string
@@ -1675,6 +1943,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      training_courses: {
+        Row: {
+          content: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_published: boolean | null
+          quiz: Json | null
+          title: string
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_published?: boolean | null
+          quiz?: Json | null
+          title: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_published?: boolean | null
+          quiz?: Json | null
+          title?: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: []
       }
       trainings: {
         Row: {
@@ -1821,6 +2128,7 @@ export type Database = {
         | "terapeuta"
         | "psicologo"
         | "administrativo"
+        | "manipuladora"
       resident_status: "prueba" | "permanente" | "egresado" | "fallecido"
     }
     CompositeTypes: {
@@ -1957,6 +2265,7 @@ export const Constants = {
         "terapeuta",
         "psicologo",
         "administrativo",
+        "manipuladora",
       ],
       resident_status: ["prueba", "permanente", "egresado", "fallecido"],
     },

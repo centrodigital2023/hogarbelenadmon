@@ -26,6 +26,15 @@ import MedicalAppointments from "@/components/forms/MedicalAppointments";
 import TrainingRecord from "@/components/forms/TrainingRecord";
 import PerformanceEval from "@/components/forms/PerformanceEval";
 import PQRSFRecord from "@/components/forms/PQRSFRecord";
+import HygieneKit from "@/components/forms/HygieneKit";
+import RoomAssignment from "@/components/RoomAssignment";
+import DocumentManager from "@/components/DocumentManager";
+import LogoSettings from "@/components/LogoSettings";
+import TrainingModule from "@/components/TrainingModule";
+import NursingNotes from "@/components/NursingNotes";
+import IndicatorsDashboard from "@/components/IndicatorsDashboard";
+import BillingModule from "@/components/BillingModule";
+import CarePlanGenerator from "@/components/CarePlanGenerator";
 import {
   ClipboardList, Stethoscope, Utensils, Heart, Activity,
   ShieldCheck, AlertTriangle, LogOut, Briefcase, TrendingUp, Settings
@@ -42,6 +51,7 @@ const MODULE_INFO: Record<string, { title: string; subtitle: string; icon: any; 
   '5': { title: '5. Salud Diaria', subtitle: 'Enfermería', icon: Activity, forms: [
     { id: 'HB-F4', label: 'HB-F4: Bitácora' }, { id: 'HB-F14', label: 'HB-F14: Medicamentos' },
     { id: 'HB-F15', label: 'HB-F15: Administración Med.' }, { id: 'HB-F16', label: 'HB-F16: Signos Vitales' },
+    { id: 'NURSING-AI', label: '🤖 Notas Enfermería IA' },
   ]},
   '6': { title: '6. Sistema Salud', subtitle: 'Urgencias y citas', icon: Stethoscope, forms: [
     { id: 'HB-F17', label: 'HB-F17: Citas Médicas' },
@@ -57,11 +67,16 @@ const MODULE_INFO: Record<string, { title: string; subtitle: string; icon: any; 
   ]},
   '10': { title: '10. Personal', subtitle: 'Talento humano', icon: Briefcase, forms: [
     { id: 'HB-F24', label: 'HB-F24: Capacitaciones' }, { id: 'HB-F25', label: 'HB-F25: Evaluación Desempeño' },
+    { id: 'TRAINING', label: '📚 Plataforma Capacitación IA' },
   ]},
   '11': { title: '11. Calidad', subtitle: 'PQRSF e indicadores', icon: TrendingUp, forms: [
-    { id: 'HB-F23', label: 'HB-F23: PQRSF' },
+    { id: 'HB-F23', label: 'HB-F23: PQRSF' }, { id: 'HB-F26', label: 'HB-F26: Indicadores' },
+    { id: 'PAI', label: '📋 Plan de Atención (PAI)' },
   ]},
-  '12': { title: '12. Admin.', subtitle: 'Gerencia y finanzas', icon: Settings, forms: [] },
+  '12': { title: '12. Admin.', subtitle: 'Gerencia y finanzas', icon: Settings, forms: [
+    { id: 'BILLING', label: '💰 Facturación' }, { id: 'DOCS', label: '📁 Documentos' },
+    { id: 'LOGO', label: '🏷️ Logo y Config.' },
+  ]},
 };
 
 const FORM_COMPONENTS: Record<string, React.FC<{ onBack: () => void }>> = {
@@ -83,6 +98,15 @@ const FORM_COMPONENTS: Record<string, React.FC<{ onBack: () => void }>> = {
   'HB-F23': PQRSFRecord,
   'HB-F24': TrainingRecord,
   'HB-F25': PerformanceEval,
+  'HYGIENE-KIT': HygieneKit,
+  'MAPA': RoomAssignment,
+  'DOCS': DocumentManager,
+  'LOGO': LogoSettings,
+  'TRAINING': TrainingModule,
+  'NURSING-AI': NursingNotes,
+  'HB-F26': IndicatorsDashboard,
+  'BILLING': BillingModule,
+  'PAI': CarePlanGenerator,
 };
 
 const Index = () => {
@@ -104,7 +128,6 @@ const Index = () => {
   if (!user) return <Login />;
 
   const renderContent = () => {
-    // If a specific form is selected
     if (form) {
       const FormComponent = FORM_COMPONENTS[form];
       if (FormComponent) {
@@ -124,7 +147,6 @@ const Index = () => {
     if (view === 'usuarios') return <UserManagement onBack={() => setView('dashboard')} />;
     if (view === 'residentes') return <ResidentManagement onBack={() => setView('dashboard')} />;
 
-    // Module with sub-forms
     const info = MODULE_INFO[view];
     if (info && info.forms.length > 0) {
       return (
