@@ -26,7 +26,7 @@ const PsychosocialRecord = ({ onBack }: Props) => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    supabase.from('residents').select('id, full_name').eq('status', 'activo').then(({ data }) => data && setResidents(data));
+    supabase.from('residents').select('id, full_name').in('status', ['permanente', 'prueba']).then(({ data }) => data && setResidents(data));
   }, []);
 
   const handleSave = async () => {
