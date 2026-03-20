@@ -156,30 +156,38 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
     return (
       <div className="animate-fade-in">
         <FormHeader title={activeTest.name} subtitle={`${activeTest.cat} — ${activeTest.desc}`} onBack={() => setStep('menu')} />
+        {activeTest.instructions && (
+          <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 mb-6 text-xs text-foreground leading-relaxed">
+            <p className="font-bold text-primary mb-1 uppercase tracking-widest text-[10px]">Instrucciones</p>
+            {activeTest.instructions}
+          </div>
+        )}
         <div className="space-y-4 max-w-2xl">
           {activeTest.questions.map((q, idx) => (
-            <div key={q.id} className="bg-card rounded-4xl p-5 shadow-sm border border-border">
+            <div key={q.id} className="bg-card rounded-2xl p-5 shadow-sm border border-border">
               <div className="flex items-center gap-3 mb-3">
-                <span className="w-7 h-7 rounded-full bg-primary text-primary-foreground text-xs font-black flex items-center justify-center">
+                <span className="w-7 h-7 rounded-full bg-primary text-primary-foreground text-xs font-black flex items-center justify-center shrink-0">
                   {idx + 1}
                 </span>
                 <span className="text-sm font-bold text-foreground">{q.text}</span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {q.opts.map(opt => (
-                  <button
-                    key={opt.l}
-                    onClick={() => handleAnswer(q.id, opt.v)}
-                    className={`p-3 rounded-xl text-xs font-bold text-left transition-all flex justify-between items-center min-h-[48px] ${
-                      answers[q.id] === opt.v
-                        ? 'bg-primary text-primary-foreground shadow-lg'
-                        : 'bg-muted text-muted-foreground hover:bg-accent border border-transparent'
-                    }`}
-                  >
-                    {opt.l}
-                    <span className="opacity-70">+{opt.v}</span>
-                  </button>
-                ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {q.opts.map(opt => {
+                  const isSelected = answers[q.id] !== undefined && answers[q.id] === opt.v;
+                  return (
+                    <button
+                      key={`${opt.l}-${opt.v}`}
+                      onClick={() => handleAnswer(q.id, opt.v)}
+                      className={`p-3 rounded-xl text-xs font-bold text-left transition-all min-h-[48px] ${
+                        isSelected
+                          ? 'bg-primary text-primary-foreground shadow-lg'
+                          : 'bg-muted text-muted-foreground hover:bg-accent border border-transparent'
+                      }`}
+                    >
+                      {opt.l}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ))}
