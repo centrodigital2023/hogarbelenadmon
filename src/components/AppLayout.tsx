@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   Users, ClipboardList, Utensils, Heart, Activity,
   Stethoscope, ShieldCheck, AlertTriangle, LogOut,
   Briefcase, TrendingUp, Settings, Sparkles, Menu,
-  X, UserPlus, Home, ChevronRight
+  X, UserPlus, Home, ChevronRight, DollarSign,
+  BookOpen, Share2, FileText
 } from "lucide-react";
 
 interface AppLayoutProps {
@@ -15,24 +17,28 @@ interface AppLayoutProps {
 
 const modules = [
   { id: 'dashboard', title: "Panel", icon: Home, roles: [] as string[] },
-  { id: '1', title: "1. Ingreso", subtitle: "Admisión", icon: ClipboardList, type: 'Operativo', roles: ['super_admin', 'coordinador'] },
-  { id: '2', title: "2. Valoración", subtitle: "Geriátrica", icon: Stethoscope, type: 'Clínico', roles: ['super_admin', 'coordinador', 'enfermera', 'terapeuta'] },
-  { id: '3', title: "3. Alimentación", subtitle: "Nutrición", icon: Utensils, type: 'Operativo', roles: ['super_admin', 'coordinador', 'cuidadora'] },
-  { id: '4', title: "4. Bienestar", subtitle: "Terapias", icon: Heart, type: 'Operativo', roles: ['super_admin', 'coordinador', 'enfermera', 'cuidadora', 'terapeuta', 'psicologo'] },
-  { id: '5', title: "5. Salud Diaria", subtitle: "Enfermería", icon: Activity, type: 'Salud', roles: ['super_admin', 'coordinador', 'enfermera'] },
-  { id: '6', title: "6. Sistema Salud", subtitle: "Urgencias", icon: Stethoscope, type: 'Clínico', roles: ['super_admin', 'coordinador', 'enfermera'] },
-  { id: '7', title: "7. Higiene", subtitle: "Prevención", icon: ShieldCheck, type: 'Preventivo', roles: ['super_admin', 'coordinador', 'cuidadora', 'enfermera'] },
-  { id: '8', title: "8. Seguridad", subtitle: "Incidentes", icon: AlertTriangle, type: 'Riesgo', roles: [] },
-  { id: '9', title: "9. Egreso", subtitle: "Traslados", icon: LogOut, type: 'Operativo', roles: ['super_admin', 'coordinador'] },
-  { id: '10', title: "10. Personal", subtitle: "Talento", icon: Briefcase, type: 'Recursos', roles: ['super_admin', 'coordinador'] },
-  { id: '11', title: "11. Calidad", subtitle: "PQRSF", icon: TrendingUp, type: 'Calidad', roles: ['super_admin', 'coordinador'] },
-  { id: '12', title: "12. Admin.", subtitle: "Gerencia", icon: Settings, type: 'Gerencia', roles: ['super_admin', 'administrativo'] },
-  { id: 'usuarios', title: "Usuarios", subtitle: "Gestión", icon: UserPlus, type: 'Sistema', roles: ['super_admin'] },
-  { id: 'residentes', title: "Residentes", subtitle: "Directorio", icon: Users, type: 'Sistema', roles: ['super_admin', 'coordinador'] },
+  { id: '1', title: "1. Ingreso", subtitle: "Admisión", icon: ClipboardList, roles: ['super_admin', 'coordinador'] },
+  { id: '2', title: "2. Valoración", subtitle: "Geriátrica", icon: Stethoscope, roles: ['super_admin', 'coordinador', 'enfermera', 'terapeuta'] },
+  { id: '3', title: "3. Alimentación", subtitle: "Nutrición", icon: Utensils, roles: ['super_admin', 'coordinador', 'cuidadora', 'manipuladora'] },
+  { id: '4', title: "4. Bienestar", subtitle: "Terapias", icon: Heart, roles: ['super_admin', 'coordinador', 'enfermera', 'cuidadora', 'terapeuta', 'psicologo'] },
+  { id: '5', title: "5. Salud Diaria", subtitle: "Enfermería", icon: Activity, roles: ['super_admin', 'coordinador', 'enfermera'] },
+  { id: '6', title: "6. Sistema Salud", subtitle: "Urgencias", icon: Stethoscope, roles: ['super_admin', 'coordinador', 'enfermera'] },
+  { id: '7', title: "7. Higiene", subtitle: "Prevención", icon: ShieldCheck, roles: ['super_admin', 'coordinador', 'cuidadora', 'enfermera'] },
+  { id: '8', title: "8. Seguridad", subtitle: "Incidentes", icon: AlertTriangle, roles: [] },
+  { id: '9', title: "9. Egreso", subtitle: "Traslados", icon: LogOut, roles: ['super_admin', 'coordinador'] },
+  { id: '10', title: "10. Personal", subtitle: "Talento", icon: Briefcase, roles: ['super_admin', 'coordinador'] },
+  { id: '11', title: "11. Calidad", subtitle: "PQRSF", icon: TrendingUp, roles: ['super_admin', 'coordinador'] },
+  { id: '12', title: "12. Admin.", subtitle: "Gerencia", icon: Settings, roles: ['super_admin', 'administrativo'] },
+  { id: 'gerencial', title: "Gestión Admin.", subtitle: "HB-G01 a G06", icon: FileText, roles: ['super_admin', 'coordinador', 'administrativo'] },
+  { id: 'finanzas', title: "Finanzas", subtitle: "Control", icon: DollarSign, roles: ['super_admin', 'administrativo'] },
+  { id: 'blog', title: "Blog", subtitle: "Noticias", icon: BookOpen, roles: ['super_admin', 'administrativo'] },
+  { id: 'redes', title: "Redes Sociales", subtitle: "Publicaciones", icon: Share2, roles: ['super_admin', 'administrativo'] },
+  { id: 'usuarios', title: "Usuarios", subtitle: "Gestión", icon: UserPlus, roles: ['super_admin'] },
+  { id: 'residentes', title: "Residentes", subtitle: "Directorio", icon: Users, roles: ['super_admin', 'coordinador'] },
 ];
 
 const AppLayout = ({ children, activeModule, onModuleChange }: AppLayoutProps) => {
-  const { profile, roles, signOut, isAdmin } = useAuth();
+  const { profile, roles, signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [autoSave, setAutoSave] = useState(false);
 
@@ -51,7 +57,6 @@ const AppLayout = ({ children, activeModule, onModuleChange }: AppLayoutProps) =
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-secondary text-secondary-foreground transform transition-transform lg:translate-x-0 lg:static ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center gap-3 px-5 py-4 border-b border-secondary-foreground/10">
           <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center">
@@ -102,7 +107,6 @@ const AppLayout = ({ children, activeModule, onModuleChange }: AppLayoutProps) =
 
       {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
-      {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen">
         <header className="bg-card border-b border-border px-4 py-3 flex items-center justify-between sticky top-0 z-30">
           <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 rounded-xl hover:bg-muted">

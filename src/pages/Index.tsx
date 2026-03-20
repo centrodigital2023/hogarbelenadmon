@@ -35,18 +35,38 @@ import NursingNotes from "@/components/NursingNotes";
 import IndicatorsDashboard from "@/components/IndicatorsDashboard";
 import BillingModule from "@/components/BillingModule";
 import CarePlanGenerator from "@/components/CarePlanGenerator";
+import FinanceModule from "@/components/FinanceModule";
+import BlogModule from "@/components/BlogModule";
+import SocialMediaModule from "@/components/SocialMediaModule";
+import AuditReport from "@/components/AuditReport";
+import UnifiedKitchen from "@/components/forms/UnifiedKitchen";
+import PsychosocialRecord from "@/components/forms/PsychosocialRecord";
+import SpiritualRecord from "@/components/forms/SpiritualRecord";
+import TherapySessionForm from "@/components/forms/TherapySessionForm";
+import WasteManagement from "@/components/forms/WasteManagement";
+import PestControl from "@/components/forms/PestControl";
+import HazardousWaste from "@/components/forms/HazardousWaste";
+import SanitationRecord from "@/components/forms/SanitationRecord";
+import EmergencyPlan from "@/components/forms/EmergencyPlan";
+import ManagerialDashboard from "@/components/forms/ManagerialDashboard";
+import PaymentVoucher from "@/components/forms/PaymentVoucher";
 import {
   ClipboardList, Stethoscope, Utensils, Heart, Activity,
-  ShieldCheck, AlertTriangle, LogOut, Briefcase, TrendingUp, Settings
+  ShieldCheck, AlertTriangle, LogOut, Briefcase, TrendingUp, Settings,
+  BookOpen, Share2, DollarSign, FileText
 } from "lucide-react";
 
 const MODULE_INFO: Record<string, { title: string; subtitle: string; icon: any; forms: { id: string; label: string }[] }> = {
   '3': { title: '3. Alimentación', subtitle: 'Nutrición y cocina', icon: Utensils, forms: [
+    { id: 'UNIFIED-KITCHEN', label: '🍳 Control Diario Cocina' },
     { id: 'HB-F5', label: 'HB-F5: Checklist Cocina' }, { id: 'HB-F6', label: 'HB-F6: Ingreso Alimentos' },
     { id: 'HB-F7', label: 'HB-F7: Temperatura Neveras' }, { id: 'HB-F8', label: 'HB-F8: Desinfección' },
   ]},
   '4': { title: '4. Bienestar', subtitle: 'Terapias y actividades', icon: Heart, forms: [
     { id: 'HB-F4', label: 'HB-F4: Bitácora Diaria' }, { id: 'HB-F9', label: 'HB-F9: Terapias' },
+    { id: 'THERAPY-SESSION', label: '📅 Sesión Terapia' },
+    { id: 'HB-F10', label: 'HB-F10: Atención Psicosocial' },
+    { id: 'HB-F11', label: 'HB-F11: Acomp. Espiritual' },
   ]},
   '5': { title: '5. Salud Diaria', subtitle: 'Enfermería', icon: Activity, forms: [
     { id: 'HB-F4', label: 'HB-F4: Bitácora' }, { id: 'HB-F14', label: 'HB-F14: Medicamentos' },
@@ -71,11 +91,19 @@ const MODULE_INFO: Record<string, { title: string; subtitle: string; icon: any; 
   ]},
   '11': { title: '11. Calidad', subtitle: 'PQRSF e indicadores', icon: TrendingUp, forms: [
     { id: 'HB-F23', label: 'HB-F23: PQRSF' }, { id: 'HB-F26', label: 'HB-F26: Indicadores' },
-    { id: 'PAI', label: '📋 Plan de Atención (PAI)' },
+    { id: 'PAI', label: '📋 Plan de Atención (PAI)' }, { id: 'AUDIT', label: '📊 Informe Auditoría' },
   ]},
   '12': { title: '12. Admin.', subtitle: 'Gerencia y finanzas', icon: Settings, forms: [
-    { id: 'BILLING', label: '💰 Facturación' }, { id: 'DOCS', label: '📁 Documentos' },
-    { id: 'LOGO', label: '🏷️ Logo y Config.' },
+    { id: 'BILLING', label: '💰 Facturación' }, { id: 'VOUCHER', label: '🧾 Comprobantes Pago' },
+    { id: 'DOCS', label: '📁 Documentos' }, { id: 'LOGO', label: '🏷️ Logo y Config.' },
+  ]},
+  'gerencial': { title: 'Gestión Administrativa', subtitle: 'Formularios gerenciales', icon: FileText, forms: [
+    { id: 'HB-G01', label: 'HB-G01: Residuos (PEGIR)' },
+    { id: 'HB-G02', label: 'HB-G02: Control Plagas' },
+    { id: 'HB-G03', label: 'HB-G03: RESPEL' },
+    { id: 'HB-G04', label: 'HB-G04: Saneamiento' },
+    { id: 'HB-G05', label: 'HB-G05: Plan Emergencias' },
+    { id: 'HB-G06', label: 'HB-G06: Tablero Gerencial' },
   ]},
 };
 
@@ -90,6 +118,8 @@ const FORM_COMPONENTS: Record<string, React.FC<{ onBack: () => void }>> = {
   'HB-F8': DisinfectionRecord,
   'HB-F8a1': DisinfectionRecord,
   'HB-F9': TherapyRecords,
+  'HB-F10': PsychosocialRecord,
+  'HB-F11': SpiritualRecord,
   'HB-F14': MedicationList,
   'HB-F15': MedicationAdmin,
   'HB-F16': VitalSigns,
@@ -107,6 +137,16 @@ const FORM_COMPONENTS: Record<string, React.FC<{ onBack: () => void }>> = {
   'HB-F26': IndicatorsDashboard,
   'BILLING': BillingModule,
   'PAI': CarePlanGenerator,
+  'UNIFIED-KITCHEN': UnifiedKitchen,
+  'THERAPY-SESSION': TherapySessionForm,
+  'VOUCHER': PaymentVoucher,
+  'AUDIT': AuditReport,
+  'HB-G01': WasteManagement,
+  'HB-G02': PestControl,
+  'HB-G03': HazardousWaste,
+  'HB-G04': SanitationRecord,
+  'HB-G05': EmergencyPlan,
+  'HB-G06': ManagerialDashboard,
 };
 
 const Index = () => {
@@ -146,6 +186,9 @@ const Index = () => {
     if (view === '2') return <ValoracionGeriatrica onBack={() => setView('dashboard')} />;
     if (view === 'usuarios') return <UserManagement onBack={() => setView('dashboard')} />;
     if (view === 'residentes') return <ResidentManagement onBack={() => setView('dashboard')} />;
+    if (view === 'finanzas') return <FinanceModule onBack={() => setView('dashboard')} />;
+    if (view === 'blog') return <BlogModule onBack={() => setView('dashboard')} />;
+    if (view === 'redes') return <SocialMediaModule onBack={() => setView('dashboard')} />;
 
     const info = MODULE_INFO[view];
     if (info && info.forms.length > 0) {
