@@ -3,52 +3,57 @@ import { useAuth } from "./useAuth";
 type Module = 'ingreso' | 'valoracion' | 'alimentacion' | 'bienestar' | 'salud' | 'sistema_salud' | 'higiene' | 'seguridad' | 'egreso' | 'personal' | 'calidad' | 'admin' | 'finanzas' | 'usuarios' | 'residentes' | 'blog' | 'redes' | 'gerencial';
 type Action = 'read' | 'create' | 'update' | 'delete';
 
-const MATRIX: Record<string, Record<string, Action[]>> = {
+const ALL: Action[] = ['read', 'create', 'update', 'delete'];
+const RO: Action[] = ['read'];
+const CR: Action[] = ['read', 'create'];
+const CRU: Action[] = ['read', 'create', 'update'];
+
+const MATRIX: Record<string, Partial<Record<Module, Action[]>>> = {
   super_admin: {
-    ingreso: ['read','create','update','delete'], valoracion: ['read','create','update','delete'],
-    alimentacion: ['read','create','update','delete'], bienestar: ['read','create','update','delete'],
-    salud: ['read','create','update','delete'], sistema_salud: ['read','create','update','delete'],
-    higiene: ['read','create','update','delete'], seguridad: ['read','create','update','delete'],
-    egreso: ['read','create','update','delete'], personal: ['read','create','update','delete'],
-    calidad: ['read','create','update','delete'], admin: ['read','create','update','delete'],
-    finanzas: ['read','create','update','delete'], usuarios: ['read','create','update','delete'],
-    residentes: ['read','create','update','delete'], blog: ['read','create','update','delete'],
-    redes: ['read','create','update','delete'], gerencial: ['read','create','update','delete'],
+    ingreso: ALL, valoracion: ALL, alimentacion: ALL, bienestar: ALL,
+    salud: ALL, sistema_salud: ALL, higiene: ALL, seguridad: ALL,
+    egreso: ALL, personal: ALL, calidad: ALL, admin: ALL,
+    finanzas: ALL, usuarios: ALL, residentes: ALL, blog: ALL,
+    redes: ALL, gerencial: ALL,
   },
   coordinador: {
-    ingreso: ['read','create','update','delete'], valoracion: ['read','create','update','delete'],
-    alimentacion: ['read'], bienestar: ['read','create','update','delete'],
-    salud: ['read','create','update','delete'], sistema_salud: ['read','create','update','delete'],
-    higiene: ['read','create','update','delete'], seguridad: ['read','create','update','delete'],
-    egreso: ['read','create','update','delete'], personal: ['read'],
-    calidad: ['read','create','update','delete'], admin: ['read'],
-    residentes: ['read','create','update','delete'], gerencial: ['read','create','update','delete'],
+    ingreso: ALL, valoracion: ALL, alimentacion: RO, bienestar: ALL,
+    salud: ALL, sistema_salud: ALL, higiene: ALL, seguridad: ALL,
+    egreso: ALL, personal: RO, calidad: ALL, admin: RO,
+    residentes: ALL, gerencial: ALL,
   },
   enfermera: {
-    valoracion: ['read','create','update','delete'], salud: ['read','create','update','delete'],
-    bienestar: ['read'], seguridad: ['read','create'], sistema_salud: ['read','create','update','delete'],
-    residentes: ['read'],
+    valoracion: ALL, salud: ALL, bienestar: RO, seguridad: CR,
+    sistema_salud: ALL, residentes: RO, higiene: RO,
   },
   cuidadora: {
-    residentes: ['read'], salud: ['read'], bienestar: ['read','create'],
-    seguridad: ['read','create'],
+    residentes: RO, salud: RO, bienestar: CR, seguridad: CR,
   },
   terapeuta: {
-    valoracion: ['read','create','update','delete'], bienestar: ['read','create','update','delete'],
-    residentes: ['read'],
+    valoracion: ALL, bienestar: ALL, residentes: RO,
   },
   psicologo: {
-    valoracion: ['read','create','update','delete'], bienestar: ['read','create','update','delete'],
-    residentes: ['read'],
+    valoracion: ALL, bienestar: ALL, residentes: RO,
   },
   administrativo: {
-    finanzas: ['read','create','update','delete'], admin: ['read','create','update','delete'],
-    blog: ['read','create','update','delete'], redes: ['read','create','update','delete'],
-    alimentacion: ['read','create'], gerencial: ['read','create','update','delete'],
+    finanzas: ALL, admin: ALL, blog: ALL, redes: ALL,
+    alimentacion: CR, gerencial: ALL,
   },
   manipuladora: {
-    alimentacion: ['read','create','update','delete'],
+    alimentacion: ALL,
   },
+};
+
+// Module ID to permission module mapping
+export const MODULE_PERMISSION_MAP: Record<string, Module> = {
+  '1': 'ingreso', '2': 'valoracion', '3': 'alimentacion',
+  '4': 'bienestar', '5': 'salud', '6': 'sistema_salud',
+  '7': 'higiene', '8': 'seguridad', '9': 'egreso',
+  '10': 'personal', '11': 'calidad', '12': 'admin',
+  'finanzas': 'finanzas', 'usuarios': 'usuarios',
+  'residentes': 'residentes', 'blog': 'blog',
+  'redes': 'redes', 'gerencial': 'gerencial',
+  'dashboard': 'ingreso', // dashboard always visible
 };
 
 export const usePermissions = () => {
@@ -64,5 +69,12 @@ export const usePermissions = () => {
   const canAccess = (module: Module): boolean => can(module, 'read');
   const canEdit = (module: Module): boolean => can(module, 'create') || can(module, 'update');
 
-  return { can, canAccess, canEdit };
+  const canAccessModule = (moduleId: string): boolean => {
+    if (moduleId === 'dashboard') return true;
+    const mod = MODULE_PERMISSION_MAP[moduleId];
+    if (!mod) return false;
+    return canAccess(mod);
+  };
+
+  return { can, canAccess, canEdit, canAccessModule };
 };

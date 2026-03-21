@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions, MODULE_PERMISSION_MAP } from "@/hooks/usePermissions";
 import Login from "@/pages/Login";
 import AppLayout from "@/components/AppLayout";
 import IngresoSubMenu from "@/components/IngresoSubMenu";
@@ -9,6 +10,7 @@ import UserManagement from "@/pages/UserManagement";
 import ResidentManagement from "@/pages/ResidentManagement";
 import DashboardView from "@/components/DashboardView";
 import ModulePlaceholder from "@/components/ModulePlaceholder";
+import ProtectedModule from "@/components/ProtectedModule";
 import AdmissionChecklist from "@/components/forms/AdmissionChecklist";
 import BelongingsInventory from "@/components/forms/BelongingsInventory";
 import LifeHistory from "@/components/forms/LifeHistory";
@@ -107,50 +109,44 @@ const MODULE_INFO: Record<string, { title: string; subtitle: string; icon: any; 
   ]},
 };
 
+// Map form IDs to the permission module they belong to
+const FORM_MODULE_MAP: Record<string, string> = {
+  'HB-F1': 'ingreso', 'HB-F3': 'ingreso', 'HB-F22': 'ingreso',
+  'MAPA': 'ingreso', 'HYGIENE-KIT': 'higiene',
+  'HB-F4': 'salud', 'HB-F5': 'alimentacion', 'HB-F6': 'alimentacion',
+  'HB-F7': 'alimentacion', 'HB-F8': 'alimentacion', 'HB-F8a1': 'higiene',
+  'HB-F9': 'bienestar', 'HB-F10': 'bienestar', 'HB-F11': 'bienestar',
+  'HB-F14': 'salud', 'HB-F15': 'salud', 'HB-F16': 'salud',
+  'HB-F17': 'sistema_salud', 'HB-F20': 'seguridad',
+  'HB-F23': 'calidad', 'HB-F24': 'personal', 'HB-F25': 'personal',
+  'HB-F26': 'calidad', 'HB-G01': 'gerencial', 'HB-G02': 'gerencial',
+  'HB-G03': 'gerencial', 'HB-G04': 'gerencial', 'HB-G05': 'gerencial',
+  'HB-G06': 'gerencial', 'UNIFIED-KITCHEN': 'alimentacion',
+  'THERAPY-SESSION': 'bienestar', 'NURSING-AI': 'salud',
+  'BILLING': 'admin', 'VOUCHER': 'admin', 'DOCS': 'admin', 'LOGO': 'admin',
+  'TRAINING': 'personal', 'PAI': 'calidad', 'AUDIT': 'calidad',
+};
+
 const FORM_COMPONENTS: Record<string, React.FC<{ onBack: () => void }>> = {
-  'HB-F1': AdmissionChecklist,
-  'HB-F3': BelongingsInventory,
-  'HB-F22': LifeHistory,
-  'HB-F4': DailyLog,
-  'HB-F5': KitchenChecklist,
-  'HB-F6': FoodIntake,
-  'HB-F7': FridgeTemps,
-  'HB-F8': DisinfectionRecord,
-  'HB-F8a1': DisinfectionRecord,
-  'HB-F9': TherapyRecords,
-  'HB-F10': PsychosocialRecord,
-  'HB-F11': SpiritualRecord,
-  'HB-F14': MedicationList,
-  'HB-F15': MedicationAdmin,
-  'HB-F16': VitalSigns,
-  'HB-F17': MedicalAppointments,
-  'HB-F20': IncidentReport,
-  'HB-F23': PQRSFRecord,
-  'HB-F24': TrainingRecord,
-  'HB-F25': PerformanceEval,
-  'HYGIENE-KIT': HygieneKit,
-  'MAPA': RoomAssignment,
-  'DOCS': DocumentManager,
-  'LOGO': LogoSettings,
-  'TRAINING': TrainingModule,
-  'NURSING-AI': NursingNotes,
-  'HB-F26': IndicatorsDashboard,
-  'BILLING': BillingModule,
-  'PAI': CarePlanGenerator,
-  'UNIFIED-KITCHEN': UnifiedKitchen,
-  'THERAPY-SESSION': TherapySessionForm,
-  'VOUCHER': PaymentVoucher,
-  'AUDIT': AuditReport,
-  'HB-G01': WasteManagement,
-  'HB-G02': PestControl,
-  'HB-G03': HazardousWaste,
-  'HB-G04': SanitationRecord,
-  'HB-G05': EmergencyPlan,
-  'HB-G06': ManagerialDashboard,
+  'HB-F1': AdmissionChecklist, 'HB-F3': BelongingsInventory, 'HB-F22': LifeHistory,
+  'HB-F4': DailyLog, 'HB-F5': KitchenChecklist, 'HB-F6': FoodIntake,
+  'HB-F7': FridgeTemps, 'HB-F8': DisinfectionRecord, 'HB-F8a1': DisinfectionRecord,
+  'HB-F9': TherapyRecords, 'HB-F10': PsychosocialRecord, 'HB-F11': SpiritualRecord,
+  'HB-F14': MedicationList, 'HB-F15': MedicationAdmin, 'HB-F16': VitalSigns,
+  'HB-F17': MedicalAppointments, 'HB-F20': IncidentReport,
+  'HB-F23': PQRSFRecord, 'HB-F24': TrainingRecord, 'HB-F25': PerformanceEval,
+  'HYGIENE-KIT': HygieneKit, 'MAPA': RoomAssignment, 'DOCS': DocumentManager,
+  'LOGO': LogoSettings, 'TRAINING': TrainingModule, 'NURSING-AI': NursingNotes,
+  'HB-F26': IndicatorsDashboard, 'BILLING': BillingModule, 'PAI': CarePlanGenerator,
+  'UNIFIED-KITCHEN': UnifiedKitchen, 'THERAPY-SESSION': TherapySessionForm,
+  'VOUCHER': PaymentVoucher, 'AUDIT': AuditReport,
+  'HB-G01': WasteManagement, 'HB-G02': PestControl, 'HB-G03': HazardousWaste,
+  'HB-G04': SanitationRecord, 'HB-G05': EmergencyPlan, 'HB-G06': ManagerialDashboard,
 };
 
 const Index = () => {
   const { user, loading } = useAuth();
+  const { canAccessModule } = usePermissions();
   const [view, setView] = useState('dashboard');
   const [form, setForm] = useState<string | null>(null);
 
@@ -170,7 +166,16 @@ const Index = () => {
   const renderContent = () => {
     if (form) {
       const FormComponent = FORM_COMPONENTS[form];
+      const permModule = FORM_MODULE_MAP[form];
+
       if (FormComponent) {
+        if (permModule && !canAccessModule(permModule === 'ingreso' ? '1' : permModule === 'valoracion' ? '2' : permModule)) {
+          return (
+            <ProtectedModule module={permModule as any}>
+              <FormComponent onBack={() => setForm(null)} />
+            </ProtectedModule>
+          );
+        }
         return <FormComponent onBack={() => setForm(null)} />;
       }
       return (

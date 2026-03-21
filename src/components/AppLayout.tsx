@@ -16,29 +16,30 @@ interface AppLayoutProps {
 }
 
 const modules = [
-  { id: 'dashboard', title: "Panel", icon: Home, roles: [] as string[] },
-  { id: '1', title: "1. Ingreso", subtitle: "Admisión", icon: ClipboardList, roles: ['super_admin', 'coordinador'] },
-  { id: '2', title: "2. Valoración", subtitle: "Geriátrica", icon: Stethoscope, roles: ['super_admin', 'coordinador', 'enfermera', 'terapeuta'] },
-  { id: '3', title: "3. Alimentación", subtitle: "Nutrición", icon: Utensils, roles: ['super_admin', 'coordinador', 'cuidadora', 'manipuladora'] },
-  { id: '4', title: "4. Bienestar", subtitle: "Terapias", icon: Heart, roles: ['super_admin', 'coordinador', 'enfermera', 'cuidadora', 'terapeuta', 'psicologo'] },
-  { id: '5', title: "5. Salud Diaria", subtitle: "Enfermería", icon: Activity, roles: ['super_admin', 'coordinador', 'enfermera'] },
-  { id: '6', title: "6. Sistema Salud", subtitle: "Urgencias", icon: Stethoscope, roles: ['super_admin', 'coordinador', 'enfermera'] },
-  { id: '7', title: "7. Higiene", subtitle: "Prevención", icon: ShieldCheck, roles: ['super_admin', 'coordinador', 'cuidadora', 'enfermera'] },
-  { id: '8', title: "8. Seguridad", subtitle: "Incidentes", icon: AlertTriangle, roles: [] },
-  { id: '9', title: "9. Egreso", subtitle: "Traslados", icon: LogOut, roles: ['super_admin', 'coordinador'] },
-  { id: '10', title: "10. Personal", subtitle: "Talento", icon: Briefcase, roles: ['super_admin', 'coordinador'] },
-  { id: '11', title: "11. Calidad", subtitle: "PQRSF", icon: TrendingUp, roles: ['super_admin', 'coordinador'] },
-  { id: '12', title: "12. Admin.", subtitle: "Gerencia", icon: Settings, roles: ['super_admin', 'administrativo'] },
-  { id: 'gerencial', title: "Gestión Admin.", subtitle: "HB-G01 a G06", icon: FileText, roles: ['super_admin', 'coordinador', 'administrativo'] },
-  { id: 'finanzas', title: "Finanzas", subtitle: "Control", icon: DollarSign, roles: ['super_admin', 'administrativo'] },
-  { id: 'blog', title: "Blog", subtitle: "Noticias", icon: BookOpen, roles: ['super_admin', 'administrativo'] },
-  { id: 'redes', title: "Redes Sociales", subtitle: "Publicaciones", icon: Share2, roles: ['super_admin', 'administrativo'] },
-  { id: 'usuarios', title: "Usuarios", subtitle: "Gestión", icon: UserPlus, roles: ['super_admin'] },
-  { id: 'residentes', title: "Residentes", subtitle: "Directorio", icon: Users, roles: ['super_admin', 'coordinador'] },
+  { id: 'dashboard', title: "Panel", icon: Home },
+  { id: '1', title: "1. Ingreso", subtitle: "Admisión", icon: ClipboardList },
+  { id: '2', title: "2. Valoración", subtitle: "Geriátrica", icon: Stethoscope },
+  { id: '3', title: "3. Alimentación", subtitle: "Nutrición", icon: Utensils },
+  { id: '4', title: "4. Bienestar", subtitle: "Terapias", icon: Heart },
+  { id: '5', title: "5. Salud Diaria", subtitle: "Enfermería", icon: Activity },
+  { id: '6', title: "6. Sistema Salud", subtitle: "Urgencias", icon: Stethoscope },
+  { id: '7', title: "7. Higiene", subtitle: "Prevención", icon: ShieldCheck },
+  { id: '8', title: "8. Seguridad", subtitle: "Incidentes", icon: AlertTriangle },
+  { id: '9', title: "9. Egreso", subtitle: "Traslados", icon: LogOut },
+  { id: '10', title: "10. Personal", subtitle: "Talento", icon: Briefcase },
+  { id: '11', title: "11. Calidad", subtitle: "PQRSF", icon: TrendingUp },
+  { id: '12', title: "12. Admin.", subtitle: "Gerencia", icon: Settings },
+  { id: 'gerencial', title: "Gestión Admin.", subtitle: "HB-G01 a G06", icon: FileText },
+  { id: 'finanzas', title: "Finanzas", subtitle: "Control", icon: DollarSign },
+  { id: 'blog', title: "Blog", subtitle: "Noticias", icon: BookOpen },
+  { id: 'redes', title: "Redes Sociales", subtitle: "Publicaciones", icon: Share2 },
+  { id: 'usuarios', title: "Usuarios", subtitle: "Gestión", icon: UserPlus },
+  { id: 'residentes', title: "Residentes", subtitle: "Directorio", icon: Users },
 ];
 
 const AppLayout = ({ children, activeModule, onModuleChange }: AppLayoutProps) => {
   const { profile, roles, signOut } = useAuth();
+  const { canAccessModule } = usePermissions();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [autoSave, setAutoSave] = useState(false);
 
@@ -50,10 +51,8 @@ const AppLayout = ({ children, activeModule, onModuleChange }: AppLayoutProps) =
     return () => clearInterval(interval);
   }, []);
 
-  const visibleModules = modules.filter(m => {
-    if (m.roles.length === 0) return true;
-    return m.roles.some(r => roles.includes(r as any));
-  });
+  // Filter modules by role permissions
+  const visibleModules = modules.filter(m => canAccessModule(m.id));
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -95,7 +94,7 @@ const AppLayout = ({ children, activeModule, onModuleChange }: AppLayoutProps) =
 
         <div className="px-4 py-3 border-t border-secondary-foreground/10">
           <p className="text-[10px] font-bold text-secondary-foreground/60 truncate">{profile?.full_name}</p>
-          <p className="text-[9px] text-secondary-foreground/40 capitalize">{roles[0] || 'Sin rol'}</p>
+          <p className="text-[9px] text-secondary-foreground/40 capitalize">{roles.map(r => r.replace('_', ' ')).join(', ') || 'Sin rol'}</p>
           <button
             onClick={signOut}
             className="mt-2 w-full text-[10px] font-bold text-secondary-foreground/50 hover:text-destructive transition-colors text-left"
@@ -113,7 +112,7 @@ const AppLayout = ({ children, activeModule, onModuleChange }: AppLayoutProps) =
             <Menu size={20} />
           </button>
           <div className="flex items-center gap-2 text-xs ml-auto">
-            <span className={`w-2 h-2 rounded-full ${autoSave ? 'bg-cat-fragility animate-pulse' : 'bg-cat-nutritional'}`} />
+            <span className={`w-2 h-2 rounded-full ${autoSave ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
             <span className="text-muted-foreground font-medium">
               {autoSave ? 'Sincronizando...' : 'En Línea'}
             </span>
