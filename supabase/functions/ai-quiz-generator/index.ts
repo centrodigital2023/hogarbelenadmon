@@ -10,9 +10,41 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { content, courseId } = await req.json();
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+    // ===== AUTH CHECK =====
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "No autorizado" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: authErr } = await userClient.auth.getUser();
+    if (authErr || !user) {
+      return new Response(JSON.stringify({ error: "Token inválido" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Verify user has a staff role (coordinador or super_admin)
+    const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+    const { data: userRoles } = await serviceClient.from("user_roles").select("role").eq("user_id", user.id);
+    if (!userRoles || userRoles.length === 0) {
+      return new Response(JSON.stringify({ error: "Acceso restringido al personal autorizado" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    // ===== END AUTH CHECK =====
+
+    const { content, courseId } = await req.json();
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -69,9 +101,8 @@ serve(async (req) => {
       const args = JSON.parse(toolCall.function.arguments);
       quiz = args.quiz || [];
     } else {
-      // Fallback: try to parse content as JSON
-      const content = aiData.choices?.[0]?.message?.content || "";
-      const match = content.match(/\[[\s\S]*\]/);
+      const fallbackContent = aiData.choices?.[0]?.message?.content || "";
+      const match = fallbackContent.match(/\[[\s\S]*\]/);
       if (match) quiz = JSON.parse(match[0]);
     }
 
