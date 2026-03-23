@@ -7,16 +7,18 @@ import { BookOpen, Plus, Play, CheckCircle2, Trophy, Loader2, ChevronRight } fro
 
 interface Props { onBack: () => void; }
 
-interface Course { id: string; title: string; description: string | null; content: string | null; video_url: string | null; quiz: any[]; is_published: boolean; created_at: string; }
+interface CourseListItem { id: string; title: string; description: string | null; content: string | null; video_url: string | null; quiz_count: number; is_published: boolean; created_at: string; }
+interface QuizQuestion { question: string; options: string[]; }
 interface ExamResult { id: string; course_id: string; score: number; total_questions: number; passed: boolean; created_at: string; }
 
 const TrainingModule = ({ onBack }: Props) => {
   const { user, isAdmin, roles } = useAuth();
   const { toast } = useToast();
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [courses, setCourses] = useState<CourseListItem[]>([]);
   const [results, setResults] = useState<ExamResult[]>([]);
   const [view, setView] = useState<'list' | 'create' | 'detail' | 'exam'>('list');
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<CourseListItem | null>(null);
+  const [examQuiz, setExamQuiz] = useState<QuizQuestion[]>([]);
   const [newTitle, setNewTitle] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newContent, setNewContent] = useState("");
@@ -24,13 +26,15 @@ const TrainingModule = ({ onBack }: Props) => {
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [examAnswers, setExamAnswers] = useState<Record<number, number>>({});
-  const [examResult, setExamResult] = useState<{ score: number; total: number } | null>(null);
+  const [examResult, setExamResult] = useState<{ score: number; total: number; passed: boolean } | null>(null);
+  const [loadingQuiz, setLoadingQuiz] = useState(false);
 
   const canManage = isAdmin || roles.includes('coordinador' as any);
 
   const loadData = async () => {
-    const { data: c } = await supabase.from('training_courses').select('*').order('created_at', { ascending: false });
-    if (c) setCourses(c as Course[]);
+    // Use view that strips quiz answers
+    const { data: c } = await supabase.from('training_courses_public' as any).select('*').order('created_at', { ascending: false });
+    if (c) setCourses(c as unknown as CourseListItem[]);
     if (user) {
       const { data: r } = await supabase.from('exam_results').select('*').eq('user_id', user.id);
       if (r) setResults(r as ExamResult[]);
@@ -50,7 +54,7 @@ const TrainingModule = ({ onBack }: Props) => {
     else {
       toast({ title: "Curso creado" });
       setNewTitle(""); setNewDesc(""); setNewContent(""); setNewVideo("");
-      if (data) { setSelectedCourse(data as Course); await generateQuiz(data.id, newContent); }
+      if (data) { await generateQuiz(data.id, newContent); }
       setView('list');
       loadData();
     }
@@ -73,20 +77,41 @@ const TrainingModule = ({ onBack }: Props) => {
     setGenerating(false);
   };
 
+  const startExam = async (course: CourseListItem) => {
+    setLoadingQuiz(true);
+    setSelectedCourse(course);
+    setExamAnswers({});
+    setExamResult(null);
+    // Fetch quiz questions without correct answers via RPC
+    const { data, error } = await supabase.rpc('get_safe_quiz', { p_course_id: course.id });
+    if (error || !data) {
+      toast({ title: "Error", description: "No se pudo cargar el examen", variant: "destructive" });
+      setLoadingQuiz(false);
+      return;
+    }
+    setExamQuiz(data as unknown as QuizQuestion[]);
+    setView('exam');
+    setLoadingQuiz(false);
+  };
+
   const submitExam = async () => {
     if (!selectedCourse || !user) return;
-    const quiz = selectedCourse.quiz || [];
-    let score = 0;
-    quiz.forEach((q: any, i: number) => { if (examAnswers[i] === q.correct) score++; });
-    const passed = (score / quiz.length) >= 0.6;
-
-    await supabase.from('exam_results').insert({
-      course_id: selectedCourse.id, user_id: user.id,
-      answers: examAnswers as any, score, total_questions: quiz.length, passed,
-    });
-
-    setExamResult({ score, total: quiz.length });
-    loadData();
+    setSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('score-exam', {
+        body: { courseId: selectedCourse.id, answers: examAnswers },
+      });
+      if (error || !data) {
+        toast({ title: "Error", description: "No se pudo enviar el examen", variant: "destructive" });
+      } else {
+        setExamResult({ score: data.score, total: data.total, passed: data.passed });
+        loadData();
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Error", description: "Error al enviar examen", variant: "destructive" });
+    }
+    setSaving(false);
   };
 
   const getResultForCourse = (courseId: string) => results.find(r => r.course_id === courseId);
@@ -122,21 +147,19 @@ const TrainingModule = ({ onBack }: Props) => {
   }
 
   if (view === 'exam' && selectedCourse) {
-    const quiz = selectedCourse.quiz || [];
     if (examResult) {
       const pct = Math.round((examResult.score / examResult.total) * 100);
-      const passed = pct >= 60;
       return (
         <div className="animate-fade-in">
           <FormHeader title="Resultado" subtitle={selectedCourse.title} onBack={() => { setView('list'); setExamResult(null); setExamAnswers({}); }} />
           <div className="bg-card border border-border rounded-2xl p-8 text-center max-w-md mx-auto">
-            <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 ${passed ? 'bg-cat-nutritional/20 text-cat-nutritional' : 'bg-destructive/20 text-destructive'}`}>
+            <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 ${examResult.passed ? 'bg-cat-nutritional/20 text-cat-nutritional' : 'bg-destructive/20 text-destructive'}`}>
               <Trophy size={36} />
             </div>
             <p className="text-4xl font-black">{pct}%</p>
             <p className="text-sm text-muted-foreground mt-1">{examResult.score}/{examResult.total} correctas</p>
-            <p className={`text-sm font-bold mt-3 ${passed ? 'text-cat-nutritional' : 'text-destructive'}`}>
-              {passed ? '¡APROBADO! 🎉' : 'No aprobado. Intente de nuevo.'}
+            <p className={`text-sm font-bold mt-3 ${examResult.passed ? 'text-cat-nutritional' : 'text-destructive'}`}>
+              {examResult.passed ? '¡APROBADO! 🎉' : 'No aprobado. Intente de nuevo.'}
             </p>
           </div>
         </div>
@@ -147,7 +170,7 @@ const TrainingModule = ({ onBack }: Props) => {
       <div className="animate-fade-in">
         <FormHeader title="Examen" subtitle={selectedCourse.title} onBack={() => { setView('list'); setExamAnswers({}); }} />
         <div className="space-y-6 max-w-2xl">
-          {quiz.map((q: any, i: number) => (
+          {examQuiz.map((q, i) => (
             <div key={i} className="bg-card border border-border rounded-2xl p-6">
               <p className="text-sm font-bold mb-3">{i + 1}. {q.question}</p>
               <div className="space-y-2">
@@ -161,9 +184,9 @@ const TrainingModule = ({ onBack }: Props) => {
               </div>
             </div>
           ))}
-          <button onClick={submitExam} disabled={Object.keys(examAnswers).length < quiz.length}
+          <button onClick={submitExam} disabled={saving || Object.keys(examAnswers).length < examQuiz.length}
             className="bg-primary text-primary-foreground px-8 py-3 rounded-xl text-xs font-bold disabled:opacity-40 min-h-[48px]">
-            Enviar respuestas
+            {saving ? 'Enviando...' : 'Enviar respuestas'}
           </button>
         </div>
       </div>
@@ -184,7 +207,7 @@ const TrainingModule = ({ onBack }: Props) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {courses.map(course => {
           const result = getResultForCourse(course.id);
-          const hasQuiz = course.quiz && course.quiz.length > 0;
+          const hasQuiz = course.quiz_count > 0;
           return (
             <div key={course.id} className="bg-card border-2 border-border rounded-2xl p-6 hover:border-primary/30 transition-all">
               <div className="flex items-start gap-3 mb-3">
@@ -212,9 +235,9 @@ const TrainingModule = ({ onBack }: Props) => {
                   </button>
                 )}
                 {hasQuiz && (
-                  <button onClick={() => { setSelectedCourse(course); setExamAnswers({}); setExamResult(null); setView('exam'); }}
+                  <button onClick={() => startExam(course)} disabled={loadingQuiz}
                     className="flex-1 flex items-center justify-center gap-1 bg-primary text-primary-foreground px-3 py-2 rounded-xl text-xs font-bold min-h-[36px]">
-                    <Play size={12} /> Examen
+                    {loadingQuiz ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} />} Examen
                   </button>
                 )}
               </div>
