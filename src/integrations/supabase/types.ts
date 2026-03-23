@@ -690,6 +690,13 @@ export type Database = {
             referencedRelation: "training_courses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "exam_results_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "training_courses_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       financial_transactions: {
@@ -2536,9 +2543,42 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      training_courses_public: {
+        Row: {
+          content: string | null
+          created_at: string | null
+          description: string | null
+          id: string | null
+          is_published: boolean | null
+          quiz_count: number | null
+          title: string | null
+          video_url: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_published?: boolean | null
+          quiz_count?: never
+          title?: string | null
+          video_url?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_published?: boolean | null
+          quiz_count?: never
+          title?: string | null
+          video_url?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      get_safe_quiz: { Args: { p_course_id: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
