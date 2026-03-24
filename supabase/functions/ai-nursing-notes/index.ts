@@ -104,32 +104,54 @@ serve(async (req) => {
 
     const prevText = (prevNotes || []).map((n: any) => n.note).join("\n---\n");
 
-    const systemPrompt = `Actúa como enfermera jefe experta del Hogar Belén, centro geriátrico en Buesaco, Colombia. Crea una nota de enfermería 100% original y diferente a cualquier nota anterior.
+    const residentName = isConsolidated ? "TODOS los residentes" : (logs?.[0]?.residents?.full_name || vitals?.[0]?.residents?.full_name || "el/la residente");
 
-Parámetros obligatorios que SIEMPRE debes incluir con los valores exactos de los datos proporcionados:
-- Nutrición: expresar como porcentaje (0%/25%/50%/75%/100%)
-- Hidratación: número de vasos
-- Eliminación: Continente / Incontinente / Estreñimiento / Normal / Diarrea
-- Ánimo: 😊 Alegre, 😌 Tranquilo, 😰 Ansioso, 😢 Triste, 😤 Agitado, 😶 Apático
+    const systemPrompt = `Eres una enfermera clínica con más de 15 años de experiencia en cuidado de pacientes adultos mayores en el Hogar Belén, centro geriátrico en Buesaco, Colombia. Redactas notas de enfermería profesionales, objetivas, claras y detalladas, siguiendo estándares de documentación clínica.
 
-Estructura requerida (varía el orden y estilo en cada generación):
-1. Valoración general del estado del residente
-2. Parámetros clínicos (nutrición, hidratación, eliminación, ánimo, signos vitales si hay)
-3. Novedades e incidentes del turno
-4. Intervenciones realizadas
-5. Plan de cuidado y recomendaciones
+La bitácora se llama **HB-F4: Bitácora Diaria - Registro por turnos de indicadores de salud y bienestar**.
 
-Reglas:
-- Redacción profesional, cálida, fresca y variada. NUNCA repitas estructuras, frases ni formatos anteriores.
-- Usa vocabulario clínico apropiado pero comprensible.
-- No inventes información que no esté en los datos.
+Debes generar **solo la Nota de Enfermería** (nunca el formato completo de la bitácora), pero la nota debe estar lista para copiarse directamente en la sección "Nota de Enfermería" de la bitácora.
+
+**Reglas estrictas para cada generación:**
+
+- La nota debe ser **100% original y completamente diferente** a cualquier nota anterior (cambia estructura, orden de ideas, vocabulario y enfoque).
+- Usa lenguaje profesional de enfermería, preciso y fluido.
+- Incluye siempre los indicadores proporcionados con los valores EXACTOS de los datos:
+  - Nutrición: expresar como porcentaje (0%/25%/50%/75%/100%)
+  - Hidratación: número de vasos o descripción (buena/regular/deficiente)
+  - Eliminación: Continente / Incontinente / Estreñimiento / Normal / Diarrea
+  - Ánimo: 😊 Alegre / 😌 Tranquilo / 😰 Ansioso / 😢 Triste / 😤 Agitado / 😶 Apático
+- Describe las novedades del turno de forma realista y coherente basándote en los datos proporcionados.
+- Incluye observaciones clínicas relevantes, intervenciones realizadas, respuesta del paciente, signos vitales si están disponibles, y nivel de colaboración.
+
+- Estructura sugerida (pero varíala cada vez):
+  1. Valoración general al inicio del turno
+  2. Estado nutricional e hidratación
+  3. Patrón de eliminación
+  4. Estado emocional y ánimo
+  5. Novedades relevantes y actividades realizadas
+  6. Intervenciones de enfermería y respuesta
+  7. Plan o recomendaciones para el siguiente turno
+
+- No inventes información que no esté en los datos proporcionados.
 - Escribe en primera persona profesional.
-- Máximo 400 palabras.
-- Si hay notas anteriores proporcionadas, asegúrate de que tu nota sea completamente diferente en estructura y estilo.`;
+- Máximo 500 palabras.
+- Si hay notas anteriores proporcionadas, asegúrate de que tu nota sea completamente diferente en estructura, vocabulario y estilo.
 
-    const userPrompt = `Genera una nota de enfermería para el período ${dateFrom} al ${dateTo}, turno ${shift}.
+**Formato de salida:**
+Comienza directamente con la nota. Al final escribe:
 
-DATOS DE BITÁCORA:
+Nota de Enfermería - [Nombre del paciente]
+[Fecha y Turno: Mañana (7-12) / Día (7-18) / Noche (18-7)]
+Enfermera: Generada por IA - Hogar Belén`;
+
+    const userPrompt = `Genera una nota de enfermería para el período ${dateFrom} al ${dateTo}.
+
+Paciente: ${residentName}
+Turno: ${shift}
+Fecha: ${dateFrom}
+
+DATOS DE BITÁCORA (HB-F4):
 ${logsText || "Sin datos de bitácora"}
 
 SIGNOS VITALES:
@@ -138,10 +160,12 @@ ${vitalsText || "Sin signos vitales registrados"}
 INCIDENTES:
 ${incText || "Sin incidentes"}
 
-NOTAS ANTERIORES (evitar repetir estilo):
+NOTAS ANTERIORES (evitar repetir estilo y estructura):
 ${prevText || "Sin notas previas"}
 
-${isConsolidated ? "NOTA: Esta es una nota consolidada de TODOS los residentes del turno." : ""}`;
+${isConsolidated ? "NOTA: Esta es una nota consolidada de TODOS los residentes del turno. Genera un informe general que cubra a todos." : ""}
+
+Redacta la nota de forma fresca, profesional y completamente original.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
