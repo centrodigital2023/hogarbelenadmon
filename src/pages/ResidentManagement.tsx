@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
-import { UserPlus, Search, User } from "lucide-react";
+import ImportData from "@/components/ImportData";
+import { UserPlus, Search, User, Upload } from "lucide-react";
 
 interface Resident {
   id: string;
@@ -30,6 +31,7 @@ const ResidentManagement = ({ onBack }: { onBack: () => void }) => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [form, setForm] = useState({
     full_name: '', document_id: '', birth_date: '', birth_place: '',
     gender: 'M', eps: '', blood_type: '', allergies: '',
@@ -88,7 +90,18 @@ const ResidentManagement = ({ onBack }: { onBack: () => void }) => {
           <UserPlus size={16} />
           Nuevo Residente
         </button>
+        <button onClick={() => setShowImport(!showImport)}
+          className="flex items-center gap-2 bg-muted text-foreground px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-muted/80 transition-colors min-h-[48px]">
+          <Upload size={16} />
+          Importar CSV
+        </button>
       </div>
+
+      {showImport && (
+        <div className="mb-6">
+          <ImportData onImported={() => { fetchResidents(); setShowImport(false); }} />
+        </div>
+      )}
 
       {showForm && (
         <form onSubmit={handleCreate} className="bg-card border border-border rounded-2xl p-6 mb-6 space-y-4">

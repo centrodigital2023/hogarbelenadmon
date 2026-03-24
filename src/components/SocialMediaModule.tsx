@@ -3,11 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
+import ShareSpark from "@/components/ShareSpark";
 import { Sparkles, Send, Calendar, Copy } from "lucide-react";
 
 interface Props { onBack: () => void; }
 
-const PLATFORMS = ['Facebook', 'Instagram', 'Twitter', 'WhatsApp'];
+const PLATFORMS = ['Facebook', 'Instagram', 'Twitter', 'WhatsApp', 'Spark'];
 
 const SocialMediaModule = ({ onBack }: Props) => {
   const { user } = useAuth();
@@ -119,6 +120,7 @@ const SocialMediaModule = ({ onBack }: Props) => {
               className="bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 hover:opacity-90">
               <Send size={14} /> WhatsApp
             </button>
+            <ShareSpark text={generatedText} hashtags={hashtags} />
           </div>
         </>
       )}
