@@ -4,10 +4,34 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
-import { Calendar, CheckCircle2, XCircle } from "lucide-react";
+import { Calendar, CheckCircle2, XCircle, Sparkles, Loader2 } from "lucide-react";
 
 interface Props { onBack: () => void; }
 interface Resident { id: string; full_name: string; }
+
+const SPECIALTY_CHECKLIST: Record<string, string[]> = {
+  'Cardiología': ['Llevar EKG recientes (últimos 3 meses)', 'Lista actualizada de medicamentos cardíacos', 'Registro de TA de los últimos 7 días', 'Ayunas si se va a realizar ecocardiograma'],
+  'Neurología': ['Llevar neuroimágenes previas (TAC, RMN)', 'Descripción detallada de episodios o cambios cognitivos', 'Lista de medicamentos antiepilépticos o neuroprotectores', 'Escala de valoración cognitiva más reciente'],
+  'Oftalmología': ['Llevar gafas actuales del paciente', 'Lista de gotas oftálmicas en uso', 'No aplicar maquillaje en ojos', 'Ayunas no requerido generalmente'],
+  'Ortopedia': ['Radiografías previas de la zona afectada', 'Descripción de dolor: localización, intensidad, duración', 'Lista de analgésicos o antiinflamatorios en uso', 'Ropa cómoda que permita acceso a la zona afectada'],
+  'Gastroenterología': ['Ayunas de 8 horas si se realiza endoscopia', 'Preparación intestinal si se realiza colonoscopia', 'Lista de medicamentos gastrointestinales', 'Últimos resultados de laboratorio (hepatograma si aplica)'],
+  'Endocrinología': ['Ayunas de 8-12 horas para laboratorios', 'Glucómetro y registro de glucemias de los últimos 30 días', 'Lista de insulinas y antidiabéticos orales', 'Llevar carné de diabetes o tiroides si aplica'],
+  'Psiquiatría': ['Lista completa de medicamentos psicotrópicos', 'Descripción de conductas o cambios de comportamiento recientes', 'Última nota de psicología o trabajo social', 'Familiar o cuidador que acompañe para contextualizar'],
+  'Urología': ['Muestra de orina fresca (frasco estéril)', 'Lista de medicamentos para próstata o vejiga', 'Descripción de sintomatología urinaria', 'Hidratación adecuada el día anterior'],
+};
+
+const getChecklist = (specialty: string): string[] => {
+  const normalized = Object.keys(SPECIALTY_CHECKLIST).find(k => specialty.toLowerCase().includes(k.toLowerCase()));
+  return normalized
+    ? SPECIALTY_CHECKLIST[normalized]
+    : [
+        'Documento de identidad del residente',
+        'Carné de EPS / seguro médico vigente',
+        'Lista completa y actualizada de medicamentos',
+        'Historia clínica o resumen médico del hogar',
+        'Acompañante designado (familiar o auxiliar)',
+      ];
+};
 
 const MedicalAppointments = ({ onBack }: Props) => {
   const { user } = useAuth();
@@ -20,6 +44,8 @@ const MedicalAppointments = ({ onBack }: Props) => {
     location: '', companion: '', companion_type: 'familiar', notes: '',
   });
   const [saving, setSaving] = useState(false);
+  const [checklist, setChecklist] = useState<string[]>([]);
+  const [generatingAI, setGeneratingAI] = useState(false);
 
   useEffect(() => {
     supabase.from('residents').select('id, full_name').in('status', ['prueba', 'permanente']).order('full_name')
@@ -42,6 +68,13 @@ const MedicalAppointments = ({ onBack }: Props) => {
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else { toast({ title: "Cita registrada" }); setShowForm(false); loadAppointments(); }
     setSaving(false);
+  };
+
+  const generateChecklist = () => {
+    if (!form.specialty) return;
+    setGeneratingAI(true);
+    setChecklist(getChecklist(form.specialty));
+    setGeneratingAI(false);
   };
 
   const toggleAttended = async (id: string, current: boolean | null) => {
@@ -93,6 +126,32 @@ const MedicalAppointments = ({ onBack }: Props) => {
             <input type="text" value={form.companion} onChange={e => setForm(p => ({ ...p, companion: e.target.value }))}
               className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm" />
           </div>
+          <div className="sm:col-span-2">
+            <button
+              type="button"
+              onClick={generateChecklist}
+              disabled={generatingAI || !form.specialty}
+              className="flex items-center gap-2 bg-primary/10 text-primary border border-primary/20 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-primary hover:text-primary-foreground transition-colors disabled:opacity-40 min-h-[40px]"
+            >
+              {generatingAI ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+              Generar checklist de preparación con IA
+            </button>
+          </div>
+          {checklist.length > 0 && (
+            <div className="sm:col-span-2 bg-primary/5 border border-primary/20 rounded-xl p-4">
+              <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-2 flex items-center gap-1">
+                <Sparkles size={10} /> Preparación recomendada — {form.specialty}
+              </p>
+              <ul className="space-y-1">
+                {checklist.map((item, i) => (
+                  <li key={i} className="flex items-start gap-2 text-xs text-foreground">
+                    <CheckCircle2 size={12} className="text-primary shrink-0 mt-0.5" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <div className="sm:col-span-2">
             <ActionButtons onFinish={handleSave} disabled={saving || !form.resident_id} />
           </div>

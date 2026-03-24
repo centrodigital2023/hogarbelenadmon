@@ -4,10 +4,33 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
-import { Upload } from "lucide-react";
+import { Sparkles, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 interface Props { onBack: () => void; }
 interface Resident { id: string; full_name: string; eps: string | null; allergies: string | null; }
+
+// Medication safety rules for elderly patients (Beers Criteria + common concerns)
+const HIGH_RISK_KEYWORDS: { pattern: RegExp; risk: string; recommendation: string }[] = [
+  { pattern: /benzodiazep|alprazolam|lorazepam|diazepam|clonazepam/i, risk: 'Benzodiazepina — riesgo de sedación excesiva, caídas y dependencia en adulto mayor', recommendation: 'Evaluar descontinuación gradual con médico. Usar mínima dosis efectiva. Vigilar sedación y riesgo de caídas.' },
+  { pattern: /warfarina|acenocumarol|sintrom/i, risk: 'Anticoagulante oral — alto riesgo de sangrado', recommendation: 'Monitorizar INR periódicamente. Verificar interacciones (AINES, antibióticos). Educar sobre signos de sangrado.' },
+  { pattern: /metformina/i, risk: 'Biguanida — contraindicada en insuficiencia renal o hepática grave', recommendation: 'Verificar función renal (creatinina) al menos cada 6 meses. Suspender ante procedimientos con contraste.' },
+  { pattern: /digoxina/i, risk: 'Glucósido cardíaco — margen terapéutico estrecho; toxicidad frecuente en adulto mayor', recommendation: 'Niveles séricos en rango 0.5-0.9 ng/mL. Vigilar bradicardia, náuseas, confusión. Control electrolitos.' },
+  { pattern: /amiodarona/i, risk: 'Antiarrítmico — múltiples efectos adversos (pulmonar, tiroideo, hepático)', recommendation: 'Control tiroideo y pulmonar semestral. Protección solar. Vigilar interacciones con otros fármacos.' },
+  { pattern: /haloperidol|risperidona|quetiapina|olanzapina/i, risk: 'Antipsicótico — riesgo cardiovascular y sedación; en demencia aumenta mortalidad', recommendation: 'Usar solo con indicación clara. Mínima dosis posible. Reevaluar necesidad cada 3 meses.' },
+  { pattern: /tramadol|morfina|oxicodona|fentanil/i, risk: 'Opioide — riesgo de confusión, estreñimiento, caídas y depresión respiratoria', recommendation: 'Iniciar con dosis bajas. Prevenir estreñimiento con laxantes. Vigilar nivel de conciencia.' },
+  { pattern: /ibuprofeno|naproxeno|diclofenaco|ketoprofeno/i, risk: 'AINE — riesgo gastrointestinal y renal; contraindicado con anticoagulantes', recommendation: 'Evitar uso crónico. Si necesario, usar con gastroprotector. Monitorizar función renal.' },
+];
+
+const analyzeMedications = (meds: { medication_name: string }[]): { alerts: { med: string; risk: string; recommendation: string }[]; safe: string[] } => {
+  const alerts: { med: string; risk: string; recommendation: string }[] = [];
+  const safe: string[] = [];
+  meds.forEach(m => {
+    const rule = HIGH_RISK_KEYWORDS.find(r => r.pattern.test(m.medication_name));
+    if (rule) alerts.push({ med: m.medication_name, risk: rule.risk, recommendation: rule.recommendation });
+    else safe.push(m.medication_name);
+  });
+  return { alerts, safe };
+};
 
 const MedicationList = ({ onBack }: Props) => {
   const { user } = useAuth();
@@ -21,6 +44,8 @@ const MedicationList = ({ onBack }: Props) => {
     prescription_date: '', expiry_date: '', notes: '',
   });
   const [saving, setSaving] = useState(false);
+  const [aiReview, setAiReview] = useState<{ alerts: { med: string; risk: string; recommendation: string }[]; safe: string[] } | null>(null);
+  const [generatingAI, setGeneratingAI] = useState(false);
 
   useEffect(() => {
     supabase.from('residents').select('id, full_name, eps, allergies').in('status', ['prueba', 'permanente']).order('full_name')
@@ -48,6 +73,13 @@ const MedicationList = ({ onBack }: Props) => {
       if (data) setMedications(data);
     }
     setSaving(false);
+  };
+
+  const runAIReview = () => {
+    if (medications.length === 0) return;
+    setGeneratingAI(true);
+    setAiReview(analyzeMedications(medications.filter(m => m.is_active !== false)));
+    setGeneratingAI(false);
   };
 
   const resident = residents.find(r => r.id === selectedResident);
@@ -127,6 +159,60 @@ const MedicationList = ({ onBack }: Props) => {
             ))}
             {medications.length === 0 && <p className="text-sm text-muted-foreground">Sin medicamentos registrados.</p>}
           </div>
+
+          {/* AI Safety Review */}
+          {medications.length > 0 && (
+            <div className="mt-6 bg-card border-2 border-primary/20 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-black text-foreground flex items-center gap-2">
+                  <Sparkles size={16} className="text-primary" /> Revisión de Seguridad con IA
+                </h3>
+                <button
+                  onClick={runAIReview}
+                  disabled={generatingAI}
+                  className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50 min-h-[36px]"
+                >
+                  {generatingAI ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                  {generatingAI ? 'Analizando...' : 'Revisar medicamentos'}
+                </button>
+              </div>
+
+              {aiReview && (
+                <div className="space-y-4">
+                  {aiReview.alerts.length === 0 ? (
+                    <div className="flex items-center gap-2 text-cat-nutritional">
+                      <CheckCircle2 size={16} />
+                      <p className="text-sm font-bold">Ningún medicamento activo presenta alertas de seguridad conocidas para adulto mayor.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">Alertas de Seguridad ({aiReview.alerts.length})</p>
+                      {aiReview.alerts.map((a, i) => (
+                        <div key={i} className="bg-destructive/5 border border-destructive/20 rounded-xl p-4">
+                          <div className="flex items-start gap-2 mb-2">
+                            <AlertTriangle size={14} className="text-destructive shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-sm font-bold text-foreground">{a.med}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">{a.risk}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-2 mt-2 pl-6">
+                            <CheckCircle2 size={12} className="text-primary shrink-0 mt-0.5" />
+                            <p className="text-xs text-foreground">{a.recommendation}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  {aiReview.safe.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-bold">Sin alertas:</span> {aiReview.safe.join(', ')}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>

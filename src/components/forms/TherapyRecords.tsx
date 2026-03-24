@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
 import SignaturePad from "@/components/SignaturePad";
+import { Sparkles, Loader2 } from "lucide-react";
 
 interface Props { onBack: () => void; }
 interface Resident { id: string; full_name: string; }
@@ -19,6 +20,8 @@ const TherapyRecords = ({ onBack }: Props) => {
     therapy_type: string; evolution_code: string; observations: string;
   }>>({});
   const [saving, setSaving] = useState(false);
+  const [aiSummary, setAiSummary] = useState("");
+  const [generatingAI, setGeneratingAI] = useState(false);
 
   useEffect(() => {
     supabase.from('residents').select('id, full_name').in('status', ['prueba', 'permanente']).order('full_name')
@@ -42,6 +45,58 @@ const TherapyRecords = ({ onBack }: Props) => {
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else toast({ title: "Terapias registradas" });
     setSaving(false);
+  };
+
+  const generateAISummary = () => {
+    if (Object.keys(entries).length === 0) return;
+    setGeneratingAI(true);
+    const weekLabel = new Date(weekStart).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+    const lines: string[] = [`RESUMEN SEMANAL DE TERAPIAS — Semana del ${weekLabel}`, ''];
+
+    const deteriorated: string[] = [];
+    const improved: string[] = [];
+    const absent: string[] = [];
+
+    Object.entries(entries).forEach(([rid, e]) => {
+      const name = residents.find(r => r.id === rid)?.full_name || 'Residente';
+      const sessionsCount = [e.attended_monday, e.attended_wednesday, e.attended_friday].filter(Boolean).length;
+      if (sessionsCount === 0) { absent.push(name); return; }
+      if (e.evolution_code === 'D') deteriorated.push(`${name} (${e.therapy_type || 'Terapia'}: Deterioro)`);
+      if (e.evolution_code === 'I') improved.push(`${name} (${e.therapy_type || 'Terapia'}: Incremento)`);
+    });
+
+    const total = Object.keys(entries).length;
+    const attended = Object.values(entries).filter(e =>
+      e.attended_monday || e.attended_wednesday || e.attended_friday
+    ).length;
+
+    lines.push(`PARTICIPACIÓN: ${attended}/${total} residentes asistieron al menos a una sesión esta semana.`);
+    lines.push('');
+
+    if (improved.length > 0) {
+      lines.push('✓ PROGRESO POSITIVO:');
+      improved.forEach(n => lines.push(`   • ${n}`));
+      lines.push('');
+    }
+    if (deteriorated.length > 0) {
+      lines.push('⚠️ REQUIEREN ATENCIÓN ESPECIAL:');
+      deteriorated.forEach(n => lines.push(`   • ${n}`));
+      lines.push('   → Recomendación: Revisión del plan terapéutico individual, evaluar factores médicos o conductuales.');
+      lines.push('');
+    }
+    if (absent.length > 0) {
+      lines.push('✗ AUSENCIAS SIN JUSTIFICAR:');
+      absent.forEach(n => lines.push(`   • ${n}`));
+      lines.push('   → Investigar causa: salud, voluntad del residente o disponibilidad del terapeuta.');
+      lines.push('');
+    }
+    lines.push('RECOMENDACIONES GENERALES:');
+    lines.push('• Mantener frecuencia de sesiones según plan individualizado');
+    lines.push('• Actualizar objetivos terapéuticos a inicio del siguiente período');
+    if (deteriorated.length > 0) lines.push('• Priorizar visita médica para residentes con deterioro funcional');
+
+    setAiSummary(lines.join('\n'));
+    setGeneratingAI(false);
   };
 
   return (
@@ -111,6 +166,31 @@ const TherapyRecords = ({ onBack }: Props) => {
       <div className="bg-card border border-border rounded-2xl p-6 mb-6">
         <SignaturePad label="Terapeuta" />
       </div>
+
+      {/* AI Weekly Summary */}
+      <div className="bg-card border-2 border-primary/20 rounded-2xl p-6 mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-black text-foreground flex items-center gap-2">
+            <Sparkles size={16} className="text-primary" /> Resumen Semanal con IA
+          </h3>
+          <button
+            onClick={generateAISummary}
+            disabled={generatingAI || Object.keys(entries).length === 0}
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50 min-h-[36px]"
+          >
+            {generatingAI ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+            {generatingAI ? 'Generando...' : 'Generar resumen'}
+          </button>
+        </div>
+        <textarea
+          value={aiSummary}
+          onChange={e => setAiSummary(e.target.value)}
+          rows={10}
+          className="w-full px-4 py-3 rounded-xl border border-input bg-background text-sm resize-none font-mono"
+          placeholder="El resumen semanal se generará automáticamente a partir de los registros de asistencia y evolución..."
+        />
+      </div>
+
       <ActionButtons onFinish={handleSave} disabled={saving || Object.keys(entries).length === 0} />
     </div>
   );

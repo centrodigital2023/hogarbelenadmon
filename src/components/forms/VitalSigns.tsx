@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Sparkles, Loader2 } from "lucide-react";
 
 interface Props { onBack: () => void; }
 interface Resident { id: string; full_name: string; }
@@ -18,6 +18,8 @@ const VitalSigns = ({ onBack }: Props) => {
     blood_pressure: string; spo2: number; temperature: number; glucose: number; heart_rate: number; weight: number; notes: string;
   }>>({});
   const [saving, setSaving] = useState(false);
+  const [aiReport, setAiReport] = useState("");
+  const [generatingAI, setGeneratingAI] = useState(false);
 
   useEffect(() => {
     supabase.from('residents').select('id, full_name').in('status', ['prueba', 'permanente']).order('full_name')
@@ -37,6 +39,60 @@ const VitalSigns = ({ onBack }: Props) => {
     if (field === 'glucose' && val > 0 && (val < 70 || val > 180)) return true;
     if (field === 'heart_rate' && val > 0 && (val < 50 || val > 120)) return true;
     return false;
+  };
+
+  const generateAIInterpretation = () => {
+    setGeneratingAI(true);
+    const lines: string[] = [
+      `INTERPRETACIÓN CLÍNICA DE SIGNOS VITALES — ${new Date(recordDate).toLocaleDateString('es-CO', { year:'numeric', month:'long', day:'numeric' })}`,
+      '',
+    ];
+    const alerts: string[] = [];
+    const normal: string[] = [];
+
+    residents.forEach(r => {
+      const e = entries[r.id];
+      if (!e) return;
+      const residentAlerts: string[] = [];
+      if (isAbnormal('spo2', e.spo2)) residentAlerts.push(`SpO₂ ${e.spo2}% — HIPOXEMIA: administrar O₂ según prescripción médica, elevar cabecera y notificar al médico`);
+      if (isAbnormal('temperature', e.temperature)) {
+        if (e.temperature > 38) residentAlerts.push(`Temperatura ${e.temperature}°C — FIEBRE: hidratar, aplicar medidas físicas, vigilar cada 2h y notificar`);
+        else residentAlerts.push(`Temperatura ${e.temperature}°C — HIPOTERMIA: abrigar, verificar circulación periférica`);
+      }
+      if (isAbnormal('glucose', e.glucose)) {
+        if (e.glucose > 180) residentAlerts.push(`Glucemia ${e.glucose} mg/dL — HIPERGLUCEMIA: verificar medicación antidiabética, controlar en 2h`);
+        else residentAlerts.push(`Glucemia ${e.glucose} mg/dL — HIPOGLUCEMIA: administrar carbohidratos de acción rápida, notificar al médico`);
+      }
+      if (isAbnormal('heart_rate', e.heart_rate)) {
+        if (e.heart_rate > 120) residentAlerts.push(`FC ${e.heart_rate} bpm — TAQUICARDIA: valorar estado de hidratación, estrés o fiebre subyacente`);
+        else residentAlerts.push(`FC ${e.heart_rate} bpm — BRADICARDIA: revisar medicación (betabloqueantes), EKG si persiste`);
+      }
+      if (residentAlerts.length > 0) {
+        alerts.push(`⚠️ ${r.full_name}:`);
+        residentAlerts.forEach(a => alerts.push(`   • ${a}`));
+      } else if (Object.values(e).some(v => v)) {
+        normal.push(`✓ ${r.full_name}: signos dentro de rangos normales`);
+      }
+    });
+
+    if (alerts.length > 0) {
+      lines.push('ALERTAS CLÍNICAS DETECTADAS:');
+      alerts.forEach(a => lines.push(a));
+      lines.push('');
+    }
+    if (normal.length > 0) {
+      lines.push('RESIDENTES SIN ALTERACIONES:');
+      normal.forEach(n => lines.push(n));
+      lines.push('');
+    }
+    lines.push('RECOMENDACIONES GENERALES:');
+    lines.push('• Continuar monitoreo según protocolo institucional');
+    lines.push('• Registrar cualquier variación significativa en la bitácora de turno');
+    lines.push('• Comunicar al equipo médico las alertas identificadas antes del cambio de turno');
+    if (alerts.length === 0) lines.push('• Todos los signos vitales se encuentran dentro de parámetros normales para adultos mayores');
+
+    setAiReport(lines.join('\n'));
+    setGeneratingAI(false);
   };
 
   const handleSave = async () => {
@@ -97,6 +153,30 @@ const VitalSigns = ({ onBack }: Props) => {
         })}
       </div>
       <ActionButtons onFinish={handleSave} disabled={saving || Object.keys(entries).length === 0} />
+
+      {/* AI Clinical Interpretation */}
+      <div className="bg-card border-2 border-primary/20 rounded-2xl p-6 mt-6">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-black text-foreground flex items-center gap-2">
+            <Sparkles size={16} className="text-primary" /> Interpretación Clínica con IA
+          </h3>
+          <button
+            onClick={generateAIInterpretation}
+            disabled={generatingAI || Object.keys(entries).length === 0}
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50 min-h-[36px]"
+          >
+            {generatingAI ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+            {generatingAI ? 'Analizando...' : 'Interpretar valores'}
+          </button>
+        </div>
+        <textarea
+          value={aiReport}
+          onChange={e => setAiReport(e.target.value)}
+          rows={8}
+          className="w-full px-4 py-3 rounded-xl border border-input bg-background text-sm resize-none font-mono"
+          placeholder="La interpretación clínica se generará automáticamente al registrar los signos vitales..."
+        />
+      </div>
     </div>
   );
 };
