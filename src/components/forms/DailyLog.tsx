@@ -199,8 +199,8 @@ const DailyLog = ({ onBack }: Props) => {
           </h3>
           <button onClick={handleGenerateAI} disabled={generatingAI || Object.keys(entries).length === 0}
           className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50 min-h-[36px]">
-            <Sparkles size={12} />
-            {generatingAI ? 'Generando...' : 'Generar Nota'}
+            {generatingAI ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+            {generatingAI ? 'Generando...' : 'Generar Nota con IA'}
           </button>
         </div>
         <textarea value={aiNote} onChange={(e) => setAiNote(e.target.value)} rows={5}
