@@ -13,7 +13,7 @@ const MOODS = ['😊 Alegre', '😌 Tranquilo', '😰 Ansioso', '😢 Triste', '
 const ELIMINATIONS = ['Continente', 'Incontinente', 'Estreñimiento', 'Normal', 'Diarrea'];
 const SHIFTS = [
 { value: 'mañana', label: 'Mañana (7-12)' },
-{ value: 'dia', label: 'Día (7-18)' },
+{ value: 'tarde', label: 'Tarde (12-18)' },
 { value: 'noche', label: 'Noche (18-7)' }];
 
 
