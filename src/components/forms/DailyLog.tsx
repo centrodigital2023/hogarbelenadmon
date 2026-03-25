@@ -13,7 +13,7 @@ const MOODS = ['😊 Alegre', '😌 Tranquilo', '😰 Ansioso', '😢 Triste', '
 const ELIMINATIONS = ['Continente', 'Incontinente', 'Estreñimiento', 'Normal', 'Diarrea'];
 const SHIFTS = [
 { value: 'mañana', label: 'Mañana (7-12)' },
-{ value: 'dia', label: 'Día (7-18)' },
+{ value: 'tarde', label: 'Tarde (12-18)' },
 { value: 'noche', label: 'Noche (18-7)' }];
 
 
@@ -62,21 +62,7 @@ const DailyLog = ({ onBack }: Props) => {
       if (data?.note) {
         setAiNote(data.note);
       } else {
-        // Fallback: generate from current form entries
-        const summary = Object.entries(entries).map(([rid, e]) => {
-          const name = residents.find((r) => r.id === rid)?.full_name || 'Residente';
-          return `${name}: Nutrición ${e.nutrition_pct}%, Hidratación ${e.hydration_glasses} vasos, Eliminación: ${e.elimination}, Ánimo: ${e.mood}. ${e.observations}`;
-        }).join('\n');
-
-        const { data: fallback, error: fbErr } = await supabase.functions.invoke('ai-nursing-notes-from-text', {
-          body: { summary, shift, logDate },
-        });
-        // If no dedicated function, use inline data
-        if (fbErr || !fallback?.note) {
-          toast({ title: "Sin datos previos", description: "Guarde primero los registros y luego genere la nota con IA.", variant: "destructive" });
-        } else {
-          setAiNote(fallback.note);
-        }
+        toast({ title: "Sin datos previos", description: "No se encontraron registros guardados para esta fecha. Guarde primero la bitácora y luego genere la nota con IA.", variant: "destructive" });
       }
     } catch (e: any) {
       toast({ title: "Error", description: e.message || "Error generando nota con IA", variant: "destructive" });
