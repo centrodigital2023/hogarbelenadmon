@@ -34,6 +34,7 @@ import DocumentManager from "@/components/DocumentManager";
 import LogoSettings from "@/components/LogoSettings";
 import TrainingModule from "@/components/TrainingModule";
 import NursingNotes from "@/components/NursingNotes";
+import NursingReport from "@/components/NursingReport";
 import IndicatorsDashboard from "@/components/IndicatorsDashboard";
 import BillingModule from "@/components/BillingModule";
 import CarePlanGenerator from "@/components/CarePlanGenerator";
@@ -74,6 +75,7 @@ const MODULE_INFO: Record<string, { title: string; subtitle: string; icon: any; 
     { id: 'HB-F4', label: 'HB-F4: Bitácora' }, { id: 'HB-F14', label: 'HB-F14: Medicamentos' },
     { id: 'HB-F15', label: 'HB-F15: Administración Med.' }, { id: 'HB-F16', label: 'HB-F16: Signos Vitales' },
     { id: 'NURSING-AI', label: '🤖 Notas Enfermería IA' },
+    { id: 'NURSING-REPORT', label: '📊 Informe Enfermería IA' },
   ]},
   '6': { title: '6. Sistema Salud', subtitle: 'Urgencias y citas', icon: Stethoscope, forms: [
     { id: 'HB-F17', label: 'HB-F17: Citas Médicas' },
@@ -122,7 +124,7 @@ const FORM_MODULE_MAP: Record<string, string> = {
   'HB-F26': 'calidad', 'HB-G01': 'gerencial', 'HB-G02': 'gerencial',
   'HB-G03': 'gerencial', 'HB-G04': 'gerencial', 'HB-G05': 'gerencial',
   'HB-G06': 'gerencial', 'UNIFIED-KITCHEN': 'alimentacion',
-  'THERAPY-SESSION': 'bienestar', 'NURSING-AI': 'salud',
+  'THERAPY-SESSION': 'bienestar', 'NURSING-AI': 'salud', 'NURSING-REPORT': 'salud',
   'BILLING': 'admin', 'VOUCHER': 'admin', 'DOCS': 'admin', 'LOGO': 'admin',
   'TRAINING': 'personal', 'PAI': 'calidad', 'AUDIT': 'calidad',
 };
@@ -136,7 +138,7 @@ const FORM_COMPONENTS: Record<string, React.FC<{ onBack: () => void }>> = {
   'HB-F17': MedicalAppointments, 'HB-F20': IncidentReport,
   'HB-F23': PQRSFRecord, 'HB-F24': TrainingRecord, 'HB-F25': PerformanceEval,
   'HYGIENE-KIT': HygieneKit, 'MAPA': RoomAssignment, 'DOCS': DocumentManager,
-  'LOGO': LogoSettings, 'TRAINING': TrainingModule, 'NURSING-AI': NursingNotes,
+  'LOGO': LogoSettings, 'TRAINING': TrainingModule, 'NURSING-AI': NursingNotes, 'NURSING-REPORT': NursingReport,
   'HB-F26': IndicatorsDashboard, 'BILLING': BillingModule, 'PAI': CarePlanGenerator,
   'UNIFIED-KITCHEN': UnifiedKitchen, 'THERAPY-SESSION': TherapySessionForm,
   'VOUCHER': PaymentVoucher, 'AUDIT': AuditReport,
