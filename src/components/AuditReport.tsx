@@ -22,7 +22,7 @@ const AuditReport = ({ onBack }: Props) => {
       supabase.from('medical_appointments').select('*').gte('appointment_date', dateFrom).lte('appointment_date', dateTo),
       supabase.from('pqrsf').select('*').gte('record_date', dateFrom).lte('record_date', dateTo),
       supabase.from('geriatric_assessments').select('*').gte('assessment_date', dateFrom).lte('assessment_date', dateTo),
-      supabase.from('training_courses' as any).select('*'),
+      supabase.from('training_courses_public' as any).select('id, title'),
       supabase.from('invoices').select('*').gte('created_at', dateFrom).lte('created_at', dateTo),
     ]);
     setData({
