@@ -330,7 +330,8 @@ export async function exportExcel(opts: {
   fileName: string;
   data: Record<string, any>[];
 }) {
-  const ExcelJS = (await import("exceljs")).default;
+  const ExcelJSModule = await import("exceljs");
+  const ExcelJS = (ExcelJSModule as any).default || ExcelJSModule;
   const workbook = new ExcelJS.Workbook();
   workbook.creator = BRAND.name;
   workbook.created = new Date();
