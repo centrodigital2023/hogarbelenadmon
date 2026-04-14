@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
+import SmartReportSection from "@/components/SmartReportSection";
 import SignaturePad from "@/components/SignaturePad";
 
 interface Props { onBack: () => void; }
@@ -104,6 +105,7 @@ const PerformanceEval = ({ onBack }: Props) => {
         <SignaturePad label="Evaluado" />
       </div>
 
+      <SmartReportSection module="personal" formTitle="HB-F25: Evaluación Desempeño" formData={form} contentRef={contentRef} />
       <ActionButtons onFinish={handleSave} disabled={saving || !form.evaluated_user_id} />
     </div>
   );

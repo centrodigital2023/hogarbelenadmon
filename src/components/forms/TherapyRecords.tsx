@@ -1,9 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
+import ExportButtons from "@/components/ExportButtons";
+import ShareButtons from "@/components/ShareButtons";
+import SmartReportSection from "@/components/SmartReportSection";
 import SignaturePad from "@/components/SignaturePad";
 
 interface Props { onBack: () => void; }
@@ -111,6 +114,7 @@ const TherapyRecords = ({ onBack }: Props) => {
       <div className="bg-card border border-border rounded-2xl p-6 mb-6">
         <SignaturePad label="Terapeuta" />
       </div>
+      <SmartReportSection module="bienestar" formTitle="HB-F9: Terapias" formData={entries} contentRef={contentRef} />
       <ActionButtons onFinish={handleSave} disabled={saving || Object.keys(entries).length === 0} />
     </div>
   );

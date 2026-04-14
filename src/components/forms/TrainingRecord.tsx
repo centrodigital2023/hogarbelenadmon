@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
+import ExportButtons from "@/components/ExportButtons";
+import ShareButtons from "@/components/ShareButtons";
+import SmartReportSection from "@/components/SmartReportSection";
 import SignaturePad from "@/components/SignaturePad";
 
 interface Props { onBack: () => void; }
@@ -91,6 +94,7 @@ const TrainingRecord = ({ onBack }: Props) => {
         <SignaturePad label="Facilitador" />
       </div>
 
+      <SmartReportSection module="personal" formTitle="HB-F24: Capacitaciones" formData={{ ...form, attendees }} contentRef={contentRef} />
       <ActionButtons onFinish={handleSave} disabled={saving || !form.topic} />
     </div>
   );
