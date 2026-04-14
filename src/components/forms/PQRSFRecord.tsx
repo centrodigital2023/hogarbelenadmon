@@ -13,6 +13,7 @@ const TYPES = ['Petición', 'Queja', 'Reclamo', 'Sugerencia', 'Felicitación'];
 const PQRSFRecord = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const contentRef = useRef<HTMLDivElement>(null);
   const [records, setRecords] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
