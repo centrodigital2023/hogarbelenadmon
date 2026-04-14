@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
+import ExportButtons from "@/components/ExportButtons";
+import ShareButtons from "@/components/ShareButtons";
 import { Sparkles, History, Loader2 } from "lucide-react";
 
 interface Props {onBack: () => void;}
@@ -20,6 +22,7 @@ const SHIFTS = [
 const DailyLog = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const contentRef = useRef<HTMLDivElement>(null);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [shift, setShift] = useState('mañana');
   const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
@@ -103,104 +106,111 @@ const DailyLog = ({ onBack }: Props) => {
     setSaving(false);
   };
 
+  const getTextContent = () => {
+    const lines = [`HB-F4: Bitácora Diaria - ${logDate} - Turno: ${shift}\n`];
+    Object.entries(entries).forEach(([rid, e]) => {
+      const r = residents.find(res => res.id === rid);
+      lines.push(`${r?.full_name || rid}: Nutrición ${e.nutrition_pct}%, Hidratación ${e.hydration_glasses} vasos, Eliminación: ${e.elimination}, Ánimo: ${e.mood}, Obs: ${e.observations}`);
+    });
+    if (aiNote) lines.push(`\nNota IA:\n${aiNote}`);
+    return lines.join('\n');
+  };
+
   return (
     <div className="animate-fade-in">
       <FormHeader title="HB-F4: Bitácora Diaria" subtitle="Registro por turnos de indicadores de salud y bienestar" onBack={onBack} />
 
-      <div className="bg-card border border-border rounded-2xl p-6 mb-6 flex flex-wrap gap-4">
-        <div>
-          <label className="text-xs font-bold text-muted-foreground uppercase">Fecha</label>
-          <input type="date" value={logDate} onChange={(e) => setLogDate(e.target.value)}
-          className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm" />
+      <div ref={contentRef}>
+        <div className="bg-card border border-border rounded-2xl p-6 mb-6 flex flex-wrap gap-4">
+          <div>
+            <label className="text-xs font-bold text-muted-foreground uppercase">Fecha</label>
+            <input type="date" value={logDate} onChange={(e) => setLogDate(e.target.value)}
+            className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm" />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-muted-foreground uppercase">Turno</label>
+            <select value={shift} onChange={(e) => setShift(e.target.value)}
+            className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm">
+              {SHIFTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
+          </div>
+          <div className="flex items-end gap-2">
+            <button onClick={loadHistory}
+            className="flex items-center gap-2 bg-muted text-muted-foreground px-4 py-3 rounded-xl text-xs font-bold hover:bg-accent min-h-[48px]">
+              <History size={14} /> Historial
+            </button>
+          </div>
         </div>
-        <div>
-          <label className="text-xs font-bold text-muted-foreground uppercase">Turno</label>
-          <select value={shift} onChange={(e) => setShift(e.target.value)}
-          className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm">
-            {SHIFTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-          </select>
+
+        <div className="space-y-4 mb-6">
+          {residents.map((r) => {
+            const entry = entries[r.id] || { nutrition_pct: 0, hydration_glasses: 0, elimination: '', mood: '', observations: '' };
+            return (
+              <div key={r.id} className="bg-card border border-border rounded-2xl p-5">
+                <p className="text-sm font-black text-foreground mb-3">{r.full_name}</p>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  <div>
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Nutrición %</label>
+                    <select value={entry.nutrition_pct} onChange={(e) => updateEntry(r.id, 'nutrition_pct', Number(e.target.value))}
+                    className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm">
+                      {[0, 25, 50, 75, 100].map((v) => <option key={v} value={v}>{v}%</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Hidratación</label>
+                    <input type="number" min={0} max={20} value={entry.hydration_glasses}
+                    onChange={(e) => updateEntry(r.id, 'hydration_glasses', Number(e.target.value))}
+                    className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm" placeholder="Vasos" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Eliminación</label>
+                    <select value={entry.elimination} onChange={(e) => updateEntry(r.id, 'elimination', e.target.value)}
+                    className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm">
+                      <option value="">--</option>
+                      {ELIMINATIONS.map((el) => <option key={el} value={el}>{el}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Ánimo</label>
+                    <select value={entry.mood} onChange={(e) => updateEntry(r.id, 'mood', e.target.value)}
+                    className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm">
+                      <option value="">--</option>
+                      {MOODS.map((m) => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Novedades</label>
+                    <input type="text" value={entry.observations}
+                    onChange={(e) => updateEntry(r.id, 'observations', e.target.value)}
+                    className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm" placeholder="..." />
+                  </div>
+                </div>
+              </div>);
+          })}
         </div>
-        <div className="flex items-end gap-2">
-          <button onClick={loadHistory}
-          className="flex items-center gap-2 bg-muted text-muted-foreground px-4 py-3 rounded-xl text-xs font-bold hover:bg-accent min-h-[48px]">
-            <History size={14} /> Historial
-          </button>
+
+        <div className="bg-card border-2 border-primary/20 rounded-2xl p-6 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-black text-foreground flex items-center gap-2">
+              <Sparkles size={16} className="text-primary" /> Nota de Enfermería con IA
+            </h3>
+            <button onClick={handleGenerateAI} disabled={generatingAI || Object.keys(entries).length === 0}
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50 min-h-[36px]">
+              {generatingAI ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+              {generatingAI ? 'Generando...' : 'Generar Nota con IA'}
+            </button>
+          </div>
+          <textarea value={aiNote} onChange={(e) => setAiNote(e.target.value)} rows={5}
+          className="w-full px-4 py-3 rounded-xl border border-input bg-background text-sm resize-none"
+          placeholder="La nota se generará automáticamente con IA a partir de los registros del turno..." />
         </div>
       </div>
 
-      {/* Resident entries */}
-      <div className="space-y-4 mb-6">
-        {residents.map((r) => {
-          const entry = entries[r.id] || { nutrition_pct: 0, hydration_glasses: 0, elimination: '', mood: '', observations: '' };
-          return (
-            <div key={r.id} className="bg-card border border-border rounded-2xl p-5">
-              <p className="text-sm font-black text-foreground mb-3">{r.full_name}</p>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                <div>
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase">Nutrición %</label>
-                  <select value={entry.nutrition_pct} onChange={(e) => updateEntry(r.id, 'nutrition_pct', Number(e.target.value))}
-                  className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm">
-                    {[0, 25, 50, 75, 100].map((v) => <option key={v} value={v}>{v}%</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase">Hidratación</label>
-                  <input type="number" min={0} max={20} value={entry.hydration_glasses}
-                  onChange={(e) => updateEntry(r.id, 'hydration_glasses', Number(e.target.value))}
-                  className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm" placeholder="Vasos" />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase">Eliminación</label>
-                  <select value={entry.elimination} onChange={(e) => updateEntry(r.id, 'elimination', e.target.value)}
-                  className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm">
-                    <option value="">--</option>
-                    {ELIMINATIONS.map((el) => <option key={el} value={el}>{el}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase">Ánimo</label>
-                  <select value={entry.mood} onChange={(e) => updateEntry(r.id, 'mood', e.target.value)}
-                  className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm">
-                    <option value="">--</option>
-                    {MOODS.map((m) => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase">Novedades</label>
-                  <input type="text" value={entry.observations}
-                  onChange={(e) => updateEntry(r.id, 'observations', e.target.value)}
-                  className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm" placeholder="..." />
-                </div>
-              </div>
-            </div>);
-
-        })}
-      </div>
-
-      {/* AI Nursing Note */}
-      <div className="bg-card border-2 border-primary/20 rounded-2xl p-6 mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-black text-foreground flex items-center gap-2">Nota de Enfermería
-            <Sparkles size={16} className="text-primary" /> Nota de Enfermería con IA
-          </h3>
-          <button onClick={handleGenerateAI} disabled={generatingAI || Object.keys(entries).length === 0}
-          className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50 min-h-[36px]">
-            {generatingAI ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-            {generatingAI ? 'Generando...' : 'Generar Nota con IA'}
-          </button>
-        </div>
-        <textarea value={aiNote} onChange={(e) => setAiNote(e.target.value)} rows={5}
-        className="w-full px-4 py-3 rounded-xl border border-input bg-background text-sm resize-none"
-        placeholder="La nota se generará automáticamente con IA a partir de los registros del turno..." />
-      </div>
-
-      {/* History panel */}
       {showHistory &&
       <div className="bg-muted rounded-2xl p-6 mb-6">
           <h3 className="text-sm font-black text-foreground mb-3">Historial reciente</h3>
           {historyData.length === 0 ?
         <p className="text-xs text-muted-foreground">Sin registros previos.</p> :
-
         <div className="space-y-2 max-h-60 overflow-y-auto">
               {historyData.map((h) =>
           <div key={h.id} className="bg-card rounded-xl p-3 text-xs">
@@ -212,6 +222,10 @@ const DailyLog = ({ onBack }: Props) => {
         </div>
       }
 
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <ExportButtons contentRef={contentRef} title={`HB-F4 Bitácora ${logDate}`} fileName={`bitacora_${logDate}_${shift}`} textContent={getTextContent()} />
+        <ShareButtons title={`HB-F4 Bitácora ${logDate}`} text={getTextContent()} />
+      </div>
       <ActionButtons onFinish={handleSave} disabled={saving || Object.keys(entries).length === 0} />
     </div>);
 

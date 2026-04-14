@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
+import ExportButtons from "@/components/ExportButtons";
+import ShareButtons from "@/components/ShareButtons";
 import { Calendar, CheckCircle2, XCircle } from "lucide-react";
 
 interface Props { onBack: () => void; }
@@ -12,6 +14,7 @@ interface Resident { id: string; full_name: string; }
 const MedicalAppointments = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const contentRef = useRef<HTMLDivElement>(null);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [appointments, setAppointments] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -36,9 +39,7 @@ const MedicalAppointments = ({ onBack }: Props) => {
   const handleSave = async () => {
     if (!user || !form.resident_id) return;
     setSaving(true);
-    const { error } = await supabase.from('medical_appointments').insert({
-      ...form, created_by: user.id,
-    });
+    const { error } = await supabase.from('medical_appointments').insert({ ...form, created_by: user.id });
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else { toast({ title: "Cita registrada" }); setShowForm(false); loadAppointments(); }
     setSaving(false);
@@ -49,14 +50,22 @@ const MedicalAppointments = ({ onBack }: Props) => {
     loadAppointments();
   };
 
+  const getApptData = () => appointments.map(a => ({
+    Residente: (a.residents as any)?.full_name, Especialidad: a.specialty,
+    Fecha: a.appointment_date, Hora: a.appointment_time, Lugar: a.location,
+    Asistió: a.was_attended ? 'Sí' : 'No',
+  }));
+
   return (
     <div className="animate-fade-in">
       <FormHeader title="HB-F17: Citas Médicas" subtitle="Gestión de citas médicas externas" onBack={onBack} />
 
-      <button onClick={() => setShowForm(!showForm)}
-        className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-3 rounded-xl text-xs font-black uppercase mb-6 min-h-[48px]">
-        <Calendar size={16} /> Nueva Cita
-      </button>
+      <div className="flex flex-wrap gap-3 mb-6">
+        <button onClick={() => setShowForm(!showForm)}
+          className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-3 rounded-xl text-xs font-black uppercase min-h-[48px]">
+          <Calendar size={16} /> Nueva Cita
+        </button>
+      </div>
 
       {showForm && (
         <div className="bg-card border border-border rounded-2xl p-6 mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -99,7 +108,7 @@ const MedicalAppointments = ({ onBack }: Props) => {
         </div>
       )}
 
-      <div className="space-y-3">
+      <div ref={contentRef} className="space-y-3 mb-6">
         {appointments.map(a => (
           <div key={a.id} className="bg-card border border-border rounded-2xl p-5 flex items-center justify-between">
             <div>
@@ -114,6 +123,12 @@ const MedicalAppointments = ({ onBack }: Props) => {
           </div>
         ))}
       </div>
+      {appointments.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <ExportButtons contentRef={contentRef} title="HB-F17 Citas Médicas" fileName="citas_medicas" data={getApptData()} textContent="Citas Médicas" />
+          <ShareButtons title="HB-F17 Citas Médicas" text={`Citas médicas registradas: ${appointments.length}`} />
+        </div>
+      )}
     </div>
   );
 };
