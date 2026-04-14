@@ -88,6 +88,7 @@ const PQRSFRecord = ({ onBack }: Props) => {
           </div>
         ))}
       </div>
+      <SmartReportSection module="calidad" formTitle="HB-F23: PQRSF" formData={{ records }} contentRef={contentRef} />
     </div>
   );
 };
