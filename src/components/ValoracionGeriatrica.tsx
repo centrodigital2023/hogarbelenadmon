@@ -1,7 +1,8 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   Activity, Brain, Heart, Utensils, AlertTriangle,
-  Users, ShieldCheck, Briefcase, ChevronRight, User, History, Save
+  Users, ShieldCheck, Briefcase, ChevronRight, User, History, Save,
+  Sparkles, Loader2, FileText, Edit3
 } from "lucide-react";
 import { TESTS_GERIATRICOS } from "@/data/tests-geriatricos";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +10,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "./FormHeader";
 import SignaturePad from "./SignaturePad";
+import ExportButtons from "./ExportButtons";
+import ShareButtons from "./ShareButtons";
+import { Textarea } from "@/components/ui/textarea";
 
 const iconMap: Record<string, React.ReactNode> = {
   Activity: <Activity size={20} />,
@@ -50,6 +54,14 @@ interface AssessmentHistory {
   created_at: string;
 }
 
+interface ReportHistoryEntry {
+  id: string;
+  date: string;
+  report: string;
+  signature: string | null;
+  residentName: string;
+}
+
 interface ValoracionGeriatricaProps {
   onBack: () => void;
 }
@@ -57,7 +69,7 @@ interface ValoracionGeriatricaProps {
 const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [step, setStep] = useState<'select-resident' | 'menu' | 'assessment' | 'summary'>('select-resident');
+  const [step, setStep] = useState<'select-resident' | 'menu' | 'assessment' | 'summary' | 'ai-report'>('select-resident');
   const [testKey, setTestKey] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [sigEval, setSigEval] = useState<string | null>(null);
@@ -73,6 +85,24 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
   // History
   const [history, setHistory] = useState<AssessmentHistory[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+
+  // AI Report state
+  const [aiReport, setAiReport] = useState("");
+  const [aiReportEditable, setAiReportEditable] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [reportSignature, setReportSignature] = useState<string | null>(null);
+  const [latestAssessments, setLatestAssessments] = useState<AssessmentHistory[]>([]);
+  const reportRef = useRef<HTMLDivElement>(null);
+
+  // Report history (localStorage)
+  const [reportHistory, setReportHistory] = useState<ReportHistoryEntry[]>(() => {
+    try {
+      const saved = localStorage.getItem('report-history-valoracion');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+  const [showReportHistory, setShowReportHistory] = useState(false);
 
   const activeTest = useMemo(() => testKey ? TESTS_GERIATRICOS[testKey] : null, [testKey]);
 
@@ -98,9 +128,22 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
     if (data) setHistory(data);
   };
 
+  const fetchLatestAssessments = async (residentId: string) => {
+    const { data } = await supabase.from('geriatric_assessments')
+      .select('id, test_key, test_name, score, max_score, interpretation, assessment_date, created_at')
+      .eq('resident_id', residentId)
+      .order('created_at', { ascending: false });
+    if (data) {
+      const latest: Record<string, AssessmentHistory> = {};
+      data.forEach(a => { if (!latest[a.test_key]) latest[a.test_key] = a; });
+      setLatestAssessments(Object.values(latest));
+    }
+  };
+
   const handleSelectResident = (r: Resident) => {
     setSelectedResident(r);
     fetchHistory(r.id);
+    fetchLatestAssessments(r.id);
     setStep('menu');
   };
 
@@ -206,8 +249,92 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
     } else {
       toast({ title: "✅ Valoración guardada", description: `${activeTest.name} - ${selectedResident.full_name}` });
       fetchHistory(selectedResident.id);
+      fetchLatestAssessments(selectedResident.id);
     }
     setSaving(false);
+  };
+
+  // AI Report generation
+  const generateAIReport = async () => {
+    if (!selectedResident || latestAssessments.length === 0) {
+      toast({ title: "Sin valoraciones", description: "Aplique al menos un test antes de generar el informe.", variant: "destructive" });
+      return;
+    }
+    setGenerating(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { toast({ title: "Error", description: "Sesión expirada", variant: "destructive" }); return; }
+
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-geriatric-report`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({
+          residentId: selectedResident.id,
+          residentName: selectedResident.full_name,
+          residentDocId: selectedResident.document_id,
+          assessments: latestAssessments.map(a => ({
+            test_key: a.test_key,
+            test_name: a.test_name,
+            score: a.score,
+            max_score: a.max_score,
+            interpretation: a.interpretation,
+            assessment_date: a.assessment_date,
+          })),
+        }),
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: "Error desconocido" }));
+        toast({ title: "Error IA", description: err.error || `Error ${resp.status}`, variant: "destructive" });
+        return;
+      }
+
+      const { report } = await resp.json();
+      if (report) {
+        setAiReport(report);
+        setAiReportEditable(report);
+        setStep('ai-report');
+        toast({ title: "✨ Informe HB-F22 generado con IA" });
+      }
+    } catch (e) {
+      toast({ title: "Error", description: "No se pudo generar el informe", variant: "destructive" });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const saveReportToHistory = () => {
+    if (!aiReportEditable || !selectedResident) return;
+    const entry: ReportHistoryEntry = {
+      id: Date.now().toString(),
+      date: new Date().toLocaleString("es-CO"),
+      report: aiReportEditable,
+      signature: reportSignature,
+      residentName: selectedResident.full_name,
+    };
+    const updated = [entry, ...reportHistory].slice(0, 30);
+    setReportHistory(updated);
+    localStorage.setItem('report-history-valoracion', JSON.stringify(updated));
+    toast({ title: "✅ Informe guardado en historial" });
+  };
+
+  const getReportTextForExport = () => {
+    return aiReportEditable;
+  };
+
+  const getExcelData = () => {
+    return latestAssessments.map(a => ({
+      Test: a.test_name,
+      Puntaje: a.score,
+      Máximo: a.max_score,
+      Porcentaje: `${Math.round((a.score / a.max_score) * 100)}%`,
+      Interpretación: a.interpretation || '',
+      Fecha: a.assessment_date,
+    }));
   };
 
   const filteredResidents = residents.filter(r =>
@@ -254,6 +381,144 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
             {filteredResidents.length === 0 && (
               <p className="text-muted-foreground col-span-full text-center py-8">No se encontraron residentes activos.</p>
             )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Step: AI Report
+  if (step === 'ai-report') {
+    return (
+      <div className="animate-fade-in">
+        <FormHeader
+          title="Informe de Valoración Geriátrica Integral (HB-F22)"
+          subtitle={`Residente: ${selectedResident?.full_name}`}
+          onBack={() => setStep('menu')}
+        />
+
+        {/* Assessment summary cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mb-6">
+          {latestAssessments.map(a => (
+            <div key={a.test_key} className="bg-card border border-border rounded-xl p-3">
+              <p className="text-[10px] font-bold text-muted-foreground truncate">{a.test_name}</p>
+              <p className="text-lg font-black text-primary">{a.score}<span className="text-xs text-muted-foreground">/{a.max_score}</span></p>
+              <p className="text-[9px] text-muted-foreground truncate">{a.interpretation}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Report content */}
+        <div ref={reportRef} className="bg-card border-2 border-primary/20 rounded-2xl p-6 mb-4">
+          <div className="text-center mb-4 pb-3 border-b-2 border-primary/20">
+            <h3 className="text-sm font-black text-primary uppercase tracking-wider">Hogar Belén — Juntos, Cuidamos Mejor</h3>
+            <p className="text-xs text-muted-foreground">Informe de Valoración Geriátrica Integral (HB-F22)</p>
+            <p className="text-xs text-foreground font-bold mt-1">{selectedResident?.full_name} | Doc: {selectedResident?.document_id || 'N/A'}</p>
+            <p className="text-[10px] text-muted-foreground">
+              {new Date().toLocaleDateString("es-CO", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+            </p>
+          </div>
+
+          {isEditing ? (
+            <Textarea
+              value={aiReportEditable}
+              onChange={e => setAiReportEditable(e.target.value)}
+              className="min-h-[400px] text-xs leading-relaxed font-mono"
+            />
+          ) : (
+            <div className="prose prose-sm max-w-none text-foreground whitespace-pre-wrap text-xs leading-relaxed">
+              {aiReportEditable}
+            </div>
+          )}
+
+          {/* Signature section */}
+          <div className="mt-6 pt-4 border-t-2 border-primary/20">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+              <div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2">Firma digital del profesional responsable</p>
+                <SignaturePad label="Firma del responsable" value={reportSignature || undefined} onChange={setReportSignature} />
+              </div>
+              {reportSignature && (
+                <div className="text-center">
+                  <img src={reportSignature} alt="Firma" className="h-16 mx-auto border rounded-lg" />
+                  <p className="text-[9px] text-muted-foreground mt-1">Firma registrada ✓</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Institutional footer */}
+          <div className="mt-4 pt-3 border-t border-border text-center">
+            <p className="text-[9px] text-muted-foreground">
+              3117301245 | hogarbelen2022@gmail.com | www.hogarbelen.org | @hogarbelenbuesaco
+            </p>
+          </div>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <button onClick={() => setIsEditing(!isEditing)}
+            className="flex items-center gap-1.5 bg-accent text-accent-foreground px-4 py-2 rounded-xl text-xs font-bold hover:bg-accent/80 transition-colors min-h-[40px]">
+            <Edit3 size={14} /> {isEditing ? "Vista previa" : "Editar informe"}
+          </button>
+          <button onClick={saveReportToHistory}
+            className="flex items-center gap-1.5 bg-primary/10 text-primary px-4 py-2 rounded-xl text-xs font-bold hover:bg-primary/20 transition-colors min-h-[40px]">
+            <Save size={14} /> Guardar en historial
+          </button>
+          <button onClick={generateAIReport} disabled={generating}
+            className="flex items-center gap-1.5 bg-gradient-to-r from-primary to-destructive text-primary-foreground px-4 py-2 rounded-xl text-xs font-bold hover:opacity-90 disabled:opacity-40 min-h-[40px]">
+            {generating ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+            Regenerar
+          </button>
+        </div>
+
+        {/* Export & Share */}
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          <ExportButtons
+            contentRef={reportRef}
+            title={`HB-F22 Valoración Geriátrica - ${selectedResident?.full_name}`}
+            fileName={`HB-F22_${selectedResident?.full_name?.replace(/\s/g, '_') || 'informe'}_${new Date().toISOString().split("T")[0]}`}
+            textContent={getReportTextForExport()}
+            data={getExcelData()}
+          />
+          <ShareButtons
+            title={`HB-F22 Valoración Geriátrica - ${selectedResident?.full_name}`}
+            text={getReportTextForExport()}
+          />
+        </div>
+
+        {/* Report History */}
+        <div className="mb-4">
+          <button onClick={() => setShowReportHistory(!showReportHistory)}
+            className="flex items-center gap-1.5 bg-muted text-muted-foreground px-4 py-2 rounded-xl text-xs font-bold hover:bg-accent transition-colors min-h-[40px]">
+            <History size={14} /> Historial de informes ({reportHistory.length})
+          </button>
+        </div>
+
+        {showReportHistory && reportHistory.length > 0 && (
+          <div className="bg-muted/50 border border-border rounded-2xl p-4 space-y-3">
+            <p className="text-xs font-bold text-muted-foreground uppercase">Últimos informes generados</p>
+            {reportHistory.map(h => (
+              <div key={h.id} className="bg-card border border-border rounded-xl p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <span className="text-[10px] text-muted-foreground">{h.date}</span>
+                    <span className="text-[10px] text-primary font-bold ml-2">{h.residentName}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => { setAiReportEditable(h.report); setReportSignature(h.signature); }}
+                      className="text-[10px] font-bold text-primary hover:underline">Cargar</button>
+                    <button onClick={() => {
+                      const updated = reportHistory.filter(x => x.id !== h.id);
+                      setReportHistory(updated);
+                      localStorage.setItem('report-history-valoracion', JSON.stringify(updated));
+                    }} className="text-[10px] font-bold text-destructive hover:underline">Eliminar</button>
+                  </div>
+                </div>
+                <p className="text-xs text-foreground line-clamp-2">{h.report.substring(0, 200)}...</p>
+                {h.signature && <p className="text-[9px] text-muted-foreground mt-1">✓ Con firma digital</p>}
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -366,7 +631,7 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
     );
   }
 
-  // Step: Menu (test selection) with history
+  // Step: Menu (test selection) with history + AI report button
   return (
     <div className="animate-fade-in">
       <FormHeader
@@ -376,7 +641,7 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
       />
 
       {/* Resident info bar */}
-      <div className="bg-card border border-border rounded-2xl p-4 mb-6 flex items-center justify-between">
+      <div className="bg-card border border-border rounded-2xl p-4 mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
             <User size={18} className="text-primary" />
@@ -386,7 +651,7 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
             <p className="text-[10px] text-muted-foreground">{selectedResident?.document_id || 'Sin documento'}</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setShowHistory(!showHistory)}
             className="flex items-center gap-1.5 bg-muted text-muted-foreground px-4 py-2 rounded-xl text-[10px] font-bold uppercase hover:bg-accent min-h-[36px]"
@@ -401,6 +666,39 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
             Cambiar Residente
           </button>
         </div>
+      </div>
+
+      {/* AI Report Button - prominent */}
+      <div className="bg-gradient-to-r from-primary/5 to-destructive/5 border-2 border-primary/20 rounded-2xl p-6 mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h3 className="text-sm font-black text-foreground flex items-center gap-2">
+              <Sparkles size={16} className="text-primary" />
+              Informe Inteligente HB-F22
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              Genera un informe integral correlacionando {latestAssessments.length} escalas con IA.
+              Incluye plan de cuidado, alertas y recomendaciones de enfermería.
+            </p>
+            {latestAssessments.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {latestAssessments.map(a => (
+                  <span key={a.test_key} className="inline-flex items-center gap-1 bg-primary/10 text-primary px-2 py-0.5 rounded-full text-[9px] font-bold">
+                    {a.test_name}: {a.score}/{a.max_score}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+          <button onClick={generateAIReport} disabled={generating || latestAssessments.length === 0}
+            className="flex items-center gap-2 bg-gradient-to-r from-primary to-destructive text-primary-foreground px-6 py-3 rounded-xl text-xs font-black uppercase tracking-wider hover:opacity-90 transition-opacity disabled:opacity-40 min-h-[48px] shrink-0">
+            {generating ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
+            {generating ? "Generando..." : "Generar Informe IA"}
+          </button>
+        </div>
+        {latestAssessments.length === 0 && (
+          <p className="text-[10px] text-destructive font-bold mt-2">⚠ Aplique al menos un test para generar el informe inteligente.</p>
+        )}
       </div>
 
       {/* History panel */}
