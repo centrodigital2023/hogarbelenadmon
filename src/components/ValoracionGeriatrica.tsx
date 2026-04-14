@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   Activity, Brain, Heart, Utensils, AlertTriangle,
-  Users, ShieldCheck, Briefcase, ChevronRight, User, History, Save
+  Users, ShieldCheck, Briefcase, ChevronRight, User, History, Save,
+  FileText, Download, Sparkles, ClipboardList
 } from "lucide-react";
 import { TESTS_GERIATRICOS } from "@/data/tests-geriatricos";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +10,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "./FormHeader";
 import SignaturePad from "./SignaturePad";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const iconMap: Record<string, React.ReactNode> = {
   Activity: <Activity size={20} />,
@@ -31,6 +35,16 @@ const colorMap: Record<string, string> = {
   'cat-social': 'text-cat-social bg-cat-social/10',
   'cat-skin': 'text-cat-skin bg-cat-skin/10',
 };
+
+/** Maps a free-text interpretation to a badge variant for visual severity. */
+function interpretationVariant(text: string): "default" | "secondary" | "destructive" | "outline" {
+  const lower = text.toLowerCase();
+  const positiveKeywords = ['independ', 'normal', 'sin riesgo', 'sin comorbilidad', 'robusto', 'no sobrecarga', 'buena'];
+  const severeKeywords = ['severo', 'severa', 'total', 'alto riesgo', 'demencia', 'muy alta'];
+  if (positiveKeywords.some(k => lower.includes(k))) return "secondary";
+  if (severeKeywords.some(k => lower.includes(k))) return "destructive";
+  return "outline";
+}
 
 interface Resident {
   id: string;
@@ -72,7 +86,8 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
 
   // History
   const [history, setHistory] = useState<AssessmentHistory[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
+  // Track whether the report-level signature has been confirmed
+  const [reportSigned, setReportSigned] = useState(false);
 
   const activeTest = useMemo(() => testKey ? TESTS_GERIATRICOS[testKey] : null, [testKey]);
 
@@ -263,6 +278,7 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
   // Step: Summary
   if (step === 'summary' && activeTest) {
     const score = getScore();
+    const interpretation = getInterpretation(score);
     return (
       <div className="animate-fade-in">
         <FormHeader
@@ -276,26 +292,54 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
             {score}
             <span className="text-2xl text-muted-foreground font-medium">/ {activeTest.max}</span>
           </div>
-          <div className="mt-6 bg-muted rounded-2xl p-4">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Interpretación</p>
-            <p className="text-lg font-black text-foreground">{getInterpretation(score)}</p>
+          <div className="mt-6 bg-muted rounded-2xl p-4 flex flex-col items-center gap-3">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Interpretación</p>
+            <Badge variant={interpretationVariant(interpretation)} className="text-sm px-4 py-1">
+              {interpretation}
+            </Badge>
           </div>
         </div>
 
-        <div className="flex justify-center gap-8 mt-8">
-          <SignaturePad label="Evaluador" onChange={(v) => setSigEval(v)} />
-          <SignaturePad label="Supervisor" onChange={(v) => setSigSuper(v)} />
+        {/* Signature Dialog */}
+        <div className="flex justify-center mt-8">
+          <Dialog>
+            <DialogTrigger asChild>
+              <button className="flex items-center gap-2 bg-muted text-muted-foreground border border-border px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-accent min-h-[48px]">
+                <FileText size={15} />
+                Firmar y Guardar
+              </button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle className="text-base font-black">Firma y Confirmación — {activeTest.name}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-2">
+                <div className="bg-muted rounded-2xl p-4 flex flex-col items-center gap-2">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Resultado</p>
+                  <p className="text-2xl font-black text-primary">{score} / {activeTest.max}</p>
+                  <Badge variant={interpretationVariant(interpretation)}>{interpretation}</Badge>
+                  <p className="text-xs text-muted-foreground">{selectedResident?.full_name} — {new Date().toLocaleDateString('es-CO')}</p>
+                </div>
+                <div className="flex flex-col sm:flex-row justify-center gap-6">
+                  <SignaturePad label="Evaluador" onChange={(v) => setSigEval(v)} />
+                  <SignaturePad label="Supervisor" onChange={(v) => setSigSuper(v)} />
+                </div>
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex items-center gap-2 bg-primary text-primary-foreground px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:opacity-90 disabled:opacity-50 min-h-[48px]"
+                  >
+                    <Save size={16} />
+                    {saving ? "Guardando..." : "Guardar Valoración"}
+                  </button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
-        <div className="flex justify-center gap-4 mt-8">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:opacity-90 disabled:opacity-50 min-h-[48px]"
-          >
-            <Save size={16} />
-            {saving ? "Guardando..." : "Guardar Valoración"}
-          </button>
+        <div className="flex justify-center mt-4">
           <button
             onClick={() => setStep('menu')}
             className="bg-secondary text-secondary-foreground px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-primary hover:text-primary-foreground transition-colors min-h-[48px]"
@@ -366,7 +410,7 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
     );
   }
 
-  // Step: Menu (test selection) with history
+  // Step: Menu (test selection) with Tabs: Escalas | Historial | Informe
   return (
     <div className="animate-fade-in">
       <FormHeader
@@ -386,81 +430,202 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
             <p className="text-[10px] text-muted-foreground">{selectedResident?.document_id || 'Sin documento'}</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowHistory(!showHistory)}
-            className="flex items-center gap-1.5 bg-muted text-muted-foreground px-4 py-2 rounded-xl text-[10px] font-bold uppercase hover:bg-accent min-h-[36px]"
-          >
-            <History size={14} />
-            Historial ({history.length})
-          </button>
-          <button
-            onClick={() => { setSelectedResident(null); setStep('select-resident'); }}
-            className="bg-secondary text-secondary-foreground px-4 py-2 rounded-xl text-[10px] font-bold uppercase hover:bg-primary hover:text-primary-foreground transition-colors min-h-[36px]"
-          >
-            Cambiar Residente
-          </button>
-        </div>
+        <button
+          onClick={() => { setSelectedResident(null); setStep('select-resident'); }}
+          className="bg-secondary text-secondary-foreground px-4 py-2 rounded-xl text-[10px] font-bold uppercase hover:bg-primary hover:text-primary-foreground transition-colors min-h-[36px]"
+        >
+          Cambiar Residente
+        </button>
       </div>
 
-      {/* History panel */}
-      {showHistory && history.length > 0 && (
-        <div className="bg-card border border-border rounded-2xl p-5 mb-6">
-          <h3 className="text-xs font-black text-foreground mb-3 uppercase tracking-widest flex items-center gap-2">
-            <History size={14} className="text-primary" /> Historial de Valoraciones
-          </h3>
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {history.map(h => (
-              <div key={h.id} className="flex items-center justify-between bg-muted rounded-xl px-4 py-3">
-                <div>
-                  <p className="text-xs font-bold text-foreground">{h.test_name}</p>
-                  <p className="text-[10px] text-muted-foreground">{h.assessment_date}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-black text-primary">{h.score}/{h.max_score}</p>
-                  <p className="text-[10px] text-muted-foreground">{h.interpretation}</p>
-                </div>
-              </div>
-            ))}
+      <Tabs defaultValue="escalas">
+        <TabsList className="mb-6 w-full sm:w-auto">
+          <TabsTrigger value="escalas" className="flex items-center gap-1.5">
+            <ClipboardList size={14} /> Escalas
+          </TabsTrigger>
+          <TabsTrigger value="historial" className="flex items-center gap-1.5">
+            <History size={14} /> Historial
+            {history.length > 0 && (
+              <Badge variant="secondary" className="ml-1 text-[10px] px-1.5 py-0">{history.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="informe" className="flex items-center gap-1.5">
+            <FileText size={14} /> Informe
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ── TAB: ESCALAS ── */}
+        <TabsContent value="escalas">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {Object.keys(TESTS_GERIATRICOS).map(key => {
+              const test = TESTS_GERIATRICOS[key];
+              const classes = colorMap[test.colorClass] || 'text-muted-foreground bg-muted';
+              const [textClass, bgClass] = classes.split(' ');
+              const lastResult = history.find(h => h.test_key === key);
+              return (
+                <button
+                  key={key}
+                  onClick={() => { setTestKey(key); setAnswers({}); setSigEval(null); setSigSuper(null); setStep('assessment'); }}
+                  className="bg-card p-5 rounded-4xl border-2 border-border hover:border-primary transition-all text-left shadow-sm group active:scale-[0.97] min-h-[48px]"
+                >
+                  <div className={`w-10 h-10 rounded-xl ${bgClass} flex items-center justify-center mb-3 ${textClass}`}>
+                    {iconMap[test.iconName] || <Activity size={20} />}
+                  </div>
+                  <p className="text-sm font-bold text-foreground">{test.name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{test.cat}</p>
+                  {lastResult && (
+                    <div className="mt-2">
+                      <Badge variant={interpretationVariant(lastResult.interpretation || '')} className="text-[10px] px-2 py-0">
+                        {lastResult.score}/{lastResult.max_score}
+                      </Badge>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{lastResult.assessment_date}</p>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1 mt-3 text-xs font-black text-primary uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                    INICIAR <ChevronRight size={14} />
+                  </div>
+                </button>
+              );
+            })}
           </div>
-        </div>
-      )}
-      {showHistory && history.length === 0 && (
-        <div className="bg-muted rounded-2xl p-6 mb-6 text-center">
-          <p className="text-xs text-muted-foreground">No hay valoraciones previas para este residente.</p>
-        </div>
-      )}
+        </TabsContent>
 
-      {/* Test grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {Object.keys(TESTS_GERIATRICOS).map(key => {
-          const test = TESTS_GERIATRICOS[key];
-          const classes = colorMap[test.colorClass] || 'text-muted-foreground bg-muted';
-          const [textClass, bgClass] = classes.split(' ');
-          const lastResult = history.find(h => h.test_key === key);
-          return (
-            <button
-              key={key}
-              onClick={() => { setTestKey(key); setAnswers({}); setSigEval(null); setSigSuper(null); setStep('assessment'); }}
-              className="bg-card p-5 rounded-4xl border-2 border-border hover:border-primary transition-all text-left shadow-sm group active:scale-[0.97] min-h-[48px]"
-            >
-              <div className={`w-10 h-10 rounded-xl ${bgClass} flex items-center justify-center mb-3 ${textClass}`}>
-                {iconMap[test.iconName] || <Activity size={20} />}
+        {/* ── TAB: HISTORIAL ── */}
+        <TabsContent value="historial">
+          {history.length === 0 ? (
+            <div className="bg-muted rounded-2xl p-10 text-center">
+              <History size={32} className="text-muted-foreground mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">No hay valoraciones previas para este residente.</p>
+              <p className="text-xs text-muted-foreground mt-1">Selecciona una escala para comenzar.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {history.map(h => (
+                <div key={h.id} className="bg-card border border-border rounded-2xl px-5 py-4 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-foreground truncate">{h.test_name}</p>
+                    <p className="text-[10px] text-muted-foreground">{h.assessment_date}</p>
+                  </div>
+                  <div className="text-right shrink-0 flex flex-col items-end gap-1">
+                    <p className="text-base font-black text-primary">{h.score}<span className="text-xs text-muted-foreground font-medium">/{h.max_score}</span></p>
+                    {h.interpretation && (
+                      <Badge variant={interpretationVariant(h.interpretation)} className="text-[10px]">
+                        {h.interpretation}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ── TAB: INFORME ── */}
+        <TabsContent value="informe">
+          {history.length === 0 ? (
+            <div className="bg-muted rounded-2xl p-10 text-center">
+              <Sparkles size={32} className="text-muted-foreground mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">No hay valoraciones guardadas para generar un informe.</p>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              <div className="bg-card border border-border rounded-2xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <FileText size={16} className="text-primary" />
+                    <h3 className="text-sm font-black text-foreground uppercase tracking-widest">Informe Profesional Generado</h3>
+                  </div>
+                  <Badge variant="secondary" className="text-[10px]">{history.length} escalas</Badge>
+                </div>
+
+                {/* Resident header */}
+                <div className="bg-muted rounded-xl p-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                      <User size={16} className="text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">{selectedResident?.full_name}</p>
+                      <p className="text-[10px] text-muted-foreground">Documento: {selectedResident?.document_id || 'N/A'} · Fecha del informe: {new Date().toLocaleDateString('es-CO')}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Results by category */}
+                {(() => {
+                  const categories: Record<string, typeof history> = {};
+                  history.forEach(h => {
+                    const test = Object.values(TESTS_GERIATRICOS).find(t => t.name === h.test_name);
+                    const cat = test?.cat || 'Otras escalas';
+                    if (!categories[cat]) categories[cat] = [];
+                    categories[cat].push(h);
+                  });
+                  return Object.entries(categories).map(([cat, items]) => (
+                    <div key={cat} className="mb-4">
+                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2">{cat}</p>
+                      <div className="space-y-2">
+                        {items.map(h => (
+                          <div key={h.id} className="flex items-center justify-between bg-muted rounded-xl px-4 py-2.5">
+                            <div>
+                              <p className="text-xs font-bold text-foreground">{h.test_name}</p>
+                              <p className="text-[10px] text-muted-foreground">{h.assessment_date}</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm font-black text-primary">{h.score}<span className="text-xs font-normal text-muted-foreground">/{h.max_score}</span></span>
+                              {h.interpretation && (
+                                <Badge variant={interpretationVariant(h.interpretation)} className="text-[10px]">
+                                  {h.interpretation}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ));
+                })()}
+
+                {/* Signature dialog inside report */}
+                <div className="border-t border-border pt-4 mt-4 flex justify-end">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <button className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest min-h-[48px] transition-colors ${reportSigned ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-primary text-primary-foreground hover:opacity-90'}`}>
+                        <Download size={14} /> {reportSigned ? 'Informe Firmado ✓' : 'Firmar Informe'}
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle className="text-base font-black">Firmar Informe Geriátrico</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 pt-2">
+                        <p className="text-xs text-muted-foreground">
+                          Residente: <strong>{selectedResident?.full_name}</strong> · {history.length} valoraciones · {new Date().toLocaleDateString('es-CO')}
+                        </p>
+                        <div className="flex flex-col sm:flex-row justify-center gap-6">
+                          <SignaturePad label="Profesional Evaluador" onChange={(v) => setSigEval(v)} />
+                          <SignaturePad label="Supervisor / Director" onChange={(v) => setSigSuper(v)} />
+                        </div>
+                        <div className="flex justify-end">
+                          <button
+                            disabled={!sigEval && !sigSuper}
+                            className="flex items-center gap-2 bg-primary text-primary-foreground px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:opacity-90 disabled:opacity-40 min-h-[48px]"
+                            onClick={() => {
+                              setReportSigned(true);
+                              toast({ title: "Informe firmado", description: "Las firmas del informe han sido registradas." });
+                            }}
+                          >
+                            <Save size={16} /> Confirmar Firmas
+                          </button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </div>
-              <p className="text-sm font-bold text-foreground">{test.name}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{test.cat}</p>
-              {lastResult && (
-                <p className="text-[10px] text-primary font-bold mt-1">
-                  Último: {lastResult.score}/{lastResult.max_score} ({lastResult.assessment_date})
-                </p>
-              )}
-              <div className="flex items-center gap-1 mt-3 text-xs font-black text-primary uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
-                INICIAR <ChevronRight size={14} />
-              </div>
-            </button>
-          );
-        })}
-      </div>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
