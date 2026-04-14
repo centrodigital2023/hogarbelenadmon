@@ -7,14 +7,14 @@ import logoImg from "@/assets/logo.png";
 export const BRAND = {
   name: "HOGAR BELÉN BUESACO S.A.S.",
   slogan: "Juntos, cuidamos mejor",
-  phone: "3117301245",
+  phone: "3117015258",
   email: "hogarbelen2022@gmail.com",
   web: "www.hogarbelen.org",
   social: "@hogarbelenbuesaco",
   nit: "NIT: 901.904.984-0",
   colorHex: "C8102E",
   colorRGB: [200, 16, 46] as [number, number, number],
-  footerText: "Cel: 3117301245 | Email: hogarbelen2022@gmail.com | Web: www.hogarbelen.org | Redes: @hogarbelenbuesaco",
+  footerText: "Cel: 3117015258 | Email: hogarbelen2022@gmail.com | Web: www.hogarbelen.org | Redes: @hogarbelenbuesaco",
 };
 
 // ─── Helpers ───

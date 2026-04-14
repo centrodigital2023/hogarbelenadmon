@@ -86,7 +86,7 @@ Generas informes profesionales listos para auditoría según normativas colombia
 **Formato del informe:**
 HOGAR BELÉN - JUNTOS CUIDAMOS MEJOR
 Centro de Protección al Adulto Mayor
-Buesaco, Nariño • Tel: 3117301245
+Buesaco, Nariño • Tel: 3117015258
 
 [TÍTULO DEL INFORME]
 Fecha: [fecha]

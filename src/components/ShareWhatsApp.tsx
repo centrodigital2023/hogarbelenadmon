@@ -24,7 +24,7 @@ const ShareWhatsApp = ({ residentName, date, shift, nutrition, hydration, mood, 
       observations ? `📝 Observaciones: ${observations}` : '',
       '',
       `_Juntos, Cuidamos Mejor_ ❤️`,
-      `📞 3117301245 | hogarbelen2022@gmail.com`,
+      `📞 3117015258 | hogarbelen2022@gmail.com`,
     ].filter(Boolean).join('\n');
     return encodeURIComponent(lines);
   };

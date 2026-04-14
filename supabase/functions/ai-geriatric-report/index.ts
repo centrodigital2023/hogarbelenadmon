@@ -67,7 +67,7 @@ serve(async (req) => {
 
 HOGAR BELÉN — JUNTOS, CUIDAMOS MEJOR
 Centro de Protección al Adulto Mayor
-Buesaco, Nariño • Tel: 3117301245 • hogarbelen2022@gmail.com
+Buesaco, Nariño • Tel: 3117015258 • hogarbelen2022@gmail.com
 ═══════════════════════════════════════════
 
 INFORME DE VALORACIÓN GERIÁTRICA INTEGRAL (HB-F22)
@@ -133,7 +133,7 @@ Profesional responsable: [nombre]
     - Guías de Práctica Clínica aplicables
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Hogar Belén • 3117301245 • hogarbelen2022@gmail.com • www.hogarbelen.org • @hogarbelenbuesaco`;
+Hogar Belén • 3117015258 • hogarbelen2022@gmail.com • www.hogarbelen.org • @hogarbelenbuesaco`;
 
     const userPromptMsg = `Analiza los resultados de los siguientes tests geriátricos para el residente ${residentName || "N/A"} (Documento: ${residentDocId || "N/A"}):
 

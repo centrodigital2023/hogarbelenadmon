@@ -450,7 +450,7 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
           {/* Institutional footer */}
           <div className="mt-4 pt-3 border-t border-border text-center">
             <p className="text-[9px] text-muted-foreground">
-              3117301245 | hogarbelen2022@gmail.com | www.hogarbelen.org | @hogarbelenbuesaco
+              3117015258 | hogarbelen2022@gmail.com | www.hogarbelen.org | @hogarbelenbuesaco
             </p>
           </div>
         </div>
