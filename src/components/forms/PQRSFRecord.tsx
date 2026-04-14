@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
+import SmartReportSection from "@/components/SmartReportSection";
 
 interface Props { onBack: () => void; }
 
@@ -12,6 +13,7 @@ const TYPES = ['Petición', 'Queja', 'Reclamo', 'Sugerencia', 'Felicitación'];
 const PQRSFRecord = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const contentRef = useRef<HTMLDivElement>(null);
   const [records, setRecords] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
@@ -86,6 +88,7 @@ const PQRSFRecord = ({ onBack }: Props) => {
           </div>
         ))}
       </div>
+      <SmartReportSection module="calidad" formTitle="HB-F23: PQRSF" formData={{ records }} contentRef={contentRef} />
     </div>
   );
 };

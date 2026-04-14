@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
+import SmartReportSection from "@/components/SmartReportSection";
 import SignaturePad from "@/components/SignaturePad";
 
 interface Props { onBack: () => void; }
@@ -13,6 +14,7 @@ const ACTIVITY_TYPES = ['Oración comunitaria', 'Misa/Culto', 'Visita pastoral',
 const SpiritualRecord = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const contentRef = useRef<HTMLDivElement>(null);
   const [recordDate, setRecordDate] = useState(new Date().toISOString().split('T')[0]);
   const [activityType, setActivityType] = useState(ACTIVITY_TYPES[0]);
   const [topic, setTopic] = useState("");
@@ -63,6 +65,7 @@ const SpiritualRecord = ({ onBack }: Props) => {
       </div>
 
       <div className="bg-card border border-border rounded-2xl p-6"><SignaturePad label="Responsable" /></div>
+      <SmartReportSection module="bienestar" formTitle="HB-F11: Acompañamiento Espiritual" formData={{ activityType, topic, observations, attendeesCount }} contentRef={contentRef} />
       <ActionButtons onFinish={handleSave} disabled={saving} />
     </div>
   );

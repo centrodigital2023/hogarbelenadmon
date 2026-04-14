@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
+import ExportButtons from "@/components/ExportButtons";
+import ShareButtons from "@/components/ShareButtons";
+import SmartReportSection from "@/components/SmartReportSection";
 import SignaturePad from "@/components/SignaturePad";
 
 interface Props { onBack: () => void; }
@@ -18,6 +21,7 @@ const ITEMS = [
 const KitchenChecklist = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const contentRef = useRef<HTMLDivElement>(null);
   const [checks, setChecks] = useState<Record<string, boolean>>({});
   const [observations, setObservations] = useState("");
   const [checkDate, setCheckDate] = useState(new Date().toISOString().split('T')[0]);
@@ -66,6 +70,11 @@ const KitchenChecklist = ({ onBack }: Props) => {
       <div className="bg-card border border-border rounded-2xl p-6 mb-6">
         <SignaturePad label="Responsable" />
       </div>
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <ExportButtons contentRef={contentRef} title="HB-F5 Checklist Cocina" fileName={`checklist_cocina_${new Date().toISOString().split('T')[0]}`} textContent={`Checklist Cocina\n${Object.entries(checks).map(([k,v]) => `${k}: ${v ? 'Sí' : 'No'}`).join('\n')}\nObs: ${observations}`} />
+        <ShareButtons title="HB-F5 Checklist Cocina" text={`Checklist Cocina\n${Object.entries(checks).map(([k,v]) => `${k}: ${v ? 'Sí' : 'No'}`).join('\n')}`} />
+      </div>
+      <SmartReportSection module="alimentacion" formTitle="HB-F5: Checklist Cocina" formData={{ checks, observations }} contentRef={contentRef} />
       <ActionButtons onFinish={handleSave} disabled={saving} />
     </div>
   );

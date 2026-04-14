@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
+import ExportButtons from "@/components/ExportButtons";
+import ShareButtons from "@/components/ShareButtons";
+import SmartReportSection from "@/components/SmartReportSection";
 import SignaturePad from "@/components/SignaturePad";
 
 interface Props { onBack: () => void; }
@@ -14,6 +17,7 @@ const AREAS_GENERAL = ['Lavamanos', 'Inodoros', 'Pisos', 'Puertas y ventanas', '
 const DisinfectionRecord = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const contentRef = useRef<HTMLDivElement>(null);
   const [recordType, setRecordType] = useState<'cocina' | 'general'>('cocina');
   const [checks, setChecks] = useState<Record<string, boolean>>({});
   const [recordDate, setRecordDate] = useState(new Date().toISOString().split('T')[0]);
@@ -76,6 +80,7 @@ const DisinfectionRecord = ({ onBack }: Props) => {
         <SignaturePad label="Responsable" />
       </div>
 
+      <SmartReportSection module="higiene" formTitle="HB-F8: Desinfección" formData={{ recordType, checks }} contentRef={contentRef} />
       <ActionButtons onFinish={handleSave} disabled={saving} />
     </div>
   );

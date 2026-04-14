@@ -1,9 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
+import ExportButtons from "@/components/ExportButtons";
+import ShareButtons from "@/components/ShareButtons";
+import SmartReportSection from "@/components/SmartReportSection";
 import SignaturePad from "@/components/SignaturePad";
 
 interface Props { onBack: () => void; }
@@ -12,6 +15,7 @@ interface Resident { id: string; full_name: string; }
 const TherapyRecords = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const contentRef = useRef<HTMLDivElement>(null);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [weekStart, setWeekStart] = useState(new Date().toISOString().split('T')[0]);
   const [entries, setEntries] = useState<Record<string, {
@@ -111,6 +115,7 @@ const TherapyRecords = ({ onBack }: Props) => {
       <div className="bg-card border border-border rounded-2xl p-6 mb-6">
         <SignaturePad label="Terapeuta" />
       </div>
+      <SmartReportSection module="bienestar" formTitle="HB-F9: Terapias" formData={entries} contentRef={contentRef} />
       <ActionButtons onFinish={handleSave} disabled={saving || Object.keys(entries).length === 0} />
     </div>
   );

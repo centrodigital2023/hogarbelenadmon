@@ -1,9 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
+import ExportButtons from "@/components/ExportButtons";
+import ShareButtons from "@/components/ShareButtons";
+import SmartReportSection from "@/components/SmartReportSection";
 import { Upload } from "lucide-react";
 
 interface Props { onBack: () => void; }
@@ -20,6 +23,7 @@ const FoodIntake = ({ onBack }: Props) => {
     packaging_ok: true, expiry_ok: true, temperature_ok: true, details: '',
   })));
   const [saving, setSaving] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const updateWeek = (idx: number, key: string, val: any) => {
     setWeeks(prev => prev.map((w, i) => i === idx ? { ...w, [key]: val } : w));
@@ -80,6 +84,11 @@ const FoodIntake = ({ onBack }: Props) => {
           </div>
         </div>
       ))}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <ExportButtons contentRef={contentRef} title={`HB-F6 Ingreso Alimentos ${month}`} fileName={`ingreso_alimentos_${month}`} textContent={`Ingreso Alimentos ${month}\n${weeks.map(w => `Sem ${w.week_number}: ${w.supplier} - ${w.details}`).join('\n')}`} />
+        <ShareButtons title={`HB-F6 Ingreso Alimentos ${month}`} text={`Ingreso Alimentos ${month}`} />
+      </div>
+      <SmartReportSection module="alimentacion" formTitle="HB-F6: Ingreso Alimentos" formData={{ month, weeks }} contentRef={contentRef} />
       <ActionButtons onFinish={handleSave} disabled={saving} />
     </div>
   );

@@ -1,9 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
+import ExportButtons from "@/components/ExportButtons";
+import ShareButtons from "@/components/ShareButtons";
+import SmartReportSection from "@/components/SmartReportSection";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
 interface Props { onBack: () => void; }
@@ -17,6 +20,7 @@ const FridgeTemps = ({ onBack }: Props) => {
   const [shift, setShift] = useState('mañana');
   const [recordDate, setRecordDate] = useState(new Date().toISOString().split('T')[0]);
   const [saving, setSaving] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const isSafe = (temp: number) => temp >= 0 && temp <= 4;
 
@@ -80,6 +84,11 @@ const FridgeTemps = ({ onBack }: Props) => {
           );
         })}
       </div>
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <ExportButtons contentRef={contentRef} title={`HB-F7 Temperaturas ${recordDate}`} fileName={`temperaturas_${recordDate}`} textContent={`Temperaturas Neveras ${recordDate}\n${Object.entries(temps).map(([k,v]) => `${k}: ${v}°C`).join('\n')}`} />
+        <ShareButtons title={`HB-F7 Temperaturas ${recordDate}`} text={`Temperaturas Neveras ${recordDate}\n${Object.entries(temps).map(([k,v]) => `${k}: ${v}°C`).join('\n')}`} />
+      </div>
+      <SmartReportSection module="alimentacion" formTitle="HB-F7: Temperatura Neveras" formData={{ temps, shift, recordDate }} contentRef={contentRef} />
       <ActionButtons onFinish={handleSave} disabled={saving} />
     </div>
   );
