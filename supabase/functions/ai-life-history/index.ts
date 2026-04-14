@@ -1,3 +1,5 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -11,6 +13,44 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // --- Auth check ---
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "No autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Token inválido" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const userId = claimsData.claims.sub;
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+
+    if (!roles || roles.length === 0) {
+      return new Response(JSON.stringify({ error: "Acceso denegado" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    // --- End auth check ---
+
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -79,13 +119,16 @@ IMPORTANTE: Responde SOLO con el JSON, sin markdown ni texto adicional.`;
 
     if (!response.ok) {
       const errText = await response.text();
-      throw new Error(`AI API error: ${response.status} - ${errText}`);
+      console.error("AI API error:", response.status, errText);
+      return new Response(JSON.stringify({ error: "Error al generar la historia de vida" }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const data = await response.json();
     let content = data.choices?.[0]?.message?.content || "";
 
-    // Clean markdown fences if present
     content = content.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
 
     const parsed = JSON.parse(content);
@@ -95,7 +138,7 @@ IMPORTANTE: Responde SOLO con el JSON, sin markdown ni texto adicional.`;
     });
   } catch (error) {
     console.error("ai-life-history error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: "Error interno del servidor" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

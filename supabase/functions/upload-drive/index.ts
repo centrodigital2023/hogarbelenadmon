@@ -1,10 +1,24 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const FOLDER_ID = "1JqJIAUFcx9uAuKI1Kz_SPlfqf83NGOeQ";
+
+// Max file size: 20 MB in base64 (~27 MB base64 string)
+const MAX_BASE64_LENGTH = 27 * 1024 * 1024;
+const MAX_FILENAME_LENGTH = 255;
+const ALLOWED_MIME_TYPES = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "text/csv",
+];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -15,7 +29,7 @@ Deno.serve(async (req) => {
     // Validate JWT
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "No authorization header" }), {
+      return new Response(JSON.stringify({ error: "No autorizado" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -29,7 +43,7 @@ Deno.serve(async (req) => {
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      return new Response(JSON.stringify({ error: "No autorizado" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -38,7 +52,7 @@ Deno.serve(async (req) => {
     // Get service account credentials
     const serviceAccountJson = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_JSON");
     if (!serviceAccountJson) {
-      return new Response(JSON.stringify({ error: "Google Drive not configured" }), {
+      return new Response(JSON.stringify({ error: "Google Drive no está configurado" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -46,10 +60,7 @@ Deno.serve(async (req) => {
 
     const credentials = JSON.parse(serviceAccountJson);
 
-    // Get access token via JWT
-    const accessToken = await getGoogleAccessToken(credentials);
-
-    // Parse multipart or JSON body
+    // Parse body
     const contentType = req.headers.get("content-type") || "";
     let fileBuffer: Uint8Array;
     let fileName: string;
@@ -58,13 +69,33 @@ Deno.serve(async (req) => {
     if (contentType.includes("application/json")) {
       const body = await req.json();
       if (!body.fileBase64 || !body.fileName || !body.mimeType) {
-        return new Response(JSON.stringify({ error: "Missing fileBase64, fileName, or mimeType" }), {
+        return new Response(JSON.stringify({ error: "Faltan campos requeridos: fileBase64, fileName, mimeType" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      fileName = body.fileName;
+
+      // --- Input validation ---
+      if (typeof body.fileBase64 !== "string" || body.fileBase64.length > MAX_BASE64_LENGTH) {
+        return new Response(JSON.stringify({ error: "El archivo excede el tamaño máximo permitido (20 MB)" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (!ALLOWED_MIME_TYPES.includes(body.mimeType)) {
+        return new Response(JSON.stringify({ error: `Tipo de archivo no permitido. Tipos aceptados: ${ALLOWED_MIME_TYPES.join(", ")}` }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Sanitize filename
+      fileName = String(body.fileName)
+        .replace(/[^\w.\-() ]/g, "_")
+        .slice(0, MAX_FILENAME_LENGTH);
       mimeType = body.mimeType;
+
       // Decode base64
       const binaryString = atob(body.fileBase64);
       const bytes = new Uint8Array(binaryString.length);
@@ -73,11 +104,14 @@ Deno.serve(async (req) => {
       }
       fileBuffer = bytes;
     } else {
-      return new Response(JSON.stringify({ error: "Unsupported content type" }), {
+      return new Response(JSON.stringify({ error: "Tipo de contenido no soportado" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Get access token via JWT
+    const accessToken = await getGoogleAccessToken(credentials);
 
     // Upload to Google Drive using multipart upload
     const metadata = JSON.stringify({
@@ -94,7 +128,6 @@ Deno.serve(async (req) => {
       `Content-Type: ${mimeType}\r\n\r\n`,
     ];
 
-    // Build multipart body
     const encoder = new TextEncoder();
     const prefix = encoder.encode(bodyParts.join(""));
     const suffix = encoder.encode(`\r\n--${boundary}--`);
@@ -118,7 +151,7 @@ Deno.serve(async (req) => {
     if (!driveResp.ok) {
       const errText = await driveResp.text();
       console.error("Drive upload failed:", errText);
-      return new Response(JSON.stringify({ error: "Failed to upload to Google Drive", details: errText }), {
+      return new Response(JSON.stringify({ error: "Error al subir el archivo a Google Drive. Intente de nuevo." }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -132,7 +165,7 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error("upload-drive error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: "Error interno del servidor" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -155,7 +188,6 @@ async function getGoogleAccessToken(credentials: any): Promise<string> {
   const encodedPayload = base64urlEncode(JSON.stringify(payload));
   const signInput = `${encodedHeader}.${encodedPayload}`;
 
-  // Import the private key and sign
   const pemContent = credentials.private_key
     .replace(/-----BEGIN PRIVATE KEY-----/g, "")
     .replace(/-----END PRIVATE KEY-----/g, "")
@@ -183,7 +215,6 @@ async function getGoogleAccessToken(credentials: any): Promise<string> {
 
   const jwt = `${signInput}.${encodedSignature}`;
 
-  // Exchange JWT for access token
   const tokenResp = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -192,7 +223,8 @@ async function getGoogleAccessToken(credentials: any): Promise<string> {
 
   if (!tokenResp.ok) {
     const errText = await tokenResp.text();
-    throw new Error(`Failed to get Google access token: ${errText}`);
+    console.error("Google token error:", errText);
+    throw new Error("Failed to authenticate with Google");
   }
 
   const tokenData = await tokenResp.json();
