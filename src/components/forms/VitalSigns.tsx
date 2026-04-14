@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
+import ExportButtons from "@/components/ExportButtons";
+import ShareButtons from "@/components/ShareButtons";
 import { AlertTriangle } from "lucide-react";
 
 interface Props { onBack: () => void; }
@@ -12,6 +14,7 @@ interface Resident { id: string; full_name: string; }
 const VitalSigns = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const contentRef = useRef<HTMLDivElement>(null);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [recordDate, setRecordDate] = useState(new Date().toISOString().split('T')[0]);
   const [entries, setEntries] = useState<Record<string, {
@@ -53,48 +56,63 @@ const VitalSigns = ({ onBack }: Props) => {
     setSaving(false);
   };
 
+  const getTextContent = () => {
+    const lines = [`HB-F16: Signos Vitales - ${recordDate}\n`];
+    Object.entries(entries).forEach(([rid, e]) => {
+      const r = residents.find(res => res.id === rid);
+      lines.push(`${r?.full_name}: TA ${e.blood_pressure}, SpO2 ${e.spo2}%, Temp ${e.temperature}°C, Glucemia ${e.glucose}, FC ${e.heart_rate}, Peso ${e.weight}kg`);
+    });
+    return lines.join('\n');
+  };
+
   return (
     <div className="animate-fade-in">
       <FormHeader title="HB-F16: Signos Vitales" subtitle="Registro de signos vitales por residente" onBack={onBack} />
-      <div className="bg-card border border-border rounded-2xl p-6 mb-6">
-        <label className="text-xs font-bold text-muted-foreground uppercase">Fecha</label>
-        <input type="date" value={recordDate} onChange={e => setRecordDate(e.target.value)}
-          className="mt-1 max-w-xs px-4 py-3 rounded-xl border border-input bg-background text-sm" />
+      <div ref={contentRef}>
+        <div className="bg-card border border-border rounded-2xl p-6 mb-6">
+          <label className="text-xs font-bold text-muted-foreground uppercase">Fecha</label>
+          <input type="date" value={recordDate} onChange={e => setRecordDate(e.target.value)}
+            className="mt-1 max-w-xs px-4 py-3 rounded-xl border border-input bg-background text-sm" />
+        </div>
+        <div className="space-y-4 mb-6">
+          {residents.map(r => {
+            const e = entries[r.id] || { blood_pressure: '', spo2: 0, temperature: 0, glucose: 0, heart_rate: 0, weight: 0, notes: '' };
+            const hasAlert = isAbnormal('spo2', e.spo2) || isAbnormal('temperature', e.temperature) || isAbnormal('glucose', e.glucose) || isAbnormal('heart_rate', e.heart_rate);
+            return (
+              <div key={r.id} className={`bg-card border-2 rounded-2xl p-5 ${hasAlert ? 'border-destructive/40' : 'border-border'}`}>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-black text-foreground">{r.full_name}</p>
+                  {hasAlert && <span className="flex items-center gap-1 text-xs font-bold text-destructive"><AlertTriangle size={14} /> Alerta</span>}
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
+                  {[
+                    { key: 'blood_pressure', label: 'T.A.', type: 'text', placeholder: '120/80' },
+                    { key: 'spo2', label: 'SpO2', type: 'number', placeholder: '%' },
+                    { key: 'temperature', label: 'Temp °C', type: 'number', placeholder: '36.5' },
+                    { key: 'glucose', label: 'Glucemia', type: 'number', placeholder: 'mg/dl' },
+                    { key: 'heart_rate', label: 'FC', type: 'number', placeholder: 'bpm' },
+                    { key: 'weight', label: 'Peso kg', type: 'number', placeholder: 'kg' },
+                    { key: 'notes', label: 'Notas', type: 'text', placeholder: '...' },
+                  ].map(f => (
+                    <div key={f.key}>
+                      <label className="text-[9px] font-bold text-muted-foreground uppercase">{f.label}</label>
+                      <input type={f.type} value={(e as any)[f.key] || ''}
+                        onChange={ev => updateEntry(r.id, f.key, f.type === 'number' ? parseFloat(ev.target.value) || 0 : ev.target.value)}
+                        placeholder={f.placeholder}
+                        className={`mt-1 w-full px-2 py-2 rounded-lg border text-sm text-center ${
+                          f.type === 'number' && isAbnormal(f.key, (e as any)[f.key]) ? 'border-destructive bg-destructive/5' : 'border-input bg-background'
+                        }`} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
-      <div className="space-y-4 mb-6">
-        {residents.map(r => {
-          const e = entries[r.id] || { blood_pressure: '', spo2: 0, temperature: 0, glucose: 0, heart_rate: 0, weight: 0, notes: '' };
-          const hasAlert = isAbnormal('spo2', e.spo2) || isAbnormal('temperature', e.temperature) || isAbnormal('glucose', e.glucose) || isAbnormal('heart_rate', e.heart_rate);
-          return (
-            <div key={r.id} className={`bg-card border-2 rounded-2xl p-5 ${hasAlert ? 'border-destructive/40' : 'border-border'}`}>
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-black text-foreground">{r.full_name}</p>
-                {hasAlert && <span className="flex items-center gap-1 text-xs font-bold text-destructive"><AlertTriangle size={14} /> Alerta</span>}
-              </div>
-              <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
-                {[
-                  { key: 'blood_pressure', label: 'T.A.', type: 'text', placeholder: '120/80' },
-                  { key: 'spo2', label: 'SpO2', type: 'number', placeholder: '%' },
-                  { key: 'temperature', label: 'Temp °C', type: 'number', placeholder: '36.5' },
-                  { key: 'glucose', label: 'Glucemia', type: 'number', placeholder: 'mg/dl' },
-                  { key: 'heart_rate', label: 'FC', type: 'number', placeholder: 'bpm' },
-                  { key: 'weight', label: 'Peso kg', type: 'number', placeholder: 'kg' },
-                  { key: 'notes', label: 'Notas', type: 'text', placeholder: '...' },
-                ].map(f => (
-                  <div key={f.key}>
-                    <label className="text-[9px] font-bold text-muted-foreground uppercase">{f.label}</label>
-                    <input type={f.type} value={(e as any)[f.key] || ''}
-                      onChange={ev => updateEntry(r.id, f.key, f.type === 'number' ? parseFloat(ev.target.value) || 0 : ev.target.value)}
-                      placeholder={f.placeholder}
-                      className={`mt-1 w-full px-2 py-2 rounded-lg border text-sm text-center ${
-                        f.type === 'number' && isAbnormal(f.key, (e as any)[f.key]) ? 'border-destructive bg-destructive/5' : 'border-input bg-background'
-                      }`} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <ExportButtons contentRef={contentRef} title={`HB-F16 Signos Vitales ${recordDate}`} fileName={`signos_vitales_${recordDate}`} textContent={getTextContent()} />
+        <ShareButtons title={`HB-F16 Signos Vitales ${recordDate}`} text={getTextContent()} />
       </div>
       <ActionButtons onFinish={handleSave} disabled={saving || Object.keys(entries).length === 0} />
     </div>

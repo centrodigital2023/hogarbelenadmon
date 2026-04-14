@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
+import ExportButtons from "@/components/ExportButtons";
+import ShareButtons from "@/components/ShareButtons";
 import SignaturePad from "@/components/SignaturePad";
 import { Plus, Minus } from "lucide-react";
 
@@ -27,6 +29,7 @@ interface Resident { id: string; full_name: string; }
 const BelongingsInventory = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const contentRef = useRef<HTMLDivElement>(null);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [selectedResident, setSelectedResident] = useState("");
   const [reason, setReason] = useState<'ingreso' | 'egreso' | 'actualizacion'>('ingreso');
@@ -47,6 +50,7 @@ const BelongingsInventory = ({ onBack }: Props) => {
   };
 
   const totalItems = Object.values(items).reduce((sum, i) => sum + (i.qty || 0), 0);
+  const residentName = residents.find(r => r.id === selectedResident)?.full_name || '';
 
   const handleSave = async () => {
     if (!selectedResident || !user) return;
@@ -108,74 +112,83 @@ const BelongingsInventory = ({ onBack }: Props) => {
     <div className="animate-fade-in">
       <FormHeader title="HB-F3: Inventario de Pertenencias" subtitle="Registro de pertenencias al ingreso/egreso" onBack={onBack} />
 
-      <div className="bg-card border border-border rounded-2xl p-6 mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className="text-xs font-bold text-muted-foreground uppercase">Residente</label>
-          <select value={selectedResident} onChange={e => setSelectedResident(e.target.value)}
-            className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm">
-            <option value="">-- Seleccionar --</option>
-            {residents.map(r => <option key={r.id} value={r.id}>{r.full_name}</option>)}
-          </select>
+      <div ref={contentRef}>
+        <div className="bg-card border border-border rounded-2xl p-6 mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs font-bold text-muted-foreground uppercase">Residente</label>
+            <select value={selectedResident} onChange={e => setSelectedResident(e.target.value)}
+              className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm">
+              <option value="">-- Seleccionar --</option>
+              {residents.map(r => <option key={r.id} value={r.id}>{r.full_name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-bold text-muted-foreground uppercase">Motivo</label>
+            <select value={reason} onChange={e => setReason(e.target.value as any)}
+              className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm">
+              <option value="ingreso">Ingreso</option>
+              <option value="egreso">Egreso</option>
+              <option value="actualizacion">Actualización Mensual</option>
+            </select>
+          </div>
         </div>
-        <div>
-          <label className="text-xs font-bold text-muted-foreground uppercase">Motivo</label>
-          <select value={reason} onChange={e => setReason(e.target.value as any)}
-            className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm">
-            <option value="ingreso">Ingreso</option>
-            <option value="egreso">Egreso</option>
-            <option value="actualizacion">Actualización Mensual</option>
-          </select>
-        </div>
+
+        {selectedResident && (
+          <>
+            <div className="bg-primary/10 text-primary px-4 py-3 rounded-xl mb-6 text-sm font-bold flex justify-between">
+              <span>Total elementos registrados</span>
+              <span className="text-xl font-black">{totalItems}</span>
+            </div>
+
+            {renderCategory('Vestuario', CATEGORIES.vestuario)}
+            {renderCategory('Aseo / Salud', CATEGORIES.aseo)}
+            {renderCategory('Documentos', CATEGORIES.documentos, true)}
+            {renderCategory('Valores / Joyas', CATEGORIES.valores)}
+
+            {reason === 'egreso' && (
+              <div className="bg-destructive/10 border-2 border-destructive/30 rounded-2xl p-6 mb-6">
+                <h4 className="text-sm font-black text-destructive mb-4">Sección de Egreso</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-muted-foreground uppercase">Fecha de egreso</label>
+                    <input type="date" className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-muted-foreground uppercase">Motivo</label>
+                    <select className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm">
+                      <option>Retiro voluntario</option>
+                      <option>Traslado</option>
+                      <option>Fallecimiento</option>
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-xs font-bold text-muted-foreground uppercase">Nombre familiar que recibe</label>
+                    <input type="text" className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-card border border-border rounded-2xl p-6 mb-6">
+              <h3 className="text-sm font-black text-foreground mb-4">Firmas</h3>
+              <div className="flex flex-wrap gap-8 justify-center">
+                <SignaturePad label="Residente" />
+                <SignaturePad label="Familiar Responsable" />
+                <SignaturePad label="Coordinador" />
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {selectedResident && (
-        <>
-          <div className="bg-primary/10 text-primary px-4 py-3 rounded-xl mb-6 text-sm font-bold flex justify-between">
-            <span>Total elementos registrados</span>
-            <span className="text-xl font-black">{totalItems}</span>
-          </div>
-
-          {renderCategory('Vestuario', CATEGORIES.vestuario)}
-          {renderCategory('Aseo / Salud', CATEGORIES.aseo)}
-          {renderCategory('Documentos', CATEGORIES.documentos, true)}
-          {renderCategory('Valores / Joyas', CATEGORIES.valores)}
-
-          {reason === 'egreso' && (
-            <div className="bg-destructive/10 border-2 border-destructive/30 rounded-2xl p-6 mb-6">
-              <h4 className="text-sm font-black text-destructive mb-4">Sección de Egreso</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold text-muted-foreground uppercase">Fecha de egreso</label>
-                  <input type="date" className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm" />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-muted-foreground uppercase">Motivo</label>
-                  <select className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm">
-                    <option>Retiro voluntario</option>
-                    <option>Traslado</option>
-                    <option>Fallecimiento</option>
-                  </select>
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="text-xs font-bold text-muted-foreground uppercase">Nombre familiar que recibe</label>
-                  <input type="text" className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm" />
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="bg-card border border-border rounded-2xl p-6 mb-6">
-            <h3 className="text-sm font-black text-foreground mb-4">Firmas</h3>
-            <div className="flex flex-wrap gap-8 justify-center">
-              <SignaturePad label="Residente" />
-              <SignaturePad label="Familiar Responsable" />
-              <SignaturePad label="Coordinador" />
-            </div>
-          </div>
-
-          <ActionButtons onFinish={handleSave} disabled={saving} />
-        </>
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <ExportButtons contentRef={contentRef} title={`HB-F3 Inventario ${residentName}`} fileName={`inventario_${residentName}`} textContent={`Inventario de Pertenencias - ${residentName}\nTotal: ${totalItems} elementos`} />
+          <ShareButtons title={`HB-F3 Inventario ${residentName}`} text={`Inventario de Pertenencias - ${residentName}\nTotal: ${totalItems} elementos`} />
+        </div>
       )}
+
+      <ActionButtons onFinish={handleSave} disabled={saving} />
     </div>
   );
 };
