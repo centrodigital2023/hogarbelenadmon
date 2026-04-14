@@ -124,7 +124,7 @@ const PsychosocialRecord = ({ onBack }: Props) => {
       )}
 
       <div className="bg-card border border-border rounded-2xl p-6"><SignaturePad label="Profesional" /></div>
-      <SmartReportSection module="bienestar" formTitle="HB-F10: Atención Psicosocial" formData={{ recordType, reason, evolution, recommendations }} contentRef={contentRef} />
+      <SmartReportSection module="bienestar" formTitle="HB-F10: Atención Psicosocial" formData={{ recordType, motivos, evolution, recommendations }} contentRef={contentRef} />
       <ActionButtons onFinish={handleSave} disabled={saving} />
     </div>
   );

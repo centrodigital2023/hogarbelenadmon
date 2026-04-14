@@ -65,7 +65,7 @@ const SpiritualRecord = ({ onBack }: Props) => {
       </div>
 
       <div className="bg-card border border-border rounded-2xl p-6"><SignaturePad label="Responsable" /></div>
-      <SmartReportSection module="bienestar" formTitle="HB-F11: Acompañamiento Espiritual" formData={{ activityType, topic, observations, attendees }} contentRef={contentRef} />
+      <SmartReportSection module="bienestar" formTitle="HB-F11: Acompañamiento Espiritual" formData={{ activityType, topic, observations, attendeesCount }} contentRef={contentRef} />
       <ActionButtons onFinish={handleSave} disabled={saving} />
     </div>
   );
