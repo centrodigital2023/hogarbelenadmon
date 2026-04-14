@@ -6,6 +6,7 @@ import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
 import ExportButtons from "@/components/ExportButtons";
 import ShareButtons from "@/components/ShareButtons";
+import SmartReportSection from "@/components/SmartReportSection";
 import { Sparkles, History, Loader2 } from "lucide-react";
 
 interface Props {onBack: () => void;}
@@ -226,6 +227,7 @@ const DailyLog = ({ onBack }: Props) => {
         <ExportButtons contentRef={contentRef} title={`HB-F4 Bitácora ${logDate}`} fileName={`bitacora_${logDate}_${shift}`} textContent={getTextContent()} />
         <ShareButtons title={`HB-F4 Bitácora ${logDate}`} text={getTextContent()} />
       </div>
+      <SmartReportSection module="salud" formTitle="HB-F4: Bitácora Diaria" formData={entries} contentRef={contentRef} />
       <ActionButtons onFinish={handleSave} disabled={saving || Object.keys(entries).length === 0} />
     </div>);
 

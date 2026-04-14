@@ -6,6 +6,7 @@ import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
 import ExportButtons from "@/components/ExportButtons";
 import ShareButtons from "@/components/ShareButtons";
+import SmartReportSection from "@/components/SmartReportSection";
 
 interface Props { onBack: () => void; }
 interface Resident { id: string; full_name: string; }
@@ -128,6 +129,7 @@ const IncidentReport = ({ onBack }: Props) => {
         <ExportButtons contentRef={contentRef} title={`HB-F20 Incidente ${residentName}`} fileName={`incidente_${residentName}`} textContent={`Incidente: ${form.incident_type} - ${residentName}\n${form.description}`} />
         <ShareButtons title={`HB-F20 Incidente ${residentName}`} text={`Incidente: ${form.incident_type} - ${residentName}\n${form.description}`} />
       </div>
+      <SmartReportSection module="seguridad" formTitle="HB-F20: Incidentes y Caídas" residentId={form.resident_id} residentName={residentName} formData={form} contentRef={contentRef} />
       <ActionButtons onFinish={handleSave} disabled={saving || !form.resident_id || !form.incident_type} />
     </div>
   );

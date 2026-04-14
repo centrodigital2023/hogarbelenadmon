@@ -6,6 +6,7 @@ import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
 import ExportButtons from "@/components/ExportButtons";
 import ShareButtons from "@/components/ShareButtons";
+import SmartReportSection from "@/components/SmartReportSection";
 import { AlertTriangle } from "lucide-react";
 
 interface Props { onBack: () => void; }
@@ -114,6 +115,7 @@ const VitalSigns = ({ onBack }: Props) => {
         <ExportButtons contentRef={contentRef} title={`HB-F16 Signos Vitales ${recordDate}`} fileName={`signos_vitales_${recordDate}`} textContent={getTextContent()} />
         <ShareButtons title={`HB-F16 Signos Vitales ${recordDate}`} text={getTextContent()} />
       </div>
+      <SmartReportSection module="salud" formTitle="HB-F16: Signos Vitales" formData={entries} contentRef={contentRef} />
       <ActionButtons onFinish={handleSave} disabled={saving || Object.keys(entries).length === 0} />
     </div>
   );
