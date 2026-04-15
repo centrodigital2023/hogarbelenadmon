@@ -9,6 +9,8 @@ import ShareButtons from "@/components/ShareButtons";
 import SmartReportSection from "@/components/SmartReportSection";
 import SignaturePad from "@/components/SignaturePad";
 import { Sparkles, History, Loader2, AlertTriangle, User, FileText, Send } from "lucide-react";
+import FormHistory from "@/components/FormHistory";
+import type { HistoryColumn } from "@/components/FormHistory";
 
 interface Props { onBack: () => void; }
 interface Resident { id: string; full_name: string; }
@@ -58,10 +60,7 @@ const DailyLog = ({ onBack }: Props) => {
   const [generatingAI, setGeneratingAI] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // History
-  const [showHistory, setShowHistory] = useState(false);
-  const [historyData, setHistoryData] = useState<any[]>([]);
-  const historyRef = useRef<HTMLDivElement>(null);
+  // History - now using FormHistory component
 
   // Single resident report
   const [selectedResident, setSelectedResident] = useState('');
@@ -114,28 +113,34 @@ const DailyLog = ({ onBack }: Props) => {
     setGeneratingAI(false);
   };
 
-  // History 90 days
-  const loadHistory = async () => {
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-    const { data } = await supabase.from('daily_logs').select('*, residents(full_name)')
-      .gte('log_date', ninetyDaysAgo.toISOString().split('T')[0])
-      .order('log_date', { ascending: false })
-      .limit(500);
-    if (data) setHistoryData(data);
-    setShowHistory(true);
-  };
+  // History columns for FormHistory
+  const historyColumns: HistoryColumn[] = [
+    { key: 'log_date', label: 'Fecha' },
+    { key: 'shift', label: 'Turno' },
+    { key: 'resident_name', label: 'Residente', render: (_v, row) => (row.residents as any)?.full_name || '-' },
+    { key: 'responsible_name', label: 'Responsable' },
+    { key: 'blood_pressure', label: 'T.A.' },
+    { key: 'spo2', label: 'SpO2' },
+    { key: 'temperature', label: 'Temp' },
+    { key: 'glucose', label: 'Gluc' },
+    { key: 'heart_rate', label: 'FC' },
+    { key: 'weight', label: 'Peso' },
+    { key: 'nutrition_pct', label: 'Nutr%' },
+    { key: 'mood', label: 'Ánimo' },
+  ];
 
-  const getHistoryTextContent = () => {
-    const lines = [`Historial Bitácora Diaria (últimos 90 días)\n`];
-    historyData.forEach(h => {
-      const name = (h.residents as any)?.full_name || 'N/A';
-      lines.push(`${h.log_date} | ${h.shift} | ${name} | Resp: ${h.responsible_name || '-'} | TA: ${h.blood_pressure || '-'} | SpO2: ${h.spo2 || '-'}% | Temp: ${h.temperature || '-'}°C | Gluc: ${h.glucose || '-'} | FC: ${h.heart_rate || '-'} | Peso: ${h.weight || '-'}kg | Nutrición: ${h.nutrition_pct}% | Ánimo: ${h.mood || '-'}`);
-    });
-    return lines.join('\n');
-  };
+  const historyEditableFields = [
+    { key: 'blood_pressure', label: 'T.A.', type: 'text' as const },
+    { key: 'spo2', label: 'SpO2', type: 'number' as const },
+    { key: 'temperature', label: 'Temp', type: 'number' as const },
+    { key: 'glucose', label: 'Glucemia', type: 'number' as const },
+    { key: 'heart_rate', label: 'FC', type: 'number' as const },
+    { key: 'weight', label: 'Peso', type: 'number' as const },
+    { key: 'observations', label: 'Novedades', type: 'text' as const },
+    { key: 'mood', label: 'Ánimo', type: 'select' as const, options: MOODS },
+  ];
 
-  const getHistoryTableData = () => historyData.map(h => ({
+  const historyExportTransform = (h: any) => ({
     Fecha: h.log_date, Turno: h.shift,
     Residente: (h.residents as any)?.full_name || '',
     Responsable: h.responsible_name || '',
@@ -143,7 +148,7 @@ const DailyLog = ({ onBack }: Props) => {
     Glucemia: h.glucose || '', FC: h.heart_rate || '', 'Peso kg': h.weight || '',
     'Nutrición %': h.nutrition_pct, Hidratación: h.hydration_glasses,
     Eliminación: h.elimination, Ánimo: h.mood, Novedades: h.observations,
-  }));
+  });
 
   // Save
   const handleSave = async () => {
@@ -235,10 +240,17 @@ const DailyLog = ({ onBack }: Props) => {
               </select>
             </div>
             <div className="flex items-end gap-2">
-              <button onClick={loadHistory}
-                className="flex items-center gap-2 bg-muted text-muted-foreground px-4 py-3 rounded-xl text-xs font-bold hover:bg-accent min-h-[48px]">
-                <History size={14} /> Historial (90 días)
-              </button>
+              <FormHistory
+                tableName="daily_logs"
+                columns={historyColumns}
+                title="Historial Bitácora Diaria"
+                fileName="historial_bitacora"
+                days={180}
+                dateColumn="log_date"
+                selectClause="*, residents(full_name)"
+                editableFields={historyEditableFields}
+                exportTransform={historyExportTransform}
+              />
             </div>
           </div>
 
@@ -388,65 +400,6 @@ const DailyLog = ({ onBack }: Props) => {
 
       <SmartReportSection module="salud" formTitle="HB-F4: Bitácora Diaria" formData={entries} contentRef={contentRef} />
       <ActionButtons onFinish={handleSave} disabled={saving || Object.keys(entries).length === 0} />
-
-      {/* History Panel */}
-      {showHistory && (
-        <div className="bg-muted rounded-2xl p-6 mt-6" ref={historyRef}>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-black text-foreground">Historial (últimos 90 días) — {historyData.length} registros</h3>
-            <button onClick={() => setShowHistory(false)} className="text-xs text-muted-foreground hover:text-foreground">Cerrar</button>
-          </div>
-          {historyData.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Sin registros previos.</p>
-          ) : (
-            <>
-              <div className="overflow-x-auto max-h-80 overflow-y-auto mb-4">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left p-2 font-bold text-muted-foreground">Fecha</th>
-                      <th className="text-left p-2 font-bold text-muted-foreground">Turno</th>
-                      <th className="text-left p-2 font-bold text-muted-foreground">Residente</th>
-                      <th className="text-left p-2 font-bold text-muted-foreground">Responsable</th>
-                      <th className="text-center p-2 font-bold text-muted-foreground">T.A.</th>
-                      <th className="text-center p-2 font-bold text-muted-foreground">SpO2</th>
-                      <th className="text-center p-2 font-bold text-muted-foreground">Temp</th>
-                      <th className="text-center p-2 font-bold text-muted-foreground">Gluc</th>
-                      <th className="text-center p-2 font-bold text-muted-foreground">FC</th>
-                      <th className="text-center p-2 font-bold text-muted-foreground">Peso</th>
-                      <th className="text-center p-2 font-bold text-muted-foreground">Nutr%</th>
-                      <th className="text-left p-2 font-bold text-muted-foreground">Ánimo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {historyData.map(h => (
-                      <tr key={h.id} className="border-b border-border/50 hover:bg-background/50">
-                        <td className="p-2">{h.log_date}</td>
-                        <td className="p-2">{h.shift}</td>
-                        <td className="p-2 font-medium">{(h.residents as any)?.full_name || '-'}</td>
-                        <td className="p-2">{h.responsible_name || '-'}</td>
-                        <td className="p-2 text-center">{h.blood_pressure || '-'}</td>
-                        <td className="p-2 text-center">{h.spo2 || '-'}</td>
-                        <td className="p-2 text-center">{h.temperature || '-'}</td>
-                        <td className="p-2 text-center">{h.glucose || '-'}</td>
-                        <td className="p-2 text-center">{h.heart_rate || '-'}</td>
-                        <td className="p-2 text-center">{h.weight || '-'}</td>
-                        <td className="p-2 text-center">{h.nutrition_pct}%</td>
-                        <td className="p-2">{h.mood || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <ExportButtons contentRef={historyRef} title="Historial Bitácora 90 días"
-                  fileName="historial_bitacora_90d" textContent={getHistoryTextContent()}
-                  data={getHistoryTableData()} signatureDataUrl={null} showDrive={false} />
-              </div>
-            </>
-          )}
-        </div>
-      )}
 
       {/* Single Resident Report */}
       <div className="bg-card border-2 border-accent rounded-2xl p-6 mt-6">

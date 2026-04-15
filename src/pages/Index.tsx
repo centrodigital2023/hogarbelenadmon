@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions, MODULE_PERMISSION_MAP } from "@/hooks/usePermissions";
+import CrossNavigation from "@/components/CrossNavigation";
 import Login from "@/pages/Login";
 import AppLayout from "@/components/AppLayout";
 import IngresoSubMenu from "@/components/IngresoSubMenu";
@@ -42,6 +43,7 @@ import FinanceModule from "@/components/FinanceModule";
 import BlogModule from "@/components/BlogModule";
 import SocialMediaModule from "@/components/SocialMediaModule";
 import AuditReport from "@/components/AuditReport";
+import ResidentTimeline from "@/components/ResidentTimeline";
 import UnifiedKitchen from "@/components/forms/UnifiedKitchen";
 import PsychosocialRecord from "@/components/forms/PsychosocialRecord";
 import SpiritualRecord from "@/components/forms/SpiritualRecord";
@@ -72,7 +74,7 @@ const MODULE_INFO: Record<string, { title: string; subtitle: string; icon: any; 
     { id: 'HB-F11', label: 'HB-F11: Acomp. Espiritual' },
   ]},
   '5': { title: '5. Salud Diaria', subtitle: 'Enfermería', icon: Activity, forms: [
-    { id: 'HB-F4', label: 'HB-F4: Bitácora' }, { id: 'HB-F14', label: 'HB-F14: Medicamentos' },
+    { id: 'HB-F14', label: 'HB-F14: Medicamentos' },
     { id: 'HB-F15', label: 'HB-F15: Administración Med.' }, { id: 'HB-F16', label: 'HB-F16: Signos Vitales' },
     { id: 'NURSING-AI', label: '🤖 Notas Enfermería IA' },
     { id: 'NURSING-REPORT', label: '📊 Informe Enfermería IA' },
@@ -171,14 +173,20 @@ const Index = () => {
       const permModule = FORM_MODULE_MAP[form];
 
       if (FormComponent) {
+        const formContent = (
+          <>
+            <FormComponent onBack={() => setForm(null)} />
+            <CrossNavigation currentFormId={form} onNavigate={(id) => setForm(id)} />
+          </>
+        );
         if (permModule && !canAccessModule(permModule === 'ingreso' ? '1' : permModule === 'valoracion' ? '2' : permModule)) {
           return (
             <ProtectedModule module={permModule as any}>
-              <FormComponent onBack={() => setForm(null)} />
+              {formContent}
             </ProtectedModule>
           );
         }
-        return <FormComponent onBack={() => setForm(null)} />;
+        return formContent;
       }
       return (
         <div className="animate-fade-in">
@@ -196,6 +204,7 @@ const Index = () => {
     if (view === 'finanzas') return <FinanceModule onBack={() => setView('dashboard')} />;
     if (view === 'blog') return <BlogModule onBack={() => setView('dashboard')} />;
     if (view === 'redes') return <SocialMediaModule onBack={() => setView('dashboard')} />;
+    if (view === 'timeline') return <ResidentTimeline onBack={() => setView('dashboard')} onNavigateForm={(id) => setForm(id)} />;
 
     const info = MODULE_INFO[view];
     if (info && info.forms.length > 0) {

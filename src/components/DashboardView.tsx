@@ -3,7 +3,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import {
   Users, ClipboardList, Utensils, Heart, Activity,
   Stethoscope, ShieldCheck, AlertTriangle, LogOut,
-  Briefcase, TrendingUp, Settings, FileText, DollarSign
+  Briefcase, TrendingUp, Settings, FileText, DollarSign, Clock
 } from "lucide-react";
 
 const modules = [
@@ -22,6 +22,7 @@ const modules = [
   { id: 'gerencial', type: 'Gerencia', title: "Gestión Admin.", subtitle: "HB-G01 a G06", icon: FileText },
   { id: 'finanzas', type: 'Finanzas', title: "Finanzas", subtitle: "Control", icon: DollarSign },
   { id: 'residentes', type: 'Operativo', title: "Residentes", subtitle: "Directorio", icon: Users },
+  { id: 'timeline', type: 'Clínico', title: "Timeline", subtitle: "Vista Unificada", icon: Clock },
 ];
 
 const TYPE_COLORS: Record<string, string> = {
