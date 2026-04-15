@@ -90,23 +90,31 @@ Deno.serve(async (req) => {
 
     if (action === "delete") {
       const { user_id } = payload;
-      if (!user_id) return new Response(JSON.stringify({ error: "user_id requerido" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (user_id === callerId) return new Response(JSON.stringify({ error: "No puede eliminarse a sí mismo" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-
-      try {
-        // Delete related records that reference user_id
-        await adminClient.from("performance_evaluations").delete().eq("evaluated_user_id", user_id);
-        await adminClient.from("performance_evaluations").delete().eq("evaluated_by", user_id);
-        await adminClient.from("exam_results").delete().eq("user_id", user_id);
-        await adminClient.from("user_roles").delete().eq("user_id", user_id);
-        await adminClient.from("profiles").delete().eq("user_id", user_id);
-        const { error } = await adminClient.auth.admin.deleteUser(user_id);
-        if (error) return new Response(JSON.stringify({ error: error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      } catch (err: any) {
-        console.error("Delete user error:", err);
-        return new Response(JSON.stringify({ error: err?.message || "Error al eliminar usuario" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (!user_id) {
+        return new Response(JSON.stringify({ error: "user_id requerido" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
+      if (user_id === callerId) {
+        return new Response(JSON.stringify({ error: "No puede eliminarse a sí mismo" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { error } = await adminClient.auth.admin.deleteUser(user_id);
+      if (error) {
+        console.error("Delete auth user error:", error);
+        return new Response(JSON.stringify({ error: `Database error deleting user: ${error.message}` }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (action === "update_profile") {

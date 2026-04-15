@@ -71,6 +71,7 @@ const UserManagement = ({ onBack }: { onBack: () => void }) => {
     const { data, error } = await supabase.functions.invoke('admin-users', { body });
     if (error) throw new Error(error.message);
     if (data?.error) throw new Error(data.error);
+    if (!data?.success && body.action !== 'list' && !data?.users) throw new Error('Operación administrativa no completada');
     return data;
   }, []);
 
