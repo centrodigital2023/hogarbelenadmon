@@ -17,7 +17,7 @@ export type Database = {
       admission_checklists: {
         Row: {
           created_at: string
-          created_by: string
+          created_by: string | null
           doc_cedula: boolean | null
           doc_contactos_emergencia: boolean | null
           doc_contrato: boolean | null
@@ -39,7 +39,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_by: string
+          created_by?: string | null
           doc_cedula?: boolean | null
           doc_contactos_emergencia?: boolean | null
           doc_contrato?: boolean | null
@@ -61,7 +61,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           doc_cedula?: boolean | null
           doc_contactos_emergencia?: boolean | null
           doc_contrato?: boolean | null
@@ -124,7 +124,7 @@ export type Database = {
       belongings_inventory: {
         Row: {
           created_at: string
-          created_by: string
+          created_by: string | null
           egress_date: string | null
           egress_family_document: string | null
           egress_family_name: string | null
@@ -143,7 +143,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_by: string
+          created_by?: string | null
           egress_date?: string | null
           egress_family_document?: string | null
           egress_family_name?: string | null
@@ -162,7 +162,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           egress_date?: string | null
           egress_family_document?: string | null
           egress_family_name?: string | null
@@ -291,7 +291,7 @@ export type Database = {
           budget_estimated: number | null
           completed: boolean | null
           created_at: string
-          created_by: string
+          created_by: string | null
           event_month: number | null
           event_name: string
           evidence_urls: Json | null
@@ -305,7 +305,7 @@ export type Database = {
           budget_estimated?: number | null
           completed?: boolean | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           event_month?: number | null
           event_name: string
           evidence_urls?: Json | null
@@ -319,7 +319,7 @@ export type Database = {
           budget_estimated?: number | null
           completed?: boolean | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           event_month?: number | null
           event_name?: string
           evidence_urls?: Json | null
@@ -421,7 +421,7 @@ export type Database = {
           ai_nursing_note: string | null
           blood_pressure: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           elimination: string | null
           glucose: number | null
           heart_rate: number | null
@@ -446,7 +446,7 @@ export type Database = {
           ai_nursing_note?: string | null
           blood_pressure?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           elimination?: string | null
           glucose?: number | null
           heart_rate?: number | null
@@ -471,7 +471,7 @@ export type Database = {
           ai_nursing_note?: string | null
           blood_pressure?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           elimination?: string | null
           glucose?: number | null
           heart_rate?: number | null
@@ -507,7 +507,7 @@ export type Database = {
           area: string
           completed: boolean | null
           created_at: string
-          created_by: string
+          created_by: string | null
           id: string
           record_date: string
           record_type: string | null
@@ -517,7 +517,7 @@ export type Database = {
           area: string
           completed?: boolean | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           id?: string
           record_date?: string
           record_type?: string | null
@@ -527,7 +527,7 @@ export type Database = {
           area?: string
           completed?: boolean | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           id?: string
           record_date?: string
           record_type?: string | null
@@ -820,7 +820,7 @@ export type Database = {
           client_supplier: string | null
           cost_center: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           description: string
           expense_amount: number | null
           id: string
@@ -836,7 +836,7 @@ export type Database = {
           client_supplier?: string | null
           cost_center?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           description: string
           expense_amount?: number | null
           id?: string
@@ -852,7 +852,7 @@ export type Database = {
           client_supplier?: string | null
           cost_center?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           description?: string
           expense_amount?: number | null
           id?: string
@@ -875,7 +875,7 @@ export type Database = {
       food_intake_records: {
         Row: {
           created_at: string
-          created_by: string
+          created_by: string | null
           details: string | null
           expiry_ok: boolean | null
           id: string
@@ -891,7 +891,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_by: string
+          created_by?: string | null
           details?: string | null
           expiry_ok?: boolean | null
           id?: string
@@ -907,7 +907,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           details?: string | null
           expiry_ok?: boolean | null
           id?: string
@@ -926,7 +926,7 @@ export type Database = {
       fridge_temps: {
         Row: {
           created_at: string
-          created_by: string
+          created_by: string | null
           fridge_name: string
           id: string
           is_safe: boolean | null
@@ -937,7 +937,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_by: string
+          created_by?: string | null
           fridge_name: string
           id?: string
           is_safe?: boolean | null
@@ -948,7 +948,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           fridge_name?: string
           id?: string
           is_safe?: boolean | null
@@ -964,7 +964,7 @@ export type Database = {
           answers: Json
           assessment_date: string
           created_at: string
-          created_by: string
+          created_by: string | null
           id: string
           interpretation: string | null
           max_score: number
@@ -979,7 +979,7 @@ export type Database = {
           answers?: Json
           assessment_date?: string
           created_at?: string
-          created_by: string
+          created_by?: string | null
           id?: string
           interpretation?: string | null
           max_score: number
@@ -994,7 +994,7 @@ export type Database = {
           answers?: Json
           assessment_date?: string
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           id?: string
           interpretation?: string | null
           max_score?: number
@@ -1104,7 +1104,7 @@ export type Database = {
           consequences: string | null
           corrective_actions: Json | null
           created_at: string
-          created_by: string
+          created_by: string | null
           description: string | null
           er_facility: string | null
           family_contact_name: string | null
@@ -1121,7 +1121,7 @@ export type Database = {
           consequences?: string | null
           corrective_actions?: Json | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           description?: string | null
           er_facility?: string | null
           family_contact_name?: string | null
@@ -1138,7 +1138,7 @@ export type Database = {
           consequences?: string | null
           corrective_actions?: Json | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           description?: string | null
           er_facility?: string | null
           family_contact_name?: string | null
@@ -1196,7 +1196,7 @@ export type Database = {
       invoices: {
         Row: {
           created_at: string
-          created_by: string
+          created_by: string | null
           due_date: string | null
           id: string
           invoice_number: string | null
@@ -1212,7 +1212,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_by: string
+          created_by?: string | null
           due_date?: string | null
           id?: string
           invoice_number?: string | null
@@ -1228,7 +1228,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           due_date?: string | null
           id?: string
           invoice_number?: string | null
@@ -1257,7 +1257,7 @@ export type Database = {
           check_date: string
           cleaned_kitchen: boolean | null
           created_at: string
-          created_by: string
+          created_by: string | null
           id: string
           observations: string | null
           respected_diets: boolean | null
@@ -1268,7 +1268,7 @@ export type Database = {
           check_date?: string
           cleaned_kitchen?: boolean | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           id?: string
           observations?: string | null
           respected_diets?: boolean | null
@@ -1279,7 +1279,7 @@ export type Database = {
           check_date?: string
           cleaned_kitchen?: boolean | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           id?: string
           observations?: string | null
           respected_diets?: boolean | null
@@ -1292,7 +1292,7 @@ export type Database = {
         Row: {
           children_info: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           dislikes: string | null
           dreams: string | null
           favorite_food: string | null
@@ -1312,7 +1312,7 @@ export type Database = {
         Insert: {
           children_info?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           dislikes?: string | null
           dreams?: string | null
           favorite_food?: string | null
@@ -1332,7 +1332,7 @@ export type Database = {
         Update: {
           children_info?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           dislikes?: string | null
           dreams?: string | null
           favorite_food?: string | null
@@ -1401,7 +1401,7 @@ export type Database = {
           companion: string | null
           companion_type: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           id: string
           location: string | null
           medical_summary: string | null
@@ -1417,7 +1417,7 @@ export type Database = {
           companion?: string | null
           companion_type?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           id?: string
           location?: string | null
           medical_summary?: string | null
@@ -1433,7 +1433,7 @@ export type Database = {
           companion?: string | null
           companion_type?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           id?: string
           location?: string | null
           medical_summary?: string | null
@@ -1456,7 +1456,7 @@ export type Database = {
       medication_admin: {
         Row: {
           admin_datetime: string
-          administered_by: string
+          administered_by: string | null
           check_dose: boolean | null
           check_medication: boolean | null
           check_patient: boolean | null
@@ -1475,7 +1475,7 @@ export type Database = {
         }
         Insert: {
           admin_datetime?: string
-          administered_by: string
+          administered_by?: string | null
           check_dose?: boolean | null
           check_medication?: boolean | null
           check_patient?: boolean | null
@@ -1494,7 +1494,7 @@ export type Database = {
         }
         Update: {
           admin_datetime?: string
-          administered_by?: string
+          administered_by?: string | null
           check_dose?: boolean | null
           check_medication?: boolean | null
           check_patient?: boolean | null
@@ -1532,7 +1532,7 @@ export type Database = {
         Row: {
           concentration: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           dose: string | null
           expiry_date: string | null
           id: string
@@ -1549,7 +1549,7 @@ export type Database = {
         Insert: {
           concentration?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           dose?: string | null
           expiry_date?: string | null
           id?: string
@@ -1566,7 +1566,7 @@ export type Database = {
         Update: {
           concentration?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           dose?: string | null
           expiry_date?: string | null
           id?: string
@@ -1698,8 +1698,8 @@ export type Database = {
         Row: {
           concept: string | null
           created_at: string
-          evaluated_by: string
-          evaluated_user_id: string
+          evaluated_by: string | null
+          evaluated_user_id: string | null
           evaluation_date: string
           id: string
           improvement_plan: string | null
@@ -1715,8 +1715,8 @@ export type Database = {
         Insert: {
           concept?: string | null
           created_at?: string
-          evaluated_by: string
-          evaluated_user_id: string
+          evaluated_by?: string | null
+          evaluated_user_id?: string | null
           evaluation_date?: string
           id?: string
           improvement_plan?: string | null
@@ -1732,8 +1732,8 @@ export type Database = {
         Update: {
           concept?: string | null
           created_at?: string
-          evaluated_by?: string
-          evaluated_user_id?: string
+          evaluated_by?: string | null
+          evaluated_user_id?: string | null
           evaluation_date?: string
           id?: string
           improvement_plan?: string | null
@@ -1802,7 +1802,7 @@ export type Database = {
       post_hospitalization: {
         Row: {
           created_at: string
-          created_by: string
+          created_by: string | null
           diagnosis: string | null
           discharge_summary_url: string | null
           followup_date: string | null
@@ -1816,7 +1816,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_by: string
+          created_by?: string | null
           diagnosis?: string | null
           discharge_summary_url?: string | null
           followup_date?: string | null
@@ -1830,7 +1830,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           diagnosis?: string | null
           discharge_summary_url?: string | null
           followup_date?: string | null
@@ -1931,7 +1931,7 @@ export type Database = {
         Row: {
           attendees: Json | null
           created_at: string
-          created_by: string
+          created_by: string | null
           evolution: string | null
           group_achievement: string | null
           group_topic: string | null
@@ -1946,7 +1946,7 @@ export type Database = {
         Insert: {
           attendees?: Json | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           evolution?: string | null
           group_achievement?: string | null
           group_topic?: string | null
@@ -1961,7 +1961,7 @@ export type Database = {
         Update: {
           attendees?: Json | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           evolution?: string | null
           group_achievement?: string | null
           group_topic?: string | null
@@ -2218,7 +2218,7 @@ export type Database = {
           activity_type: string | null
           attendees_count: number | null
           created_at: string
-          created_by: string
+          created_by: string | null
           id: string
           leader: string | null
           observations: string | null
@@ -2229,7 +2229,7 @@ export type Database = {
           activity_type?: string | null
           attendees_count?: number | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           id?: string
           leader?: string | null
           observations?: string | null
@@ -2240,7 +2240,7 @@ export type Database = {
           activity_type?: string | null
           attendees_count?: number | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           id?: string
           leader?: string | null
           observations?: string | null
@@ -2350,7 +2350,7 @@ export type Database = {
           activity_date: string
           activity_name: string
           created_at: string
-          created_by: string
+          created_by: string | null
           id: string
           observations: string | null
           participants: Json | null
@@ -2361,7 +2361,7 @@ export type Database = {
           activity_date?: string
           activity_name: string
           created_at?: string
-          created_by: string
+          created_by?: string | null
           id?: string
           observations?: string | null
           participants?: Json | null
@@ -2372,7 +2372,7 @@ export type Database = {
           activity_date?: string
           activity_name?: string
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           id?: string
           observations?: string | null
           participants?: Json | null
@@ -2387,7 +2387,7 @@ export type Database = {
           attended_monday: boolean | null
           attended_wednesday: boolean | null
           created_at: string
-          created_by: string
+          created_by: string | null
           evolution_code: string | null
           id: string
           observations: string | null
@@ -2400,7 +2400,7 @@ export type Database = {
           attended_monday?: boolean | null
           attended_wednesday?: boolean | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           evolution_code?: string | null
           id?: string
           observations?: string | null
@@ -2413,7 +2413,7 @@ export type Database = {
           attended_monday?: boolean | null
           attended_wednesday?: boolean | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           evolution_code?: string | null
           id?: string
           observations?: string | null
@@ -2517,7 +2517,7 @@ export type Database = {
           attendees: Json | null
           content: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           end_time: string | null
           facilitator: string | null
           facilitator_entity: string | null
@@ -2533,7 +2533,7 @@ export type Database = {
           attendees?: Json | null
           content?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           end_time?: string | null
           facilitator?: string | null
           facilitator_entity?: string | null
@@ -2549,7 +2549,7 @@ export type Database = {
           attendees?: Json | null
           content?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           end_time?: string | null
           facilitator?: string | null
           facilitator_entity?: string | null
@@ -2585,7 +2585,7 @@ export type Database = {
         Row: {
           blood_pressure: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           glucose: number | null
           heart_rate: number | null
           id: string
@@ -2599,7 +2599,7 @@ export type Database = {
         Insert: {
           blood_pressure?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           glucose?: number | null
           heart_rate?: number | null
           id?: string
@@ -2613,7 +2613,7 @@ export type Database = {
         Update: {
           blood_pressure?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           glucose?: number | null
           heart_rate?: number | null
           id?: string
