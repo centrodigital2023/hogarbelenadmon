@@ -121,6 +121,15 @@ const AppLayout = ({ children, activeModule, onModuleChange }: AppLayoutProps) =
         </div>
       </aside>
 
+      {/* Mobile bottom logout bar - visible only on small screens when sidebar is closed */}
+      <button
+        onClick={signOut}
+        className="fixed bottom-0 left-0 right-0 z-30 lg:hidden flex items-center justify-center gap-2 py-3 bg-card border-t border-border text-xs font-bold text-muted-foreground hover:text-destructive transition-colors safe-bottom touch-manipulation"
+      >
+        <LogOut size={14} />
+        Cerrar sesión
+      </button>
+
       {/* Overlay */}
       {sidebarOpen && (
         <div
@@ -152,7 +161,7 @@ const AppLayout = ({ children, activeModule, onModuleChange }: AppLayoutProps) =
           {children}
         </main>
 
-        <footer className="text-center py-3 text-[10px] text-muted-foreground font-medium border-t border-border safe-bottom">
+        <footer className="text-center py-3 pb-14 lg:pb-3 text-[10px] text-muted-foreground font-medium border-t border-border safe-bottom">
           Hogar Belén • Gestión Segura • Hecho en Colombia 🇨🇴
         </footer>
       </div>
