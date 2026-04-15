@@ -161,7 +161,7 @@ const AppLayout = ({ children, activeModule, onModuleChange }: AppLayoutProps) =
           {children}
         </main>
 
-        <footer className="text-center py-3 text-[10px] text-muted-foreground font-medium border-t border-border safe-bottom">
+        <footer className="text-center py-3 pb-14 lg:pb-3 text-[10px] text-muted-foreground font-medium border-t border-border safe-bottom">
           Hogar Belén • Gestión Segura • Hecho en Colombia 🇨🇴
         </footer>
       </div>
