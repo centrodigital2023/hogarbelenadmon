@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -7,18 +7,40 @@ import ActionButtons from "@/components/ActionButtons";
 import ExportButtons from "@/components/ExportButtons";
 import ShareButtons from "@/components/ShareButtons";
 import SmartReportSection from "@/components/SmartReportSection";
-import { Sparkles, History, Loader2 } from "lucide-react";
+import SignaturePad from "@/components/SignaturePad";
+import { Sparkles, History, Loader2, AlertTriangle, User, FileText, Send } from "lucide-react";
 
-interface Props {onBack: () => void;}
-interface Resident {id: string;full_name: string;}
+interface Props { onBack: () => void; }
+interface Resident { id: string; full_name: string; }
 
 const MOODS = ['😊 Alegre', '😌 Tranquilo', '😰 Ansioso', '😢 Triste', '😤 Agitado', '😶 Apático'];
 const ELIMINATIONS = ['Continente', 'Incontinente', 'Estreñimiento', 'Normal', 'Diarrea'];
 const SHIFTS = [
-{ value: 'mañana', label: 'Mañana (7-12)' },
-{ value: 'tarde', label: 'Tarde (12-18)' },
-{ value: 'noche', label: 'Noche (18-7)' }];
+  { value: 'mañana', label: 'Mañana (7-12)' },
+  { value: 'tarde', label: 'Tarde (12-18)' },
+  { value: 'noche', label: 'Noche (18-7)' },
+];
+const RESPONSIBLE_ROLES = ['Auxiliar de Enfermería', 'Cuidadora de Turno'];
 
+interface EntryData {
+  nutrition_pct: number;
+  hydration_glasses: number;
+  elimination: string;
+  mood: string;
+  observations: string;
+  blood_pressure: string;
+  spo2: number;
+  temperature: number;
+  glucose: number;
+  heart_rate: number;
+  weight: number;
+  vital_notes: string;
+}
+
+const emptyEntry: EntryData = {
+  nutrition_pct: 0, hydration_glasses: 0, elimination: '', mood: '', observations: '',
+  blood_pressure: '', spo2: 0, temperature: 0, glucose: 0, heart_rate: 0, weight: 0, vital_notes: '',
+};
 
 const DailyLog = ({ onBack }: Props) => {
   const { user } = useAuth();
@@ -27,26 +49,53 @@ const DailyLog = ({ onBack }: Props) => {
   const [residents, setResidents] = useState<Resident[]>([]);
   const [shift, setShift] = useState('mañana');
   const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
-  const [entries, setEntries] = useState<Record<string, {
-    nutrition_pct: number;hydration_glasses: number;elimination: string;mood: string;observations: string;
-  }>>({});
-  const [aiNote, setAiNote] = useState("");
+  const [entries, setEntries] = useState<Record<string, EntryData>>({});
+  const [responsibleName, setResponsibleName] = useState('');
+  const [responsibleRole, setResponsibleRole] = useState(RESPONSIBLE_ROLES[0]);
+  const [responsibleManual, setResponsibleManual] = useState(false);
+  const [signatureData, setSignatureData] = useState<string | null>(null);
+  const [aiNote, setAiNote] = useState('');
   const [generatingAI, setGeneratingAI] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // History
   const [showHistory, setShowHistory] = useState(false);
   const [historyData, setHistoryData] = useState<any[]>([]);
+  const historyRef = useRef<HTMLDivElement>(null);
+
+  // Single resident report
+  const [selectedResident, setSelectedResident] = useState('');
+  const [singleReport, setSingleReport] = useState('');
+  const [generatingSingle, setGeneratingSingle] = useState(false);
+  const singleReportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    supabase.from('residents').select('id, full_name').
-    in('status', ['prueba', 'permanente']).order('full_name').
-    then(({ data }) => {if (data) setResidents(data);});
+    supabase.from('residents').select('id, full_name')
+      .in('status', ['prueba', 'permanente']).order('full_name')
+      .then(({ data }) => { if (data) setResidents(data); });
   }, []);
 
-  const updateEntry = (residentId: string, field: string, value: any) => {
-    setEntries((prev) => ({
+  // Set responsible name from current user
+  useEffect(() => {
+    if (user && !responsibleManual) {
+      supabase.from('profiles').select('full_name').eq('user_id', user.id).single()
+        .then(({ data }) => { if (data) setResponsibleName(data.full_name); });
+    }
+  }, [user, responsibleManual]);
+
+  const updateEntry = (rid: string, field: string, val: any) => {
+    setEntries(prev => ({
       ...prev,
-      [residentId]: { ...(prev[residentId] || { nutrition_pct: 0, hydration_glasses: 0, elimination: '', mood: '', observations: '' }), [field]: value }
+      [rid]: { ...(prev[rid] || { ...emptyEntry }), [field]: val },
     }));
+  };
+
+  const isAbnormal = (field: string, val: number) => {
+    if (field === 'spo2' && val > 0 && val < 90) return true;
+    if (field === 'temperature' && val > 0 && (val < 35 || val > 38)) return true;
+    if (field === 'glucose' && val > 0 && (val < 70 || val > 180)) return true;
+    if (field === 'heart_rate' && val > 0 && (val < 50 || val > 120)) return true;
+    return false;
   };
 
   const handleGenerateAI = async () => {
@@ -54,183 +103,391 @@ const DailyLog = ({ onBack }: Props) => {
     setGeneratingAI(true);
     try {
       const { data, error } = await supabase.functions.invoke('ai-nursing-notes', {
-        body: {
-          residentId: null,
-          dateFrom: logDate,
-          dateTo: logDate,
-          shift,
-          isConsolidated: true,
-        },
+        body: { residentId: null, dateFrom: logDate, dateTo: logDate, shift, isConsolidated: true },
       });
       if (error) throw error;
-      if (data?.note) {
-        setAiNote(data.note);
-      } else {
-        toast({ title: "Sin datos previos", description: "No se encontraron registros guardados para esta fecha. Guarde primero la bitácora y luego genere la nota con IA.", variant: "destructive" });
-      }
+      if (data?.note) setAiNote(data.note);
+      else toast({ title: "Sin datos previos", description: "Guarde primero la bitácora y luego genere la nota con IA.", variant: "destructive" });
     } catch (e: any) {
-      toast({ title: "Error", description: e.message || "Error generando nota con IA", variant: "destructive" });
+      toast({ title: "Error", description: e.message || "Error generando nota", variant: "destructive" });
     }
     setGeneratingAI(false);
   };
 
+  // History 90 days
   const loadHistory = async () => {
-    const { data } = await supabase.from('daily_logs').select('*').
-    order('log_date', { ascending: false }).limit(20);
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    const { data } = await supabase.from('daily_logs').select('*, residents(full_name)')
+      .gte('log_date', ninetyDaysAgo.toISOString().split('T')[0])
+      .order('log_date', { ascending: false })
+      .limit(500);
     if (data) setHistoryData(data);
     setShowHistory(true);
   };
 
+  const getHistoryTextContent = () => {
+    const lines = [`Historial Bitácora Diaria (últimos 90 días)\n`];
+    historyData.forEach(h => {
+      const name = (h.residents as any)?.full_name || 'N/A';
+      lines.push(`${h.log_date} | ${h.shift} | ${name} | Resp: ${h.responsible_name || '-'} | TA: ${h.blood_pressure || '-'} | SpO2: ${h.spo2 || '-'}% | Temp: ${h.temperature || '-'}°C | Gluc: ${h.glucose || '-'} | FC: ${h.heart_rate || '-'} | Peso: ${h.weight || '-'}kg | Nutrición: ${h.nutrition_pct}% | Ánimo: ${h.mood || '-'}`);
+    });
+    return lines.join('\n');
+  };
+
+  const getHistoryTableData = () => historyData.map(h => ({
+    Fecha: h.log_date, Turno: h.shift,
+    Residente: (h.residents as any)?.full_name || '',
+    Responsable: h.responsible_name || '',
+    'T.A.': h.blood_pressure || '', 'SpO2': h.spo2 || '', 'Temp °C': h.temperature || '',
+    Glucemia: h.glucose || '', FC: h.heart_rate || '', 'Peso kg': h.weight || '',
+    'Nutrición %': h.nutrition_pct, Hidratación: h.hydration_glasses,
+    Eliminación: h.elimination, Ánimo: h.mood, Novedades: h.observations,
+  }));
+
+  // Save
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-
-    const inserts = Object.entries(entries).map(([residentId, e]) => ({
-      resident_id: residentId,
-      created_by: user.id,
-      shift,
-      log_date: logDate,
-      nutrition_pct: e.nutrition_pct,
-      hydration_glasses: e.hydration_glasses,
-      elimination: e.elimination,
-      mood: e.mood,
-      observations: e.observations,
-      ai_nursing_note: aiNote || null
+    const inserts = Object.entries(entries).map(([rid, e]) => ({
+      resident_id: rid, created_by: user.id, shift, log_date: logDate,
+      nutrition_pct: e.nutrition_pct, hydration_glasses: e.hydration_glasses,
+      elimination: e.elimination, mood: e.mood, observations: e.observations,
+      blood_pressure: e.blood_pressure || null, spo2: e.spo2 || null,
+      temperature: e.temperature || null, glucose: e.glucose || null,
+      heart_rate: e.heart_rate || null, weight: e.weight || null,
+      vital_notes: e.vital_notes || null, ai_nursing_note: aiNote || null,
+      responsible_name: responsibleName, responsible_role: responsibleRole,
+      signature: signatureData,
     }));
-
     const { error } = await supabase.from('daily_logs').insert(inserts);
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Bitácora guardada", description: `${inserts.length} registros del turno ${shift}` });
-    }
+    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+    else toast({ title: "Bitácora guardada", description: `${inserts.length} registros del turno ${shift}` });
     setSaving(false);
   };
 
+  // Single resident AI report
+  const handleSingleReport = async () => {
+    if (!selectedResident) return;
+    setGeneratingSingle(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-nursing-notes', {
+        body: { residentId: selectedResident, dateFrom: logDate, dateTo: logDate, shift, isConsolidated: false },
+      });
+      if (error) throw error;
+      setSingleReport(data?.note || 'No se pudo generar el informe.');
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+    setGeneratingSingle(false);
+  };
+
+  const saveSingleReport = async () => {
+    if (!user || !selectedResident || !singleReport) return;
+    const { error } = await supabase.from('nursing_notes').insert({
+      resident_id: selectedResident, generated_by: user.id,
+      note: singleReport, note_date: logDate, shift, is_ai_generated: true,
+    });
+    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+    else toast({ title: "Informe guardado" });
+  };
+
   const getTextContent = () => {
-    const lines = [`HB-F4: Bitácora Diaria - ${logDate} - Turno: ${shift}\n`];
+    const lines = [`HB-F4: Bitácora Diaria - ${logDate} - Turno: ${shift}\nResponsable: ${responsibleName} (${responsibleRole})\n`];
     Object.entries(entries).forEach(([rid, e]) => {
       const r = residents.find(res => res.id === rid);
-      lines.push(`${r?.full_name || rid}: Nutrición ${e.nutrition_pct}%, Hidratación ${e.hydration_glasses} vasos, Eliminación: ${e.elimination}, Ánimo: ${e.mood}, Obs: ${e.observations}`);
+      lines.push(`${r?.full_name}: TA ${e.blood_pressure}, SpO2 ${e.spo2}%, Temp ${e.temperature}°C, Gluc ${e.glucose}, FC ${e.heart_rate}, Peso ${e.weight}kg | Nutrición ${e.nutrition_pct}%, Hidratación ${e.hydration_glasses} vasos, Eliminación: ${e.elimination}, Ánimo: ${e.mood}, Obs: ${e.observations}`);
     });
     if (aiNote) lines.push(`\nNota IA:\n${aiNote}`);
     return lines.join('\n');
   };
 
+  const getTableData = () => Object.entries(entries).map(([rid, e]) => {
+    const r = residents.find(res => res.id === rid);
+    return {
+      Residente: r?.full_name || '', 'T.A.': e.blood_pressure, SpO2: e.spo2, 'Temp °C': e.temperature,
+      Glucemia: e.glucose, FC: e.heart_rate, 'Peso kg': e.weight,
+      'Nutrición %': e.nutrition_pct, Hidratación: e.hydration_glasses,
+      Eliminación: e.elimination, Ánimo: e.mood, Novedades: e.observations,
+    };
+  });
+
+  const selectedResidentName = residents.find(r => r.id === selectedResident)?.full_name || '';
+
   return (
     <div className="animate-fade-in">
-      <FormHeader title="HB-F4: Bitácora Diaria" subtitle="Registro por turnos de indicadores de salud y bienestar" onBack={onBack} />
+      <FormHeader title="HB-F4: Bitácora Diaria" subtitle="Registro por turnos de indicadores de salud, bienestar y signos vitales" onBack={onBack} />
 
       <div ref={contentRef}>
-        <div className="bg-card border border-border rounded-2xl p-6 mb-6 flex flex-wrap gap-4">
-          <div>
-            <label className="text-xs font-bold text-muted-foreground uppercase">Fecha</label>
-            <input type="date" value={logDate} onChange={(e) => setLogDate(e.target.value)}
-            className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm" />
+        {/* Header: Fecha, Turno, Responsable */}
+        <div className="bg-card border border-border rounded-2xl p-6 mb-6">
+          <div className="flex flex-wrap gap-4 mb-4">
+            <div>
+              <label className="text-xs font-bold text-muted-foreground uppercase">Fecha</label>
+              <input type="date" value={logDate} onChange={e => setLogDate(e.target.value)}
+                className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-muted-foreground uppercase">Turno</label>
+              <select value={shift} onChange={e => setShift(e.target.value)}
+                className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm">
+                {SHIFTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            </div>
+            <div className="flex items-end gap-2">
+              <button onClick={loadHistory}
+                className="flex items-center gap-2 bg-muted text-muted-foreground px-4 py-3 rounded-xl text-xs font-bold hover:bg-accent min-h-[48px]">
+                <History size={14} /> Historial (90 días)
+              </button>
+            </div>
           </div>
-          <div>
-            <label className="text-xs font-bold text-muted-foreground uppercase">Turno</label>
-            <select value={shift} onChange={(e) => setShift(e.target.value)}
-            className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm">
-              {SHIFTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
-          </div>
-          <div className="flex items-end gap-2">
-            <button onClick={loadHistory}
-            className="flex items-center gap-2 bg-muted text-muted-foreground px-4 py-3 rounded-xl text-xs font-bold hover:bg-accent min-h-[48px]">
-              <History size={14} /> Historial
-            </button>
+
+          {/* Responsible */}
+          <div className="border-t border-border pt-4">
+            <div className="flex items-center gap-2 mb-2">
+              <User size={14} className="text-primary" />
+              <label className="text-xs font-bold text-muted-foreground uppercase">Responsable del Turno</label>
+            </div>
+            <div className="flex flex-wrap gap-3 items-end">
+              <div>
+                <label className="text-[10px] text-muted-foreground">Rol</label>
+                <select value={responsibleRole} onChange={e => setResponsibleRole(e.target.value)}
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm">
+                  {RESPONSIBLE_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <input type="checkbox" checked={responsibleManual} onChange={e => setResponsibleManual(e.target.checked)}
+                    className="rounded" />
+                  Ingresar manualmente
+                </label>
+              </div>
+              <div className="flex-1 min-w-[200px]">
+                <label className="text-[10px] text-muted-foreground">Nombre</label>
+                <input type="text" value={responsibleName}
+                  onChange={e => setResponsibleName(e.target.value)}
+                  readOnly={!responsibleManual}
+                  className={`mt-1 w-full px-3 py-2 rounded-lg border border-input text-sm ${responsibleManual ? 'bg-background' : 'bg-muted'}`}
+                  placeholder="Nombre del responsable" />
+              </div>
+            </div>
           </div>
         </div>
 
+        {/* Resident entries with vital signs */}
         <div className="space-y-4 mb-6">
-          {residents.map((r) => {
-            const entry = entries[r.id] || { nutrition_pct: 0, hydration_glasses: 0, elimination: '', mood: '', observations: '' };
+          {residents.map(r => {
+            const e = entries[r.id] || { ...emptyEntry };
+            const hasAlert = isAbnormal('spo2', e.spo2) || isAbnormal('temperature', e.temperature) || isAbnormal('glucose', e.glucose) || isAbnormal('heart_rate', e.heart_rate);
             return (
-              <div key={r.id} className="bg-card border border-border rounded-2xl p-5">
-                <p className="text-sm font-black text-foreground mb-3">{r.full_name}</p>
+              <div key={r.id} className={`bg-card border-2 rounded-2xl p-5 ${hasAlert ? 'border-destructive/40' : 'border-border'}`}>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-black text-foreground">{r.full_name}</p>
+                  {hasAlert && <span className="flex items-center gap-1 text-xs font-bold text-destructive"><AlertTriangle size={14} /> Alerta</span>}
+                </div>
+
+                {/* Vital signs row */}
+                <p className="text-[10px] font-bold text-primary uppercase mb-1">Signos Vitales</p>
+                <div className="grid grid-cols-3 sm:grid-cols-7 gap-2 mb-3">
+                  {[
+                    { key: 'blood_pressure', label: 'T.A.', type: 'text', placeholder: '120/80' },
+                    { key: 'spo2', label: 'SpO2 %', type: 'number', placeholder: '%' },
+                    { key: 'temperature', label: 'Temp °C', type: 'number', placeholder: '36.5' },
+                    { key: 'glucose', label: 'Glucemia', type: 'number', placeholder: 'mg/dl' },
+                    { key: 'heart_rate', label: 'FC', type: 'number', placeholder: 'bpm' },
+                    { key: 'weight', label: 'Peso kg', type: 'number', placeholder: 'kg' },
+                    { key: 'vital_notes', label: 'Notas SV', type: 'text', placeholder: '...' },
+                  ].map(f => (
+                    <div key={f.key}>
+                      <label className="text-[9px] font-bold text-muted-foreground uppercase">{f.label}</label>
+                      <input type={f.type} value={(e as any)[f.key] || ''}
+                        onChange={ev => updateEntry(r.id, f.key, f.type === 'number' ? parseFloat(ev.target.value) || 0 : ev.target.value)}
+                        placeholder={f.placeholder}
+                        className={`mt-1 w-full px-2 py-2 rounded-lg border text-sm text-center ${
+                          f.type === 'number' && isAbnormal(f.key, (e as any)[f.key]) ? 'border-destructive bg-destructive/5' : 'border-input bg-background'
+                        }`} />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Bienestar row */}
+                <p className="text-[10px] font-bold text-accent-foreground uppercase mb-1">Bienestar</p>
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                   <div>
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Nutrición %</label>
-                    <select value={entry.nutrition_pct} onChange={(e) => updateEntry(r.id, 'nutrition_pct', Number(e.target.value))}
-                    className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm">
-                      {[0, 25, 50, 75, 100].map((v) => <option key={v} value={v}>{v}%</option>)}
+                    <label className="text-[9px] font-bold text-muted-foreground uppercase">Nutrición %</label>
+                    <select value={e.nutrition_pct} onChange={ev => updateEntry(r.id, 'nutrition_pct', Number(ev.target.value))}
+                      className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm">
+                      {[0, 25, 50, 75, 100].map(v => <option key={v} value={v}>{v}%</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Hidratación</label>
-                    <input type="number" min={0} max={20} value={entry.hydration_glasses}
-                    onChange={(e) => updateEntry(r.id, 'hydration_glasses', Number(e.target.value))}
-                    className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm" placeholder="Vasos" />
+                    <label className="text-[9px] font-bold text-muted-foreground uppercase">Hidratación</label>
+                    <input type="number" min={0} max={20} value={e.hydration_glasses}
+                      onChange={ev => updateEntry(r.id, 'hydration_glasses', Number(ev.target.value))}
+                      className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm" placeholder="Vasos" />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Eliminación</label>
-                    <select value={entry.elimination} onChange={(e) => updateEntry(r.id, 'elimination', e.target.value)}
-                    className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm">
+                    <label className="text-[9px] font-bold text-muted-foreground uppercase">Eliminación</label>
+                    <select value={e.elimination} onChange={ev => updateEntry(r.id, 'elimination', ev.target.value)}
+                      className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm">
                       <option value="">--</option>
-                      {ELIMINATIONS.map((el) => <option key={el} value={el}>{el}</option>)}
+                      {ELIMINATIONS.map(el => <option key={el} value={el}>{el}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Ánimo</label>
-                    <select value={entry.mood} onChange={(e) => updateEntry(r.id, 'mood', e.target.value)}
-                    className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm">
+                    <label className="text-[9px] font-bold text-muted-foreground uppercase">Ánimo</label>
+                    <select value={e.mood} onChange={ev => updateEntry(r.id, 'mood', ev.target.value)}
+                      className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm">
                       <option value="">--</option>
-                      {MOODS.map((m) => <option key={m} value={m}>{m}</option>)}
+                      {MOODS.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Novedades</label>
-                    <input type="text" value={entry.observations}
-                    onChange={(e) => updateEntry(r.id, 'observations', e.target.value)}
-                    className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm" placeholder="..." />
+                    <label className="text-[9px] font-bold text-muted-foreground uppercase">Novedades</label>
+                    <input type="text" value={e.observations}
+                      onChange={ev => updateEntry(r.id, 'observations', ev.target.value)}
+                      className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm" placeholder="..." />
                   </div>
                 </div>
-              </div>);
+              </div>
+            );
           })}
         </div>
 
+        {/* AI Note */}
         <div className="bg-card border-2 border-primary/20 rounded-2xl p-6 mb-6">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-black text-foreground flex items-center gap-2">
               <Sparkles size={16} className="text-primary" /> Nota de Enfermería con IA
             </h3>
             <button onClick={handleGenerateAI} disabled={generatingAI || Object.keys(entries).length === 0}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50 min-h-[36px]">
+              className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50 min-h-[36px]">
               {generatingAI ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-              {generatingAI ? 'Generando...' : 'Generar Nota con IA'}
+              {generatingAI ? 'Generando...' : 'Generar Nota'}
             </button>
           </div>
-          <textarea value={aiNote} onChange={(e) => setAiNote(e.target.value)} rows={5}
-          className="w-full px-4 py-3 rounded-xl border border-input bg-background text-sm resize-none"
-          placeholder="La nota se generará automáticamente con IA a partir de los registros del turno..." />
+          <textarea value={aiNote} onChange={e => setAiNote(e.target.value)} rows={5}
+            className="w-full px-4 py-3 rounded-xl border border-input bg-background text-sm resize-none"
+            placeholder="La nota se generará automáticamente con IA a partir de los registros del turno..." />
+        </div>
+
+        {/* Signature */}
+        <div className="bg-card border border-border rounded-2xl p-6 mb-6 flex flex-col items-center">
+          <h3 className="text-sm font-black text-foreground mb-3">Firma Digital del Responsable</h3>
+          <SignaturePad label={`${responsibleName} — ${responsibleRole}`} value={signatureData || undefined} onChange={setSignatureData} />
         </div>
       </div>
 
-      {showHistory &&
-      <div className="bg-muted rounded-2xl p-6 mb-6">
-          <h3 className="text-sm font-black text-foreground mb-3">Historial reciente</h3>
-          {historyData.length === 0 ?
-        <p className="text-xs text-muted-foreground">Sin registros previos.</p> :
-        <div className="space-y-2 max-h-60 overflow-y-auto">
-              {historyData.map((h) =>
-          <div key={h.id} className="bg-card rounded-xl p-3 text-xs">
-                  <span className="font-bold">{h.log_date}</span> — Turno: {h.shift} — Nutrición: {h.nutrition_pct}% — {h.mood}
-                </div>
-          )}
-            </div>
-        }
-        </div>
-      }
-
+      {/* Export & Share */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <ExportButtons contentRef={contentRef} title={`HB-F4 Bitácora ${logDate}`} fileName={`bitacora_${logDate}_${shift}`} textContent={getTextContent()} />
+        <ExportButtons contentRef={contentRef} title={`HB-F4 Bitácora ${logDate}`} fileName={`bitacora_${logDate}_${shift}`}
+          textContent={getTextContent()} data={getTableData()} signatureDataUrl={signatureData} />
         <ShareButtons title={`HB-F4 Bitácora ${logDate}`} text={getTextContent()} />
       </div>
+
       <SmartReportSection module="salud" formTitle="HB-F4: Bitácora Diaria" formData={entries} contentRef={contentRef} />
       <ActionButtons onFinish={handleSave} disabled={saving || Object.keys(entries).length === 0} />
-    </div>);
 
+      {/* History Panel */}
+      {showHistory && (
+        <div className="bg-muted rounded-2xl p-6 mt-6" ref={historyRef}>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-black text-foreground">Historial (últimos 90 días) — {historyData.length} registros</h3>
+            <button onClick={() => setShowHistory(false)} className="text-xs text-muted-foreground hover:text-foreground">Cerrar</button>
+          </div>
+          {historyData.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Sin registros previos.</p>
+          ) : (
+            <>
+              <div className="overflow-x-auto max-h-80 overflow-y-auto mb-4">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left p-2 font-bold text-muted-foreground">Fecha</th>
+                      <th className="text-left p-2 font-bold text-muted-foreground">Turno</th>
+                      <th className="text-left p-2 font-bold text-muted-foreground">Residente</th>
+                      <th className="text-left p-2 font-bold text-muted-foreground">Responsable</th>
+                      <th className="text-center p-2 font-bold text-muted-foreground">T.A.</th>
+                      <th className="text-center p-2 font-bold text-muted-foreground">SpO2</th>
+                      <th className="text-center p-2 font-bold text-muted-foreground">Temp</th>
+                      <th className="text-center p-2 font-bold text-muted-foreground">Gluc</th>
+                      <th className="text-center p-2 font-bold text-muted-foreground">FC</th>
+                      <th className="text-center p-2 font-bold text-muted-foreground">Peso</th>
+                      <th className="text-center p-2 font-bold text-muted-foreground">Nutr%</th>
+                      <th className="text-left p-2 font-bold text-muted-foreground">Ánimo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historyData.map(h => (
+                      <tr key={h.id} className="border-b border-border/50 hover:bg-background/50">
+                        <td className="p-2">{h.log_date}</td>
+                        <td className="p-2">{h.shift}</td>
+                        <td className="p-2 font-medium">{(h.residents as any)?.full_name || '-'}</td>
+                        <td className="p-2">{h.responsible_name || '-'}</td>
+                        <td className="p-2 text-center">{h.blood_pressure || '-'}</td>
+                        <td className="p-2 text-center">{h.spo2 || '-'}</td>
+                        <td className="p-2 text-center">{h.temperature || '-'}</td>
+                        <td className="p-2 text-center">{h.glucose || '-'}</td>
+                        <td className="p-2 text-center">{h.heart_rate || '-'}</td>
+                        <td className="p-2 text-center">{h.weight || '-'}</td>
+                        <td className="p-2 text-center">{h.nutrition_pct}%</td>
+                        <td className="p-2">{h.mood || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <ExportButtons contentRef={historyRef} title="Historial Bitácora 90 días"
+                  fileName="historial_bitacora_90d" textContent={getHistoryTextContent()}
+                  data={getHistoryTableData()} signatureDataUrl={null} showDrive={false} />
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Single Resident Report */}
+      <div className="bg-card border-2 border-accent rounded-2xl p-6 mt-6">
+        <h3 className="text-sm font-black text-foreground flex items-center gap-2 mb-4">
+          <FileText size={16} className="text-primary" /> Informe Individual con IA
+        </h3>
+        <div className="flex flex-wrap gap-3 items-end mb-4">
+          <div className="flex-1 min-w-[200px]">
+            <label className="text-[10px] font-bold text-muted-foreground uppercase">Residente</label>
+            <select value={selectedResident} onChange={e => setSelectedResident(e.target.value)}
+              className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm">
+              <option value="">Seleccionar residente...</option>
+              {residents.map(r => <option key={r.id} value={r.id}>{r.full_name}</option>)}
+            </select>
+          </div>
+          <button onClick={handleSingleReport} disabled={!selectedResident || generatingSingle}
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50 min-h-[40px]">
+            {generatingSingle ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+            Generar Informe
+          </button>
+        </div>
+
+        {singleReport && (
+          <div ref={singleReportRef}>
+            <textarea value={singleReport} onChange={e => setSingleReport(e.target.value)} rows={8}
+              className="w-full px-4 py-3 rounded-xl border border-input bg-background text-sm resize-none mb-4" />
+            <div className="flex flex-wrap gap-2">
+              <button onClick={saveSingleReport}
+                className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl text-xs font-bold min-h-[40px]">
+                <FileText size={12} /> Guardar
+              </button>
+              <ExportButtons contentRef={singleReportRef} title={`Informe ${selectedResidentName} ${logDate}`}
+                fileName={`informe_${selectedResidentName.replace(/\s+/g, '_')}_${logDate}`}
+                textContent={singleReport} signatureDataUrl={signatureData} showDrive={false} />
+              <ShareButtons title={`Informe ${selectedResidentName}`} text={singleReport} />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default DailyLog;

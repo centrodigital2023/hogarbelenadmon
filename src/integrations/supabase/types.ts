@@ -419,9 +419,12 @@ export type Database = {
       daily_logs: {
         Row: {
           ai_nursing_note: string | null
+          blood_pressure: string | null
           created_at: string
           created_by: string
           elimination: string | null
+          glucose: number | null
+          heart_rate: number | null
           hydration_glasses: number | null
           id: string
           log_date: string
@@ -429,15 +432,24 @@ export type Database = {
           nutrition_pct: number | null
           observations: string | null
           resident_id: string
+          responsible_name: string | null
+          responsible_role: string | null
           shift: string
           signature: string | null
+          spo2: number | null
+          temperature: number | null
           updated_at: string
+          vital_notes: string | null
+          weight: number | null
         }
         Insert: {
           ai_nursing_note?: string | null
+          blood_pressure?: string | null
           created_at?: string
           created_by: string
           elimination?: string | null
+          glucose?: number | null
+          heart_rate?: number | null
           hydration_glasses?: number | null
           id?: string
           log_date?: string
@@ -445,15 +457,24 @@ export type Database = {
           nutrition_pct?: number | null
           observations?: string | null
           resident_id: string
+          responsible_name?: string | null
+          responsible_role?: string | null
           shift: string
           signature?: string | null
+          spo2?: number | null
+          temperature?: number | null
           updated_at?: string
+          vital_notes?: string | null
+          weight?: number | null
         }
         Update: {
           ai_nursing_note?: string | null
+          blood_pressure?: string | null
           created_at?: string
           created_by?: string
           elimination?: string | null
+          glucose?: number | null
+          heart_rate?: number | null
           hydration_glasses?: number | null
           id?: string
           log_date?: string
@@ -461,9 +482,15 @@ export type Database = {
           nutrition_pct?: number | null
           observations?: string | null
           resident_id?: string
+          responsible_name?: string | null
+          responsible_role?: string | null
           shift?: string
           signature?: string | null
+          spo2?: number | null
+          temperature?: number | null
           updated_at?: string
+          vital_notes?: string | null
+          weight?: number | null
         }
         Relationships: [
           {
