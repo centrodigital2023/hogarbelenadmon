@@ -410,7 +410,7 @@ export async function exportWord(opts: {
           margin: { top: 1800, right: 1440, bottom: 1440, left: 1440 },
         },
       },
-      children: bodyChildren,
+      children: bodyChildren as any,
     }],
   });
 

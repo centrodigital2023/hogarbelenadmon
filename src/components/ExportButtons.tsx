@@ -10,11 +10,13 @@ interface ExportButtonsProps {
   textContent?: string;
   signatureDataUrl?: string | null;
   showDrive?: boolean;
+  responsibleName?: string;
+  responsibleRole?: string;
 }
 
 type ExportStatus = null | "loading" | "success" | "error";
 
-const ExportButtons = ({ contentRef, title, fileName, data, textContent, signatureDataUrl, showDrive = true }: ExportButtonsProps) => {
+const ExportButtons = ({ contentRef, title, fileName, data, textContent, signatureDataUrl, showDrive = true, responsibleName, responsibleRole }: ExportButtonsProps) => {
   const [exporting, setExporting] = useState<string | null>(null);
   const [status, setStatus] = useState<Record<string, ExportStatus>>({});
   const { toast } = useToast();
@@ -45,13 +47,13 @@ const ExportButtons = ({ contentRef, title, fileName, data, textContent, signatu
 
   const handlePDF = () => handleExport("pdf", async () => {
     const { exportPDF } = await import("@/lib/export-service");
-    await exportPDF({ contentRef, title, fileName, textContent, signatureDataUrl });
+    await exportPDF({ contentRef, title, fileName, textContent, signatureDataUrl, responsibleName, responsibleRole });
   });
 
   const handleWord = () => handleExport("docx", async () => {
     const { exportWord } = await import("@/lib/export-service");
     const fullText = textContent || contentRef.current?.innerText || "";
-    await exportWord({ title, fileName, textContent: fullText, data, signatureDataUrl });
+    await exportWord({ title, fileName, textContent: fullText, data, signatureDataUrl, responsibleName, responsibleRole });
   });
 
   const handleExcel = () => {
