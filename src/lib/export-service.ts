@@ -2,27 +2,43 @@ import jsPDF from "jspdf";
 import { Document, Packer, Paragraph, TextRun, Header, Footer, ImageRun, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, PageNumber, HeadingLevel } from "docx";
 import { saveAs } from "file-saver";
 import logoImg from "@/assets/logo.png";
+import { supabase } from "@/integrations/supabase/client";
 
 // ─── Brand Constants ───
 export const BRAND = {
   name: "HOGAR BELÉN BUESACO S.A.S.",
   slogan: "Juntos, cuidamos mejor",
-  phone: "3117015258",
+  phone: "3117301245",
   email: "hogarbelen2022@gmail.com",
   web: "www.hogarbelen.org",
   social: "@hogarbelenbuesaco",
   nit: "NIT: 901.904.984-0",
   colorHex: "C8102E",
   colorRGB: [200, 16, 46] as [number, number, number],
-  footerText: "Cel: 3117015258 | Email: hogarbelen2022@gmail.com | Web: www.hogarbelen.org | Redes: @hogarbelenbuesaco",
+  footerText: "Cel: 3117301245 | Email: hogarbelen2022@gmail.com | Web: www.hogarbelen.org | Redes: @hogarbelenbuesaco",
 };
 
 // ─── Helpers ───
 let cachedLogoDataUrl: string | null = null;
 let cachedLogoBuffer: ArrayBuffer | null = null;
+let cachedDynamicLogoUrl: string | null = null;
+let logoLookupDone = false;
+
+async function getDynamicLogoUrl(): Promise<string | null> {
+  if (logoLookupDone) return cachedDynamicLogoUrl;
+  logoLookupDone = true;
+  try {
+    const { data } = await (supabase as any).from("system_settings").select("value").eq("key", "logo_url").maybeSingle();
+    if (data?.value && typeof data.value === "string") {
+      cachedDynamicLogoUrl = data.value;
+    }
+  } catch { /* fallback to bundled asset */ }
+  return cachedDynamicLogoUrl;
+}
 
 async function getLogoDataUrl(): Promise<string> {
   if (cachedLogoDataUrl) return cachedLogoDataUrl;
+  const dynamicUrl = await getDynamicLogoUrl();
   return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
@@ -34,20 +50,67 @@ async function getLogoDataUrl(): Promise<string> {
       cachedLogoDataUrl = c.toDataURL("image/png");
       resolve(cachedLogoDataUrl);
     };
-    img.onerror = () => resolve("");
-    img.src = logoImg;
+    img.onerror = () => {
+      // Fallback to bundled logo
+      const fb = new Image();
+      fb.onload = () => {
+        const c = document.createElement("canvas");
+        c.width = fb.naturalWidth;
+        c.height = fb.naturalHeight;
+        c.getContext("2d")!.drawImage(fb, 0, 0);
+        cachedLogoDataUrl = c.toDataURL("image/png");
+        resolve(cachedLogoDataUrl);
+      };
+      fb.onerror = () => resolve("");
+      fb.src = logoImg;
+    };
+    img.src = dynamicUrl || logoImg;
   });
 }
 
 async function getLogoBuffer(): Promise<ArrayBuffer> {
   if (cachedLogoBuffer) return cachedLogoBuffer;
-  const resp = await fetch(logoImg);
-  cachedLogoBuffer = await resp.arrayBuffer();
-  return cachedLogoBuffer;
+  const dynamicUrl = await getDynamicLogoUrl();
+  try {
+    const resp = await fetch(dynamicUrl || logoImg);
+    cachedLogoBuffer = await resp.arrayBuffer();
+    return cachedLogoBuffer;
+  } catch {
+    const resp = await fetch(logoImg);
+    cachedLogoBuffer = await resp.arrayBuffer();
+    return cachedLogoBuffer;
+  }
 }
 
 function formatDate(): string {
   return new Date().toLocaleDateString("es-CO", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+}
+
+function formatTime(): string {
+  return new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+}
+
+// Strip markdown chars for plain rendering / split into segments with bold/italic flags
+type Segment = { text: string; bold?: boolean; italic?: boolean; heading?: 1 | 2 | 3 };
+function parseMarkdownLine(line: string): Segment[] {
+  const segments: Segment[] = [];
+  // Heading detection
+  const h = line.match(/^(#{1,3})\s+(.*)$/);
+  if (h) return [{ text: h[2], bold: true, heading: h[1].length as 1 | 2 | 3 }];
+
+  // Inline bold/italic
+  const regex = /(\*\*[^*]+\*\*|\*[^*]+\*)/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(line)) !== null) {
+    if (m.index > last) segments.push({ text: line.slice(last, m.index) });
+    const tok = m[0];
+    if (tok.startsWith("**")) segments.push({ text: tok.slice(2, -2), bold: true });
+    else segments.push({ text: tok.slice(1, -1), italic: true });
+    last = m.index + tok.length;
+  }
+  if (last < line.length) segments.push({ text: line.slice(last) });
+  return segments.length ? segments : [{ text: line }];
 }
 
 // ─── PDF EXPORT ───
