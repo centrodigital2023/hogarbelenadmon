@@ -305,63 +305,41 @@ export async function exportWord(opts: {
   textContent?: string;
   data?: Record<string, any>[] | null;
   signatureDataUrl?: string | null;
+  responsibleName?: string;
+  responsibleRole?: string;
 }) {
   const logoBuffer = await getLogoBuffer();
   const content = opts.textContent || "";
 
   const headerChildren: (Paragraph)[] = [
-    new Paragraph({
-      children: [
-        new ImageRun({ data: logoBuffer, transformation: { width: 80, height: 80 }, type: "png", altText: { title: "Logo", description: "Logo Hogar Belén", name: "logo" } }),
-      ],
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: BRAND.name, bold: true, size: 28, color: BRAND.colorHex, font: "Arial" }),
-      ],
-      alignment: AlignmentType.LEFT,
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: BRAND.slogan, italics: true, size: 20, color: "555555", font: "Arial" }),
-      ],
-      border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: BRAND.colorHex, space: 4 } },
-    }),
+    new Paragraph({ children: [new ImageRun({ data: logoBuffer, transformation: { width: 80, height: 80 }, type: "png", altText: { title: "Logo", description: "Logo Hogar Belén", name: "logo" } })] }),
+    new Paragraph({ children: [new TextRun({ text: BRAND.name, bold: true, size: 28, color: BRAND.colorHex, font: "Arial" })], alignment: AlignmentType.LEFT }),
+    new Paragraph({ children: [new TextRun({ text: BRAND.slogan, italics: true, size: 20, color: "333333", font: "Arial" })], border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: BRAND.colorHex, space: 4 } } }),
   ];
 
-  const footerChildren: Paragraph[] = [
-    new Paragraph({
-      children: [
-        new TextRun({ text: BRAND.footerText, size: 14, color: "666666", font: "Arial" }),
-      ],
+  const footerChildren: Paragraph[] = [];
+  if (opts.responsibleName) {
+    footerChildren.push(new Paragraph({
+      children: [new TextRun({ text: `Registrado por: ${opts.responsibleName}${opts.responsibleRole ? ` (${opts.responsibleRole})` : ""} | Fecha: ${new Date().toLocaleDateString("es-CO")} | Hora: ${formatTime()}`, size: 14, color: "555555", font: "Arial", bold: true })],
       alignment: AlignmentType.CENTER,
-      border: { top: { style: BorderStyle.SINGLE, size: 4, color: BRAND.colorHex, space: 4 } },
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: BRAND.nit + "  |  ", size: 12, color: "999999", font: "Arial" }),
-        new TextRun({ text: "Página ", size: 12, color: "999999", font: "Arial" }),
-        new TextRun({ children: [PageNumber.CURRENT], size: 12, color: "999999", font: "Arial" }),
-        new TextRun({ text: " de ", size: 12, color: "999999", font: "Arial" }),
-        new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 12, color: "999999", font: "Arial" }),
-      ],
-      alignment: AlignmentType.CENTER,
-    }),
+    }));
+  }
+  footerChildren.push(
+    new Paragraph({ children: [new TextRun({ text: BRAND.footerText, size: 14, color: "666666", font: "Arial" })], alignment: AlignmentType.CENTER, border: { top: { style: BorderStyle.SINGLE, size: 4, color: BRAND.colorHex, space: 4 } } }),
+    new Paragraph({ children: [
+      new TextRun({ text: BRAND.nit + "  |  ", size: 12, color: "999999", font: "Arial" }),
+      new TextRun({ text: "Página ", size: 12, color: "999999", font: "Arial" }),
+      new TextRun({ children: [PageNumber.CURRENT], size: 12, color: "999999", font: "Arial" }),
+      new TextRun({ text: " de ", size: 12, color: "999999", font: "Arial" }),
+      new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 12, color: "999999", font: "Arial" }),
+    ], alignment: AlignmentType.CENTER }),
+  );
+
+  const bodyChildren: (Paragraph | Table)[] = [
+    new Paragraph({ children: [new TextRun({ text: opts.title, bold: true, size: 28, color: BRAND.colorHex, font: "Arial" })], heading: HeadingLevel.HEADING_1, spacing: { after: 200 } }),
+    new Paragraph({ children: [new TextRun({ text: `Fecha: ${formatDate()}`, size: 20, color: "666666", font: "Arial" })], spacing: { after: 300 } }),
   ];
 
-  const bodyChildren: Paragraph[] = [
-    new Paragraph({
-      children: [new TextRun({ text: opts.title, bold: true, size: 28, color: BRAND.colorHex, font: "Arial" })],
-      heading: HeadingLevel.HEADING_1,
-      spacing: { after: 200 },
-    }),
-    new Paragraph({
-      children: [new TextRun({ text: `Fecha: ${formatDate()}`, size: 20, color: "666666", font: "Arial" })],
-      spacing: { after: 300 },
-    }),
-  ];
-
-  // Build table if data provided
   if (opts.data && opts.data.length > 0) {
     const keys = Object.keys(opts.data[0]);
     const headerRow = new TableRow({
@@ -379,16 +357,27 @@ export async function exportWord(opts: {
       })),
     }));
     bodyChildren.push(new Paragraph({ spacing: { after: 100 }, children: [] }));
-    const table = new Table({
-      width: { size: 9360, type: WidthType.DXA },
-      rows: [headerRow, ...dataRows],
-    });
-    bodyChildren.push(table as any);
+    bodyChildren.push(new Table({ width: { size: 9360, type: WidthType.DXA }, rows: [headerRow, ...dataRows] }));
   } else if (content) {
-    content.split("\n").filter(l => l.trim()).forEach(line => {
+    content.split("\n").forEach(line => {
+      if (!line.trim()) {
+        bodyChildren.push(new Paragraph({ children: [new TextRun({ text: "", size: 22, font: "Arial" })], spacing: { after: 80 } }));
+        return;
+      }
+      const segments = parseMarkdownLine(line);
+      const head = segments[0]?.heading;
+      if (head) {
+        const size = head === 1 ? 28 : head === 2 ? 24 : 22;
+        bodyChildren.push(new Paragraph({
+          children: [new TextRun({ text: segments[0].text, bold: true, size, color: BRAND.colorHex, font: "Arial" })],
+          heading: head === 1 ? HeadingLevel.HEADING_1 : head === 2 ? HeadingLevel.HEADING_2 : HeadingLevel.HEADING_3,
+          spacing: { before: 200, after: 120 },
+        }));
+        return;
+      }
       bodyChildren.push(new Paragraph({
-        children: [new TextRun({ text: line, size: 22, font: "Arial" })],
-        spacing: { after: 120, line: 276 },
+        children: segments.map(seg => new TextRun({ text: seg.text, bold: seg.bold, italics: seg.italic, size: 22, font: "Arial", color: seg.bold ? "1A1A1A" : "333333" })),
+        spacing: { after: 120, line: 300 },
       }));
     });
   }
