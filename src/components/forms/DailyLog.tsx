@@ -176,11 +176,31 @@ const DailyLog = ({ onBack }: Props) => {
     if (!selectedResident) return;
     setGeneratingSingle(true);
     try {
+      const liveEntry = entries[selectedResident];
       const { data, error } = await supabase.functions.invoke('ai-nursing-notes', {
-        body: { residentId: selectedResident, dateFrom: logDate, dateTo: logDate, shift, isConsolidated: false },
+        body: {
+          residentId: selectedResident,
+          dateFrom: logDate,
+          dateTo: logDate,
+          shift,
+          isConsolidated: false,
+          liveEntry: liveEntry || null,
+          responsibleName,
+          responsibleRole,
+        },
       });
       if (error) throw error;
-      setSingleReport(data?.note || 'No se pudo generar el informe.');
+      if (data?.error) throw new Error(data.error);
+      if (!data?.note) {
+        toast({
+          title: "Sin datos suficientes",
+          description: "Diligencia signos vitales y bienestar del residente o guarda la bitácora antes de generar el informe.",
+          variant: "destructive",
+        });
+        setGeneratingSingle(false);
+        return;
+      }
+      setSingleReport(data.note);
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     }
