@@ -25,6 +25,9 @@ const NursingReport = ({ onBack }: Props) => {
   const [stats, setStats] = useState<any>(null);
   const [generating, setGenerating] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [signature, setSignature] = useState<string | null>(null);
+  const [responsibleName, setResponsibleName] = useState("");
+  const [responsibleRole, setResponsibleRole] = useState("");
 
   const generateReport = async () => {
     if (!user) return;
