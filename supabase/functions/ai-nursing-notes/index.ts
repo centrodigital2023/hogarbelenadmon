@@ -88,7 +88,7 @@ serve(async (req) => {
     if (!isConsolidated && residentId) incQuery = incQuery.eq("resident_id", residentId);
     const { data: incidents } = await incQuery;
 
-    if ((!logs || logs.length === 0) && (!vitals || vitals.length === 0)) {
+    if ((!logs || logs.length === 0) && (!vitals || vitals.length === 0) && !liveEntry) {
       return new Response(JSON.stringify({ note: null }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -110,6 +110,13 @@ serve(async (req) => {
     if (!isConsolidated && residentId) prevQuery = prevQuery.eq("resident_id", residentId);
     const { data: prevNotes } = await prevQuery;
 
+    // Lookup resident name if needed (case where only liveEntry is provided)
+    let residentNameFromDb: string | null = null;
+    if (residentId && noteType !== "grupal") {
+      const { data: r } = await serviceClient.from("residents").select("full_name").eq("id", residentId).maybeSingle();
+      residentNameFromDb = r?.full_name || null;
+    }
+
     const logsText = (logs || []).map((l: any) =>
       `${l.log_date} ${l.shift}: ${l.residents?.full_name || 'Residente'} - Nutrición:${l.nutrition_pct}%, Hidratación:${l.hydration_glasses} vasos, Ánimo:${l.mood}, Eliminación:${l.elimination}, Obs:${l.observations || 'N/A'}`
     ).join("\n");
@@ -117,6 +124,14 @@ serve(async (req) => {
     const vitalsText = (vitals || []).map((v: any) =>
       `${v.record_date}: ${v.residents?.full_name || 'Residente'} - PA:${v.blood_pressure}, FC:${v.heart_rate}, T:${v.temperature}°C, SpO2:${v.spo2}%, Peso:${v.weight}kg, Glicemia:${v.glucose}`
     ).join("\n");
+
+    // Datos en pantalla (sin guardar) — fuente principal cuando se genera desde el formulario
+    const liveEntryText = liveEntry ? `${dateFrom} ${shift}: ${residentNameFromDb || 'Residente'}
+- Signos vitales: T.A. ${liveEntry.blood_pressure || 'N/R'}, SpO2 ${liveEntry.spo2 ?? 'N/R'}%, Temp ${liveEntry.temperature ?? 'N/R'}°C, Glucemia ${liveEntry.glucose ?? 'N/R'}, FC ${liveEntry.heart_rate ?? 'N/R'}, Peso ${liveEntry.weight ?? 'N/R'} kg
+- Notas SV: ${liveEntry.vital_notes || 'Sin notas'}
+- Bienestar: Nutrición ${liveEntry.nutrition_pct ?? 0}%, Hidratación ${liveEntry.hydration_glasses ?? 0} vasos, Eliminación: ${liveEntry.elimination || 'N/R'}
+- Estado de ánimo: ${liveEntry.mood || 'N/R'}
+- Novedades / observaciones: ${liveEntry.observations || 'Sin novedades'}` : "";
 
     const incText = (incidents || []).map((i: any) =>
       `${i.incident_datetime}: ${i.residents?.full_name} - Tipo:${i.incident_type}, Desc:${i.description}`
@@ -134,7 +149,11 @@ serve(async (req) => {
 
     const residentName = noteType === "grupal"
       ? "TODOS los residentes del turno"
-      : (logs?.[0]?.residents?.full_name || vitals?.[0]?.residents?.full_name || "el/la residente");
+      : (logs?.[0]?.residents?.full_name || vitals?.[0]?.residents?.full_name || residentNameFromDb || "el/la residente");
+
+    const responsibleLine = responsibleName
+      ? `${responsibleName}${responsibleRole ? ' — ' + responsibleRole : ''}`
+      : '[responsable del turno]';
 
     // ===== PROMPTS MAESTROS (según Manual de Implementación Técnica - Belén Gestión) =====
     const baseSystem = `Actúas como enfermera clínica del **Hogar Belén Buesaco S.A.S.** (Buesaco, Nariño), con más de 15 años de experiencia en cuidado del adulto mayor. Lema institucional: *"Juntos, cuidamos mejor"*.
