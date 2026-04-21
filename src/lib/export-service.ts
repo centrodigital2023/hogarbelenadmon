@@ -227,7 +227,7 @@ export async function exportPDF(opts: {
       y += lineH + 1;
     };
 
-    for (const rawLine of opts.textContent.split("\n")) {
+    for (const rawLine of sourceText.split("\n")) {
       if (!rawLine.trim()) { y += 3; continue; }
       const segments = parseMarkdownLine(rawLine);
       writeSegments(segments);
