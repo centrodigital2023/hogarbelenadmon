@@ -166,19 +166,19 @@ serve(async (req) => {
 - **Estado de Ánimo:** 😊 Alegre / 😌 Tranquilo / 😰 Ansioso / 😢 Triste / 😤 Agitado / 😶 Apático
 - **Novedades:** medicamentos administrados, terapias, actividades, citas médicas e incidentes (HB-F20)
 
-**Cierre obligatorio** (al final del texto):
+**Cierre obligatorio** (al final del texto, EXACTAMENTE este formato):
 > Nota generada por IA — Hogar Belén Buesaco S.A.S.
-> Registrado por: [responsable del turno] | Fecha: [DD/MM/AAAA] | Hora: [HH:MM]`;
+> Registrado por: ${responsibleLine} | Fecha: ${dateFrom} | Hora: (usa la hora actual del servidor en formato HH:MM)`;
 
     let promptByType = "";
     if (noteType === "individual") {
       promptByType = `**TIPO: NOTA INDIVIDUAL**
 
-Redacta una nota para **${residentName}**. Basado en sus signos vitales y su ánimo, narra una jornada de bienestar. Menciona la nutrición al X% y la administración de medicamentos con un tono dulce y profesional. Resalta en **negrita** los hitos clínicos y en *cursiva* el confort y la calidez del cuidado.
+Redacta una nota para **${residentName}**. Basado en sus signos vitales y su ánimo, narra una jornada de bienestar. Menciona la nutrición al porcentaje EXACTO indicado y la administración de medicamentos con un tono dulce y profesional. Resalta en **negrita** los hitos clínicos y en *cursiva* el confort y la calidez del cuidado.
 
 Estructura sugerida (adáptala con naturalidad, máximo 450 palabras):
 1. *Apertura cálida* con valoración general
-2. **Signos vitales** del turno
+2. **Signos vitales** del turno (cita los valores exactos)
 3. **Nutrición e hidratación** (porcentaje exacto)
 4. Patrón de **eliminación** y **estado de ánimo**
 5. **Medicamentos**, terapias y actividades realizadas
@@ -198,11 +198,13 @@ Agrupa las novedades de **${residentName}** desde el **${dateFrom}** hasta el **
 
     const userPrompt = `Datos del período ${dateFrom} → ${dateTo} | Turno: ${shift || 'N/A'} | Tipo: ${noteType.toUpperCase()}
 Paciente: ${residentName}
+Responsable del turno: ${responsibleLine}
 
-DATOS DE BITÁCORA (HB-F4):
-${logsText || "Sin datos de bitácora"}
+${liveEntryText ? `DATOS ACTUALES DEL TURNO (fuente principal — diligenciados ahora mismo en HB-F4):\n${liveEntryText}\n` : ''}
+DATOS DE BITÁCORA HISTÓRICOS (HB-F4):
+${logsText || "Sin datos de bitácora guardados"}
 
-SIGNOS VITALES:
+SIGNOS VITALES HISTÓRICOS:
 ${vitalsText || "Sin signos vitales registrados"}
 
 INCIDENTES (HB-F20):
@@ -217,7 +219,7 @@ ${apptText || "Sin citas en el período"}
 NOTAS ANTERIORES (no copiar estilo, generar texto 100% original):
 ${prevText || "Sin notas previas"}
 
-Redacta la nota cumpliendo estrictamente el tipo (${noteType.toUpperCase()}), el formato Markdown con **negritas** e *cursivas*, y el cierre obligatorio con "Registrado por…".`;
+Redacta la nota cumpliendo estrictamente el tipo (${noteType.toUpperCase()}), el formato Markdown con **negritas** y *cursivas*, citando los valores EXACTOS de signos vitales y el porcentaje EXACTO de nutrición, y el cierre obligatorio con "Registrado por: ${responsibleLine}".`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
