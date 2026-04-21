@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ExportButtons from "@/components/ExportButtons";
+import SignaturePad from "@/components/SignaturePad";
 import { Sparkles, Loader2, Save, Calendar, ChevronDown, ChevronUp, Share2, Mail, MessageCircle } from "lucide-react";
 
 interface Props { onBack: () => void; }
@@ -25,6 +26,9 @@ const NursingNotes = ({ onBack }: Props) => {
   const [history, setHistory] = useState<any[]>([]);
   const [isConsolidated, setIsConsolidated] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [signature, setSignature] = useState<string | null>(null);
+  const [responsibleName, setResponsibleName] = useState("");
+  const [responsibleRole, setResponsibleRole] = useState("");
 
   useEffect(() => {
     supabase.from('residents').select('id, full_name').in('status', ['prueba', 'permanente'])
@@ -190,12 +194,43 @@ const NursingNotes = ({ onBack }: Props) => {
           <h3 className="text-sm font-black text-foreground mb-3">Nota generada</h3>
           <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={12}
             className="w-full px-4 py-3 rounded-xl border border-input bg-background text-sm resize-none font-mono" />
+
+          {/* Responsable + Firma */}
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-border">
+            <div className="space-y-2">
+              <input
+                placeholder="Nombre del responsable"
+                value={responsibleName}
+                onChange={e => setResponsibleName(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-input bg-background text-sm"
+              />
+              <input
+                placeholder="Cargo / Rol"
+                value={responsibleRole}
+                onChange={e => setResponsibleRole(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-input bg-background text-sm"
+              />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Firma digital</p>
+              <SignaturePad label="Firma" value={signature || undefined} onChange={setSignature} />
+            </div>
+          </div>
+
           <div className="flex flex-wrap gap-3 mt-4">
             <button onClick={saveNote} disabled={saving}
               className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-xl text-xs font-bold disabled:opacity-40 min-h-[48px]">
               <Save size={14} /> {saving ? 'Guardando...' : 'Guardar nota'}
             </button>
-            <ExportButtons contentRef={contentRef} title="Nota de Enfermería" fileName="nota_enfermeria" textContent={note} />
+            <ExportButtons
+              contentRef={contentRef}
+              title="Nota de Enfermería"
+              fileName="nota_enfermeria"
+              textContent={note}
+              signatureDataUrl={signature}
+              responsibleName={responsibleName}
+              responsibleRole={responsibleRole}
+            />
             <button onClick={shareWhatsApp}
               className="flex items-center gap-2 bg-[hsl(var(--accent))] text-accent-foreground px-6 py-3 rounded-xl text-xs font-bold hover:opacity-90 transition">
               <MessageCircle size={14} /> WhatsApp
