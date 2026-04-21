@@ -49,6 +49,15 @@ serve(async (req) => {
 
     const body = await req.json();
     const { residentId, dateFrom, dateTo, shift, isConsolidated } = body;
+    // Determinar tipo de nota: individual | grupal | consolidado
+    // - individual: un residente, un día/turno
+    // - grupal: todos los residentes en un turno/día
+    // - consolidado: un residente en un rango de fechas (evolución)
+    const isRangeReport = dateFrom !== dateTo;
+    const noteType: "individual" | "grupal" | "consolidado" =
+      isConsolidated && !residentId ? "grupal"
+      : residentId && isRangeReport ? "consolidado"
+      : "individual";
 
     // ===== INPUT VALIDATION =====
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
