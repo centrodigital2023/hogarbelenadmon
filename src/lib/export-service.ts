@@ -174,46 +174,11 @@ export async function exportPDF(opts: {
     pdf.text(`Página ${pageNum} de ${totalPages}`, pageW / 2, y + 17, { align: "center" });
   };
 
-  if (opts.contentRef?.current) {
-    const canvas = await html2canvas(opts.contentRef.current, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
-    const imgData = canvas.toDataURL("image/png");
-    const imgW = canvas.width;
-    const imgH = canvas.height;
-    const ratio = contentW / imgW;
-    const maxContentH = pageH - headerH - footerH - 10;
+  // Garantía: si no hay textContent explícito, usar el innerText del contenedor
+  // (nunca una captura visual). Así PDF == versión textual del Word.
+  const sourceText = opts.textContent || opts.contentRef?.current?.innerText || opts.title;
 
-    if (imgH * ratio <= maxContentH) {
-      drawHeader(0);
-      pdf.addImage(imgData, "PNG", margin, headerH + 4, contentW, imgH * ratio);
-      if (opts.signatureDataUrl) {
-        try { pdf.addImage(opts.signatureDataUrl, "PNG", margin, headerH + 4 + imgH * ratio + 4, 40, 20); } catch {}
-      }
-      drawFooter(1, 1);
-    } else {
-      let yOffset = 0;
-      let page = 0;
-      while (yOffset < imgH) {
-        if (page > 0) pdf.addPage();
-        drawHeader(page);
-        const sliceH = Math.min(maxContentH / ratio, imgH - yOffset);
-        const tc = document.createElement("canvas");
-        tc.width = imgW;
-        tc.height = sliceH;
-        tc.getContext("2d")!.drawImage(canvas, 0, yOffset, imgW, sliceH, 0, 0, imgW, sliceH);
-        pdf.addImage(tc.toDataURL("image/png"), "PNG", margin, headerH + 4, contentW, sliceH * ratio);
-        yOffset += sliceH;
-        page++;
-      }
-      if (opts.signatureDataUrl) {
-        try { pdf.addImage(opts.signatureDataUrl, "PNG", margin, headerH + 4 + (imgH - Math.floor(yOffset - (maxContentH / ratio))) * ratio + 4, 40, 20); } catch {}
-      }
-      const total = pdf.getNumberOfPages();
-      for (let i = 1; i <= total; i++) {
-        pdf.setPage(i);
-        drawFooter(i, total);
-      }
-    }
-  } else if (opts.textContent) {
+  {
     drawHeader(0);
     pdf.setFontSize(13);
     pdf.setFont("helvetica", "bold");
