@@ -142,18 +142,30 @@ const NursingNotes = ({ onBack }: Props) => {
     <div className="animate-fade-in space-y-6">
       <FormHeader title="HB-F4: Bitácora Diaria" subtitle="Registro por turnos de indicadores de salud y bienestar" onBack={onBack} />
 
+      {/* Privacy & Confidentiality Alert */}
+      <div className={`p-4 rounded-xl border-2 ${isConsolidated ? 'bg-orange-50 border-orange-200' : 'bg-blue-50 border-blue-200'}`}>
+        <p className="text-[11px] font-bold mb-1">
+          {isConsolidated ? '📊 NOTA CONSOLIDADA' : '🔒 NOTA INDIVIDUAL Y CONFIDENCIAL'}
+        </p>
+        <p className="text-[10px]">
+          {isConsolidated 
+            ? 'Esta nota incluirá datos agregados de TODOS los residentes del período seleccionado.' 
+            : 'Esta nota contendrá información EXCLUSIVA del residente seleccionado. Los datos no se mezclarán con otros residentes.'}
+        </p>
+      </div>
+
       <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={isConsolidated} onChange={(e) => setIsConsolidated(e.target.checked)} className="w-4 h-4 accent-primary" />
-            <span className="text-sm font-bold text-foreground">Nota consolidada (todos los residentes)</span>
+            <span className="text-sm font-bold text-foreground">Generar nota consolidada (todos los residentes)</span>
           </label>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {!isConsolidated && (
             <div>
-              <label className="text-xs font-bold text-muted-foreground uppercase">Residente</label>
+              <label className="text-xs font-bold text-muted-foreground uppercase">📋 Residente (exclusivo)</label>
               <select value={selectedResident} onChange={(e) => setSelectedResident(e.target.value)}
                 className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm">
                 <option value="">-- Seleccionar --</option>
@@ -191,6 +203,16 @@ const NursingNotes = ({ onBack }: Props) => {
 
       {note && (
         <div ref={contentRef} className="bg-card border-2 border-primary/20 rounded-2xl p-6">
+          <div className={`mb-4 p-3 rounded-lg ${isConsolidated ? 'bg-orange-50 border border-orange-200' : 'bg-green-50 border border-green-200'}`}>
+            <p className="text-[11px] font-bold">
+              {isConsolidated ? '✅ Nota Consolidada' : `✅ Nota Individual de: ${residents.find(r => r.id === selectedResident)?.full_name || 'Residente'}`}
+            </p>
+            <p className="text-[10px] mt-1">
+              {isConsolidated 
+                ? 'Nota consolidada generada. Contiene datos agregados de todos los residentes.'
+                : 'Nota confidencial generada. Contiene solo información de este residente.'}
+            </p>
+          </div>
           <h3 className="text-sm font-black text-foreground mb-3">Nota generada</h3>
           <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={12}
             className="w-full px-4 py-3 rounded-xl border border-input bg-background text-sm resize-none font-mono" />

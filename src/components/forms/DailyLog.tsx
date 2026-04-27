@@ -433,12 +433,16 @@ const DailyLog = ({ onBack }: Props) => {
 
       {/* Single Resident Report */}
       <div className="bg-card border-2 border-accent rounded-2xl p-6 mt-6">
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <p className="text-[11px] font-bold text-amber-900">🔒 NOTA INDIVIDUAL Y CONFIDENCIAL</p>
+          <p className="text-[10px] text-amber-800 mt-1">Esta nota contendrá información EXCLUSIVA del residente seleccionado. Los datos no se mezclarán con otros residentes.</p>
+        </div>
         <h3 className="text-sm font-black text-foreground flex items-center gap-2 mb-4">
           <FileText size={16} className="text-primary" /> Informe Individual con IA
         </h3>
         <div className="flex flex-wrap gap-3 items-end mb-4">
           <div className="flex-1 min-w-[200px]">
-            <label className="text-[10px] font-bold text-muted-foreground uppercase">Residente</label>
+            <label className="text-[10px] font-bold text-muted-foreground uppercase">Residente (selecciona uno)</label>
             <select value={selectedResident} onChange={e => setSelectedResident(e.target.value)}
               className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm">
               <option value="">Seleccionar residente...</option>
@@ -452,8 +456,19 @@ const DailyLog = ({ onBack }: Props) => {
           </button>
         </div>
 
+        {selectedResident && !singleReport && (
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+            <p className="text-[10px] font-semibold text-blue-900">ℹ️ Informe para: <span className="font-bold">{selectedResidentName}</span></p>
+            <p className="text-[10px] text-blue-800 mt-1">Cuando hagas clic en "Generar Informe", se recopilarán solo los datos de este residente.</p>
+          </div>
+        )}
+
         {singleReport && (
           <div ref={singleReportRef}>
+            <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-[10px] font-bold text-green-900">✅ Informe Individual de: <span className="font-bold">{selectedResidentName}</span></p>
+              <p className="text-[10px] text-green-800 mt-1">Nota confidencial generada. Contiene solo información de este residente.</p>
+            </div>
             <textarea value={singleReport} onChange={e => setSingleReport(e.target.value)} rows={8}
               className="w-full px-4 py-3 rounded-xl border border-input bg-background text-sm resize-none mb-4" />
             <div className="flex flex-wrap gap-2">

@@ -69,23 +69,44 @@ serve(async (req) => {
     if (residentId && !uuidRegex.test(residentId)) {
       return new Response(JSON.stringify({ error: "ID de residente inválido." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+    
+    // ===== CRITICAL: Validate resident exists in database for personal/consolidated notes =====
+    if ((noteType === "individual" || noteType === "consolidado") && residentId) {
+      const { data: residentExists } = await serviceClient.from("residents").select("id").eq("id", residentId).maybeSingle();
+      if (!residentExists) {
+        return new Response(JSON.stringify({ error: "Residente no encontrado o no tiene acceso." }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
     // ===== END INPUT VALIDATION =====
 
     // Gather data using service client
+    // ===== CRITICAL FILTER LOGIC FOR PERSONAL NOTES =====
+    // For individual/consolidado notes (when residentId is provided):
+    // - ALL queries MUST include WHERE resident_id = residentId
+    // - This ensures NO data from other residents is included in the prompt
+    
     let logsQuery = serviceClient.from("daily_logs").select("*, residents(full_name)")
       .gte("log_date", dateFrom).lte("log_date", dateTo);
-    if (!isConsolidated && residentId) logsQuery = logsQuery.eq("resident_id", residentId);
+    if ((noteType === "individual" || noteType === "consolidado") && residentId) {
+      logsQuery = logsQuery.eq("resident_id", residentId);
+    } else if (noteType === "grupal") {
+      // For grupal: no resident filter, gets ALL residents for the period
+    }
     if (shift && shift !== "todos") logsQuery = logsQuery.eq("shift", shift);
     const { data: logs } = await logsQuery.order("log_date");
 
     let vitalsQuery = serviceClient.from("vital_signs").select("*, residents(full_name)")
       .gte("record_date", dateFrom).lte("record_date", dateTo);
-    if (!isConsolidated && residentId) vitalsQuery = vitalsQuery.eq("resident_id", residentId);
+    if ((noteType === "individual" || noteType === "consolidado") && residentId) {
+      vitalsQuery = vitalsQuery.eq("resident_id", residentId);
+    }
     const { data: vitals } = await vitalsQuery;
 
     let incQuery = serviceClient.from("incidents").select("*, residents(full_name)")
       .gte("incident_datetime", `${dateFrom}T00:00:00`).lte("incident_datetime", `${dateTo}T23:59:59`);
-    if (!isConsolidated && residentId) incQuery = incQuery.eq("resident_id", residentId);
+    if ((noteType === "individual" || noteType === "consolidado") && residentId) {
+      incQuery = incQuery.eq("resident_id", residentId);
+    }
     const { data: incidents } = await incQuery;
 
     if ((!logs || logs.length === 0) && (!vitals || vitals.length === 0) && !liveEntry) {
@@ -93,21 +114,31 @@ serve(async (req) => {
     }
 
     // Medicamentos administrados (contexto)
+    // ===== CRITICAL: Filter by resident for personal notes =====
     let medQuery = serviceClient.from("medication_admin")
       .select("admin_datetime, was_administered, skip_reason, medications(medication_name, dose), residents(full_name)")
       .gte("admin_datetime", `${dateFrom}T00:00:00`).lte("admin_datetime", `${dateTo}T23:59:59`);
-    if (residentId && noteType !== "grupal") medQuery = medQuery.eq("resident_id", residentId);
+    if ((noteType === "individual" || noteType === "consolidado") && residentId) {
+      medQuery = medQuery.eq("resident_id", residentId);
+    }
     const { data: medications } = await medQuery;
 
     // Citas médicas (contexto)
+    // ===== CRITICAL: Filter by resident for personal notes =====
     let apptQuery = serviceClient.from("medical_appointments")
       .select("appointment_date, specialty, location, was_attended, residents(full_name)")
       .gte("appointment_date", dateFrom).lte("appointment_date", dateTo);
-    if (residentId && noteType !== "grupal") apptQuery = apptQuery.eq("resident_id", residentId);
+    if ((noteType === "individual" || noteType === "consolidado") && residentId) {
+      apptQuery = apptQuery.eq("resident_id", residentId);
+    }
     const { data: appointments } = await apptQuery;
 
+    // Previous nursing notes (for context and style continuity)
+    // ===== CRITICAL: Filter by resident for personal notes =====
     let prevQuery = serviceClient.from("nursing_notes").select("note").order("created_at", { ascending: false }).limit(3);
-    if (!isConsolidated && residentId) prevQuery = prevQuery.eq("resident_id", residentId);
+    if ((noteType === "individual" || noteType === "consolidado") && residentId) {
+      prevQuery = prevQuery.eq("resident_id", residentId);
+    }
     const { data: prevNotes } = await prevQuery;
 
     // Lookup resident name if needed (case where only liveEntry is provided)
@@ -172,54 +203,67 @@ serve(async (req) => {
 
     let promptByType = "";
     if (noteType === "individual") {
-      promptByType = `**TIPO: NOTA INDIVIDUAL**
+      promptByType = `**TIPO: NOTA INDIVIDUAL (EXCLUSIVA DE UN RESIDENTE)**
+
+⚠️ **CRÍTICO:** Los datos que recibes a continuación pertenecen ÚNICAMENTE a **${residentName}**. 
+NO incluyas datos, nombres o información de otros residentes. 
+Esta nota es personal y confidencial para este residente específico.
 
 Redacta una nota para **${residentName}**. Basado en sus signos vitales y su ánimo, narra una jornada de bienestar. Menciona la nutrición al porcentaje EXACTO indicado y la administración de medicamentos con un tono dulce y profesional. Resalta en **negrita** los hitos clínicos y en *cursiva* el confort y la calidez del cuidado.
 
 Estructura sugerida (adáptala con naturalidad, máximo 450 palabras):
-1. *Apertura cálida* con valoración general
-2. **Signos vitales** del turno (cita los valores exactos)
-3. **Nutrición e hidratación** (porcentaje exacto)
-4. Patrón de **eliminación** y **estado de ánimo**
-5. **Medicamentos**, terapias y actividades realizadas
-6. Citas médicas o incidentes (si aplica)
-7. *Recomendación* breve para el siguiente turno`;
+1. *Apertura cálida* con valoración general de ${residentName}
+2. **Signos vitales** de ${residentName} (cita los valores exactos)
+3. **Nutrición e hidratación** de ${residentName} (porcentaje exacto)
+4. Patrón de **eliminación** y **estado de ánimo** de ${residentName}
+5. **Medicamentos** de ${residentName}, terapias y actividades realizadas
+6. Citas médicas o incidentes de ${residentName} (si aplica)
+7. *Recomendación* breve para el siguiente turno de ${residentName}`;
     } else if (noteType === "grupal") {
       promptByType = `**TIPO: NOTA GRUPAL DE TURNO**
 
 Sintetiza la actividad de la unidad durante el turno **${shift}** del **${dateFrom}**. Describe cómo el grupo de residentes mantuvo la **estabilidad clínica** y participó en las actividades del día. Usa un lenguaje que transmita *paz* y **seguridad clínica**, evitando enumerar residente por residente; en su lugar resalta tendencias colectivas (nutrición promedio, ánimo predominante, eventos relevantes). Máximo 500 palabras.`;
     } else {
-      promptByType = `**TIPO: NOTA CONSOLIDADA / EVOLUCIÓN**
+      promptByType = `**TIPO: NOTA CONSOLIDADA / EVOLUCIÓN (EXCLUSIVA DE UN RESIDENTE)**
+
+⚠️ **CRÍTICO:** Los datos que recibes a continuación pertenecen ÚNICAMENTE a **${residentName}**. 
+NO inclujas datos, nombres o información de otros residentes.
+Esta es una nota de evolución consolidada para este residente específico únicamente.
 
 Agrupa las novedades de **${residentName}** desde el **${dateFrom}** hasta el **${dateTo}**. Crea un relato coherente de la **evolución del residente**, resaltando su *recuperación*, sus avances y la **constancia del cuidado** brindado por el equipo. Integra signos vitales (tendencias), adherencia a medicamentos, citas médicas asistidas e incidentes. Cierra con una *proyección esperanzadora*. Máximo 600 palabras.`;
     }
 
     const systemPrompt = `${baseSystem}\n\n${promptByType}`;
 
-    const userPrompt = `Datos del período ${dateFrom} → ${dateTo} | Turno: ${shift || 'N/A'} | Tipo: ${noteType.toUpperCase()}
+    const dataIsolationWarning = (noteType === "individual" || noteType === "consolidado") && residentId
+      ? `\n⚠️ **ADVERTENCIA CRÍTICA DE PRIVACIDAD:** Los datos que siguen pertenecen ÚNICAMENTE a: **${residentName}** (ID: ${residentId})\nNO INCLUYAS información de otros residentes bajo ninguna circunstancia.\nEsta es una nota individual y confidencial.\n`
+      : "";
+
+    const userPrompt = `${dataIsolationWarning}
+Datos del período ${dateFrom} → ${dateTo} | Turno: ${shift || 'N/A'} | Tipo: ${noteType.toUpperCase()}
 Paciente: ${residentName}
 Responsable del turno: ${responsibleLine}
 
 ${liveEntryText ? `DATOS ACTUALES DEL TURNO (fuente principal — diligenciados ahora mismo en HB-F4):\n${liveEntryText}\n` : ''}
-DATOS DE BITÁCORA HISTÓRICOS (HB-F4):
+DATOS DE BITÁCORA HISTÓRICOS (HB-F4) - SOLO DE ${residentName}:
 ${logsText || "Sin datos de bitácora guardados"}
 
-SIGNOS VITALES HISTÓRICOS:
+SIGNOS VITALES HISTÓRICOS - SOLO DE ${residentName}:
 ${vitalsText || "Sin signos vitales registrados"}
 
-INCIDENTES (HB-F20):
+INCIDENTES (HB-F20) - SOLO DE ${residentName}:
 ${incText || "Sin incidentes"}
 
-ADMINISTRACIÓN DE MEDICAMENTOS:
+ADMINISTRACIÓN DE MEDICAMENTOS - SOLO DE ${residentName}:
 ${medText || "Sin administración registrada"}
 
-CITAS MÉDICAS:
+CITAS MÉDICAS - SOLO DE ${residentName}:
 ${apptText || "Sin citas en el período"}
 
-NOTAS ANTERIORES (no copiar estilo, generar texto 100% original):
+NOTAS ANTERIORES DE ${residentName} (no copiar estilo, generar texto 100% original):
 ${prevText || "Sin notas previas"}
 
-Redacta la nota cumpliendo estrictamente el tipo (${noteType.toUpperCase()}), el formato Markdown con **negritas** y *cursivas*, citando los valores EXACTOS de signos vitales y el porcentaje EXACTO de nutrición, y el cierre obligatorio con "Registrado por: ${responsibleLine}".`;
+Redacta la nota cumpliendo estrictamente el tipo (${noteType.toUpperCase()}), el formato Markdown con **negritas** y *cursivas*, citando los valores EXACTOS de signos vitales y el porcentaje EXACTO de nutrición, y el cierre obligatorio con "Registrado por: ${responsibleLine}".\n\nRECUERDA: Solo data de ${residentName}. No mezcles con otros residentes.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
