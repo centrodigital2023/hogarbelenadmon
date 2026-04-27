@@ -30,7 +30,7 @@ const SOURCE_CONFIG: Record<string, { label: string; icon: typeof Activity; colo
   medical_appointments: { label: 'Cita Médica', icon: Stethoscope, color: 'text-green-500', formId: 'HB-F17' },
   medication_admin: { label: 'Medicación', icon: ShieldCheck, color: 'text-purple-500', formId: 'HB-F15' },
   geriatric_assessments: { label: 'Valoración', icon: User, color: 'text-orange-500' },
-  kitchen_checklists: { label: 'Cocina', icon: Utensils, color: 'text-yellow-600', formId: 'HB-F5' },
+  kitchen_checklists: { label: 'Cocina', icon: Utensils, color: 'text-yellow-600', formId: 'UNIFIED-KITCHEN' },
 };
 
 const SOURCES = Object.keys(SOURCE_CONFIG);

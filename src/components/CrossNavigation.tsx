@@ -82,27 +82,11 @@ const RELATED_FORMS: Record<string, { id: string; label: string; module: string 
     { id: 'HB-F9', label: 'Terapias', module: 'Bienestar' },
     { id: 'HB-F26', label: 'Indicadores', module: 'Calidad' },
   ],
-  'HB-F5': [
-    { id: 'HB-F6', label: 'Ingreso Alimentos', module: 'Alimentación' },
-    { id: 'HB-F7', label: 'Temperatura Neveras', module: 'Alimentación' },
+  'HB-F6': [
     { id: 'UNIFIED-KITCHEN', label: 'Control Diario Cocina', module: 'Alimentación' },
   ],
-  'HB-F6': [
-    { id: 'HB-F5', label: 'Checklist Cocina', module: 'Alimentación' },
-    { id: 'HB-F7', label: 'Temperatura Neveras', module: 'Alimentación' },
-  ],
-  'HB-F7': [
-    { id: 'HB-F5', label: 'Checklist Cocina', module: 'Alimentación' },
-    { id: 'HB-F8', label: 'Desinfección', module: 'Alimentación' },
-  ],
-  'HB-F8': [
-    { id: 'HB-F5', label: 'Checklist Cocina', module: 'Alimentación' },
-    { id: 'HB-F8a1', label: 'Desinfección General', module: 'Higiene' },
-  ],
   'UNIFIED-KITCHEN': [
-    { id: 'HB-F5', label: 'Checklist Cocina', module: 'Alimentación' },
     { id: 'HB-F6', label: 'Ingreso Alimentos', module: 'Alimentación' },
-    { id: 'HB-F7', label: 'Temperatura Neveras', module: 'Alimentación' },
   ],
   'HB-F24': [
     { id: 'HB-F25', label: 'Evaluación Desempeño', module: 'Personal' },

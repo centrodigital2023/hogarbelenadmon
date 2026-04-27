@@ -64,8 +64,7 @@ import {
 const MODULE_INFO: Record<string, { title: string; subtitle: string; icon: any; forms: { id: string; label: string }[] }> = {
   '3': { title: '3. Alimentación', subtitle: 'Nutrición y cocina', icon: Utensils, forms: [
     { id: 'UNIFIED-KITCHEN', label: '🍳 Control Diario Cocina' },
-    { id: 'HB-F5', label: 'HB-F5: Checklist Cocina' }, { id: 'HB-F6', label: 'HB-F6: Ingreso Alimentos' },
-    { id: 'HB-F7', label: 'HB-F7: Temperatura Neveras' }, { id: 'HB-F8', label: 'HB-F8: Desinfección' },
+    { id: 'HB-F6', label: 'HB-F6: Ingreso Alimentos' },
   ]},
   '4': { title: '4. Bienestar', subtitle: 'Terapias y actividades', icon: Heart, forms: [
     { id: 'HB-F4', label: 'HB-F4: Bitácora Diaria' }, { id: 'HB-F9', label: 'HB-F9: Terapias' },
@@ -117,8 +116,8 @@ const MODULE_INFO: Record<string, { title: string; subtitle: string; icon: any; 
 const FORM_MODULE_MAP: Record<string, string> = {
   'HB-F1': 'ingreso', 'HB-F3': 'ingreso', 'HB-F22': 'ingreso',
   'MAPA': 'ingreso', 'HYGIENE-KIT': 'higiene',
-  'HB-F4': 'salud', 'HB-F5': 'alimentacion', 'HB-F6': 'alimentacion',
-  'HB-F7': 'alimentacion', 'HB-F8': 'alimentacion', 'HB-F8a1': 'higiene',
+  'HB-F4': 'salud', 'HB-F6': 'alimentacion',
+  'HB-F8a1': 'higiene',
   'HB-F9': 'bienestar', 'HB-F10': 'bienestar', 'HB-F11': 'bienestar',
   'HB-F14': 'salud', 'HB-F15': 'salud', 'HB-F16': 'salud',
   'HB-F17': 'sistema_salud', 'HB-F20': 'seguridad',
@@ -133,8 +132,8 @@ const FORM_MODULE_MAP: Record<string, string> = {
 
 const FORM_COMPONENTS: Record<string, React.FC<{ onBack: () => void }>> = {
   'HB-F1': AdmissionChecklist, 'HB-F3': BelongingsInventory, 'HB-F22': LifeHistory,
-  'HB-F4': DailyLog, 'HB-F5': KitchenChecklist, 'HB-F6': FoodIntake,
-  'HB-F7': FridgeTemps, 'HB-F8': DisinfectionRecord, 'HB-F8a1': DisinfectionRecord,
+  'HB-F4': DailyLog, 'HB-F6': FoodIntake,
+  'HB-F8a1': DisinfectionRecord,
   'HB-F9': TherapyRecords, 'HB-F10': PsychosocialRecord, 'HB-F11': SpiritualRecord,
   'HB-F14': MedicationList, 'HB-F15': MedicationAdmin, 'HB-F16': VitalSigns,
   'HB-F17': MedicalAppointments, 'HB-F20': IncidentReport,
