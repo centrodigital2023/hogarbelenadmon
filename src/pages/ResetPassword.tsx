@@ -23,8 +23,12 @@ const ResetPassword = () => {
       toast({ title: "Error", description: "Las contraseñas no coinciden", variant: "destructive" });
       return;
     }
-    if (password.length < 6) {
-      toast({ title: "Error", description: "Mínimo 6 caracteres", variant: "destructive" });
+    if (password.length < 10) {
+      toast({ title: "Error", description: "Mínimo 10 caracteres", variant: "destructive" });
+      return;
+    }
+    if (!/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+      toast({ title: "Error", description: "Debe incluir al menos un número y un carácter especial", variant: "destructive" });
       return;
     }
     setLoading(true);
