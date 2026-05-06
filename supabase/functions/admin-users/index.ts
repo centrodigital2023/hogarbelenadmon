@@ -43,8 +43,11 @@ Deno.serve(async (req) => {
       if (!email || !password || !full_name || !role) {
         return new Response(JSON.stringify({ error: "Campos requeridos: email, password, full_name, role" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      if (password.length < 6) {
-        return new Response(JSON.stringify({ error: "La contraseña debe tener al menos 6 caracteres" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (password.length < 10) {
+        return new Response(JSON.stringify({ error: "La contraseña debe tener al menos 10 caracteres" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (!/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+        return new Response(JSON.stringify({ error: "La contraseña debe incluir al menos un número y un carácter especial" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       const { data: newUser, error: createErr } = await adminClient.auth.admin.createUser({
@@ -131,7 +134,8 @@ Deno.serve(async (req) => {
     if (action === "reset_password") {
       const { user_id, new_password } = payload;
       if (!user_id || !new_password) return new Response(JSON.stringify({ error: "user_id y new_password requeridos" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (new_password.length < 6) return new Response(JSON.stringify({ error: "Mínimo 6 caracteres" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (new_password.length < 10) return new Response(JSON.stringify({ error: "Mínimo 10 caracteres" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (!/[0-9]/.test(new_password) || !/[^A-Za-z0-9]/.test(new_password)) return new Response(JSON.stringify({ error: "Debe incluir al menos un número y un carácter especial" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const { error } = await adminClient.auth.admin.updateUserById(user_id, { password: new_password });
       if (error) return new Response(JSON.stringify({ error: error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
