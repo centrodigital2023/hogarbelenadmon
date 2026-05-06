@@ -36,8 +36,10 @@ serve(async (req) => {
 
     const serviceClient = createClient(supabaseUrl, supabaseKey);
     const { data: userRoles } = await serviceClient.from("user_roles").select("role").eq("user_id", user.id);
-    if (!userRoles || userRoles.length === 0) {
-      return new Response(JSON.stringify({ error: "Acceso restringido al personal" }), {
+    const allowedRoles = ["super_admin", "coordinador", "enfermera"];
+    const hasAccess = !!userRoles?.some((r: any) => allowedRoles.includes(r.role));
+    if (!hasAccess) {
+      return new Response(JSON.stringify({ error: "Acceso restringido a personal médico autorizado" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

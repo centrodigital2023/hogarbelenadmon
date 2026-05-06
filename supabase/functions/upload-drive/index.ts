@@ -49,6 +49,18 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Role check: only authorized staff can upload to institutional Drive
+    const serviceClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data: userRoles } = await serviceClient.from("user_roles").select("role").eq("user_id", user.id);
+    const allowedRoles = ["super_admin", "coordinador", "administrativo", "enfermera"];
+    const hasAccess = !!userRoles?.some((r: any) => allowedRoles.includes(r.role));
+    if (!hasAccess) {
+      return new Response(JSON.stringify({ error: "Acceso restringido a personal autorizado" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Get service account credentials
     const serviceAccountJson = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_JSON");
     if (!serviceAccountJson) {
