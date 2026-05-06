@@ -118,12 +118,13 @@ IMPORTANTE: Responde SOLO con el JSON, sin markdown ni texto adicional.`;
     });
 
     if (!response.ok) {
-      const errText = await response.text();
-      console.error("AI API error:", response.status, errText);
-      return new Response(JSON.stringify({ error: "Error al generar la historia de vida" }), {
-        status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      const errorText = await response.text();
+      console.error("AI API error:", response.status, errorText);
+      if (response.status === 429) return new Response(JSON.stringify({ error: "Límite de solicitudes alcanzado. Intente en unos minutos." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 402) return new Response(JSON.stringify({ error: "Créditos insuficientes para generar la historia de vida." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 401) return new Response(JSON.stringify({ error: "Error de autenticación con el servicio de IA." }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 400) return new Response(JSON.stringify({ error: "Datos inválidos enviados al servicio de IA." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: `Error del servicio de IA (${response.status}): ${errorText}` }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const data = await response.json();
