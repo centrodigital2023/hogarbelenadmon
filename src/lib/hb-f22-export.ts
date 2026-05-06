@@ -394,8 +394,54 @@ function formatTime(date: Date = new Date()): string {
 /**
  * Genera HTML completo del informe HBF22
  */
+// HTML entity escape to prevent stored XSS via DB-sourced strings
+const escHtml = (s: unknown): string =>
+  String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
 export function buildHBF22HTML(report: HBF22Report): string {
-  const { resident, professional, scales, summary, riskAlerts, carePlan, correlations } = report;
+  const { resident: rRaw, professional: pRaw, scales: sRaw, summary: summaryRaw, riskAlerts: aRaw, carePlan: cpRaw, correlations: corrRaw } = report;
+  // Sanitize all DB-sourced text fields
+  const resident = {
+    ...rRaw,
+    fullName: escHtml(rRaw.fullName),
+    documentId: rRaw.documentId ? escHtml(rRaw.documentId) : rRaw.documentId,
+    dateOfBirth: rRaw.dateOfBirth ? escHtml(rRaw.dateOfBirth) : rRaw.dateOfBirth,
+    gender: rRaw.gender,
+    age: rRaw.age,
+  };
+  const professional = {
+    ...pRaw,
+    name: escHtml(pRaw.name),
+    role: escHtml(pRaw.role),
+    nit: pRaw.nit ? escHtml(pRaw.nit) : pRaw.nit,
+  };
+  const summary = escHtml(summaryRaw);
+  const scales = sRaw.map((s) => ({ ...s, name: escHtml(s.name), category: escHtml(s.category) }));
+  const riskAlerts = aRaw.map((a) => ({
+    ...a,
+    message: escHtml(a.message),
+    scale: escHtml(a.scale),
+    recommendation: a.recommendation ? escHtml(a.recommendation) : a.recommendation,
+    currentValue: typeof a.currentValue === "string" ? escHtml(a.currentValue) : a.currentValue,
+  }));
+  const carePlan = cpRaw.map((p) => ({
+    ...p,
+    title: escHtml(p.title),
+    description: escHtml(p.description),
+    scales: p.scales.map((x) => escHtml(x)),
+    interventions: p.interventions.map((x) => escHtml(x)),
+  }));
+  const correlations = {
+    ...corrRaw,
+    dependencyProfile: escHtml(corrRaw.dependencyProfile),
+    fragilityStatus: escHtml(corrRaw.fragilityStatus),
+    riskFactors: corrRaw.riskFactors.map((x) => escHtml(x)),
+  };
 
   const htmlContent = `
 <!DOCTYPE html>

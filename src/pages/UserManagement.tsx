@@ -244,8 +244,8 @@ const UserManagement = ({ onBack }: { onBack: () => void }) => {
             <div>
               <label className="text-[10px] font-bold text-muted-foreground uppercase">Contraseña *</label>
               <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)}
-                className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm" required minLength={6} maxLength={72} />
-              <p className="text-[9px] text-muted-foreground mt-1">Mínimo 6 caracteres</p>
+                className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm" required minLength={10} maxLength={72} />
+              <p className="text-[9px] text-muted-foreground mt-1">Mínimo 10 caracteres, incluyendo al menos un número y un carácter especial</p>
             </div>
             <div>
               <label className="text-[10px] font-bold text-muted-foreground uppercase">Rol *</label>
