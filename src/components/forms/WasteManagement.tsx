@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
 import SignaturePad from "@/components/SignaturePad";
+import HistorialGerencial from "@/components/HistorialGerencial";
 
 interface Props { onBack: () => void; }
 
@@ -151,6 +152,12 @@ const WasteManagement = ({ onBack }: Props) => {
       </div>
 
       <ActionButtons onFinish={handleSave} disabled={saving} />
+
+      <HistorialGerencial 
+        moduleId="HB-G01" 
+        moduleName="HB-G01: Plan de Gestión Integral de Residuos (PEGIR)"
+        tableName="waste_management"
+      />
     </div>
   );
 };

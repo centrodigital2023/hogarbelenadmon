@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import FormHeader from "@/components/FormHeader";
 import SignaturePad from "@/components/SignaturePad";
 import ActionButtons from "@/components/ActionButtons";
+import HistorialGerencial from "@/components/HistorialGerencial";
 import { useToast } from "@/hooks/use-toast";
 
 interface Props { onBack: () => void; }
@@ -101,6 +102,12 @@ const ManagerialDashboard = ({ onBack }: Props) => {
         ))}
         <button onClick={() => setActions(p => [...p, { accion:'', responsable:'', fecha_limite:'', estado:'pendiente' }])} className="text-xs font-bold text-primary hover:underline mt-2">+ Agregar acción</button>
       </div>
+
+      <HistorialGerencial 
+        moduleId="HB-G06" 
+        moduleName="HB-G06: Tablero de Control Gerencial"
+        tableName="managerial_dashboard"
+      />
 
       <div className="bg-card border border-border rounded-2xl p-6"><SignaturePad label="Vo.Bo. Representante Legal" /></div>
     </div>

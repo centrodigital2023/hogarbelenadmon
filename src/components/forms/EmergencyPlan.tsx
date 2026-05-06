@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
 import SignaturePad from "@/components/SignaturePad";
+import HistorialGerencial from "@/components/HistorialGerencial";
 
 interface Props { onBack: () => void; }
 
@@ -143,6 +144,12 @@ const EmergencyPlan = ({ onBack }: Props) => {
         <SignaturePad label="Responsable" /><SignaturePad label="Vo.Bo. Coordinador" />
       </div>
       <ActionButtons onFinish={handleSave} disabled={saving} />
+
+      <HistorialGerencial 
+        moduleId="HB-G05" 
+        moduleName="HB-G05: Plan de Emergencias y Evacuación"
+        tableName="emergency_plan"
+      />
     </div>
   );
 };

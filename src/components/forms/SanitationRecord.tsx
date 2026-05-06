@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
 import SignaturePad from "@/components/SignaturePad";
+import HistorialGerencial from "@/components/HistorialGerencial";
 
 interface Props { onBack: () => void; }
 
@@ -128,6 +129,12 @@ const SanitationRecord = ({ onBack }: Props) => {
         <SignaturePad label="Responsable" /><SignaturePad label="Vo.Bo. Coordinador" />
       </div>
       <ActionButtons onFinish={handleSave} disabled={saving} />
+
+      <HistorialGerencial 
+        moduleId="HB-G04" 
+        moduleName="HB-G04: Saneamiento Básico"
+        tableName="sanitation_record"
+      />
     </div>
   );
 };
