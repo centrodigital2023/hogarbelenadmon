@@ -21,6 +21,7 @@ const modules = [
   { id: '11', type: 'Calidad', title: "11. Calidad", subtitle: "PQRSF", icon: TrendingUp },
   { id: '12', type: 'Gerencia', title: "12. Admin.", subtitle: "Gerencia", icon: Settings },
   { id: 'gerencial', type: 'Gerencia', title: "Gestión Admin.", subtitle: "HB-G01 a G06", icon: FileText },
+  { id: 'instituciones', type: 'Finanzas', title: "Instituciones", subtitle: "Resumen & Ofertas", icon: FileText },
   { id: 'finanzas', type: 'Finanzas', title: "Finanzas", subtitle: "Control", icon: DollarSign },
   { id: 'residentes', type: 'Operativo', title: "Residentes", subtitle: "Directorio", icon: Users },
   { id: 'timeline', type: 'Clínico', title: "Timeline", subtitle: "Vista Unificada", icon: Clock },

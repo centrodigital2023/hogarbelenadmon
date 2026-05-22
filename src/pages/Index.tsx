@@ -44,6 +44,7 @@ import BlogModule from "@/components/BlogModule";
 import SocialMediaModule from "@/components/SocialMediaModule";
 import AuditReport from "@/components/AuditReport";
 import ResidentTimeline from "@/components/ResidentTimeline";
+import InstitutionModule from "@/components/InstitutionModule";
 import UnifiedKitchen from "@/components/forms/UnifiedKitchen";
 import PsychosocialRecord from "@/components/forms/PsychosocialRecord";
 import SpiritualRecord from "@/components/forms/SpiritualRecord";
@@ -201,6 +202,7 @@ const Index = () => {
     if (view === 'usuarios') return <UserManagement onBack={() => setView('dashboard')} />;
     if (view === 'residentes') return <ResidentManagement onBack={() => setView('dashboard')} />;
     if (view === 'finanzas') return <FinanceModule onBack={() => setView('dashboard')} />;
+    if (view === 'instituciones') return <InstitutionModule onBack={() => setView('dashboard')} />;
     if (view === 'blog') return <BlogModule onBack={() => setView('dashboard')} />;
     if (view === 'redes') return <SocialMediaModule onBack={() => setView('dashboard')} />;
     if (view === 'timeline') return <ResidentTimeline onBack={() => setView('dashboard')} onNavigateForm={(id) => setForm(id)} />;
