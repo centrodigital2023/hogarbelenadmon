@@ -3,7 +3,9 @@
 **Objetivo**: Conectar e integrar el Informe Inteligente HB-F22 en tu proyecto Lovable
 
 **Fecha**: 24 de Abril de 2026  
-**Proyecto ID**: `c9a020a5-6f2c-4b89-aaec-9b2c898ae954`
+**Proyecto ID**: `ea6fc079-e3d3-421b-9a3b-b62e3ddcdc44`
+
+**Magic link**: https://lovable.dev/projects/ea6fc079-e3d3-421b-9a3b-b62e3ddcdc44?magic_link=mc_9e427cc0-6ae2-43eb-9a14-82b9c65eb2d0
 
 ---
 
@@ -13,7 +15,10 @@ Si tu proyecto Lovable ya está conectado con tu repositorio GitHub, seguir esto
 
 ### Paso 1: Configurar GitHub Connection en Lovable
 
-1. Ve a tu proyecto en Lovable: https://lovable.dev/projects/c9a020a5-6f2c-4b89-aaec-9b2c898ae954
+1. Ve a tu proyecto en Lovable: https://lovable.dev/projects/ea6fc079-e3d3-421b-9a3b-b62e3ddcdc44
+   > Si tienes acceso directo, puedes usar también este magic link:
+   > `https://lovable.dev/projects/ea6fc079-e3d3-421b-9a3b-b62e3ddcdc44?magic_link=mc_9e427cc0-6ae2-43eb-9a14-82b9c65eb2d0`
+   > Nota: tu Lovable puede estar conectado a `centrodigital2023/hogarbelenadmon` o a `centrodigital2023/humanix-care-connect`.
 2. Haz clic en **Settings** (Engranaje) → **Repository**
 3. Si aún no está conectado:
    - Selecciona **Connect to GitHub**

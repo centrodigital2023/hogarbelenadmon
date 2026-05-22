@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
+import ExportButtons from "@/components/ExportButtons";
 import { DollarSign, TrendingUp, TrendingDown, CreditCard, FileText } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
@@ -13,22 +14,29 @@ const COLORS = ['hsl(var(--primary))', 'hsl(var(--destructive))', 'hsl(var(--acc
 const FinanceModule = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const contentRef = useRef<HTMLDivElement>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [vouchers, setVouchers] = useState<any[]>([]);
+  const [residentCount, setResidentCount] = useState(0);
+  const [appointmentCount, setAppointmentCount] = useState(0);
   const [tab, setTab] = useState<'dashboard' | 'transactions' | 'invoices' | 'vouchers'>('dashboard');
   const [newTx, setNewTx] = useState({ description: '', income_amount: '', expense_amount: '', payment_method: 'transferencia', client_supplier: '', cost_center: '' });
   const [saving, setSaving] = useState(false);
 
   const fetchData = async () => {
-    const [txRes, invRes, vcRes] = await Promise.all([
+    const [txRes, invRes, vcRes, residentsRes, appointmentsRes] = await Promise.all([
       supabase.from('financial_transactions').select('*').order('transaction_date', { ascending: false }).limit(100),
       supabase.from('invoices').select('*, residents(full_name)').order('created_at', { ascending: false }).limit(50),
       supabase.from('payment_vouchers' as any).select('*').order('created_at', { ascending: false }).limit(50),
+      supabase.from('residents').select('*', { count: 'exact', head: true }),
+      supabase.from('medical_appointments').select('*', { count: 'exact', head: true }),
     ]);
     if (txRes.data) setTransactions(txRes.data);
     if (invRes.data) setInvoices(invRes.data);
     if (vcRes.data) setVouchers(vcRes.data as any[]);
+    if (typeof residentsRes.count === 'number') setResidentCount(residentsRes.count);
+    if (typeof appointmentsRes.count === 'number') setAppointmentCount(appointmentsRes.count);
   };
 
   useEffect(() => { fetchData(); }, []);
@@ -38,6 +46,11 @@ const FinanceModule = ({ onBack }: Props) => {
   const balance = totalIncome - totalExpense;
   const pendingInvoices = invoices.filter(i => i.status === 'pendiente');
   const totalPending = pendingInvoices.reduce((s, i) => s + (i.total || 0), 0);
+  const invoiceTotal = invoices.reduce((s, i) => s + (i.total || 0), 0);
+  const averageInvoice = invoices.length ? Math.round(invoiceTotal / invoices.length) : 0;
+  const complianceScore = invoices.length ? Math.round((invoices.filter(i => i.status === 'pagada').length / invoices.length) * 100) : 0;
+  const totalOffers = invoices.length;
+  const reportCount = transactions.length + invoices.length + vouchers.length;
 
   const monthlyData = Array.from({ length: 6 }, (_, i) => {
     const d = new Date(); d.setMonth(d.getMonth() - (5 - i));
@@ -74,21 +87,84 @@ const FinanceModule = ({ onBack }: Props) => {
       </div>
 
       {tab === 'dashboard' && (
-        <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div ref={contentRef} className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             {[
-              { label: 'Saldo', value: balance, icon: DollarSign, color: balance >= 0 ? 'text-primary' : 'text-destructive' },
-              { label: 'Ingresos', value: totalIncome, icon: TrendingUp, color: 'text-primary' },
-              { label: 'Gastos', value: totalExpense, icon: TrendingDown, color: 'text-destructive' },
-              { label: 'Por Cobrar', value: totalPending, icon: CreditCard, color: 'text-muted-foreground' },
+              { label: 'Pacientes', value: residentCount, icon: FileText, color: 'text-primary' },
+              { label: 'Agenda', value: appointmentCount, icon: TrendingUp, color: 'text-cat-nutritional' },
+              { label: 'Ofertas totales', value: totalOffers, icon: CreditCard, color: 'text-accent' },
+              { label: 'Reportes', value: reportCount, icon: DollarSign, color: 'text-muted-foreground' },
             ].map(card => (
               <div key={card.label} className="bg-card border border-border rounded-2xl p-5">
                 <card.icon size={20} className={card.color} />
                 <p className="text-xs text-muted-foreground mt-2">{card.label}</p>
-                <p className={`text-lg font-black ${card.color}`}>${card.value.toLocaleString()}</p>
+                <p className={`text-lg font-black ${card.color}`}>{card.value.toLocaleString()}</p>
               </div>
             ))}
           </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-4">
+            <div className="bg-gradient-to-br from-primary/10 via-transparent to-accent/10 border border-border rounded-2xl p-6">
+              <div className="flex flex-col gap-4">
+                <div>
+                  <p className="text-xs uppercase font-bold text-muted-foreground">Ofertas masivas + IA</p>
+                  <h3 className="text-2xl font-black text-foreground mt-2">Automatice propuestas y servicios</h3>
+                  <p className="mt-3 text-sm leading-6 text-muted-foreground">Genere ofertas inteligentes para pacientes con datos de facturación, agenda y cumplimiento. Haga seguimiento en un solo lugar.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl bg-card/80 p-4">
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Monto promedio</p>
+                    <p className="mt-2 text-xl font-black text-foreground">${averageInvoice.toLocaleString()}</p>
+                  </div>
+                  <div className="rounded-2xl bg-card/80 p-4">
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Compliance RETHUS</p>
+                    <p className="mt-2 text-xl font-black text-foreground">{complianceScore}%</p>
+                  </div>
+                </div>
+                <button onClick={() => toast({ title: 'IA en curso', description: 'Generando propuesta masiva de servicios...' })}
+                  className="w-full rounded-2xl bg-primary text-primary-foreground px-5 py-3 text-sm font-black uppercase tracking-wide hover:bg-primary/90 transition-all">
+                  Generar propuesta IA
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              <div className="bg-card border border-border rounded-2xl p-5">
+                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Facturación consolidada</p>
+                <p className="mt-3 text-3xl font-black text-foreground">${totalIncome.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground mt-2">Ingresos registrados en transacciones y facturas.</p>
+              </div>
+              <div className="bg-card border border-border rounded-2xl p-5">
+                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Gasto ejecutado</p>
+                <p className="mt-3 text-3xl font-black text-destructive">${totalExpense.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground mt-2">Control de egresos y pagos operativos.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-card border border-border rounded-2xl p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-black text-foreground">Resumen financiero y compliance</h3>
+                <p className="text-sm text-muted-foreground mt-1">Exporta métricas clave de pacientes, agenda, facturación y reportes en CSV, Excel o PDF.</p>
+              </div>
+              <ExportButtons
+                contentRef={contentRef}
+                title="Resumen Financiero"
+                fileName="resumen_financiero"
+                data={[
+                  { Indicador: 'Pacientes', Valor: residentCount },
+                  { Indicador: 'Agenda', Valor: appointmentCount },
+                  { Indicador: 'Ofertas totales', Valor: totalOffers },
+                  { Indicador: 'Facturación consolidada', Valor: totalIncome },
+                  { Indicador: 'Monto promedio por factura', Valor: averageInvoice },
+                  { Indicador: 'Compliance RETHUS', Valor: `${complianceScore}%` },
+                ]}
+                textContent={`Pacientes: ${residentCount}\nAgenda: ${appointmentCount}\nOfertas totales: ${totalOffers}\nFacturación: ${totalIncome}\nMonto promedio: ${averageInvoice}\nCompliance RETHUS: ${complianceScore}%`}
+              />
+            </div>
+          </div>
+
           <div className="bg-card border border-border rounded-2xl p-6">
             <h3 className="text-sm font-black text-foreground mb-4">Ingresos vs Gastos (6 meses)</h3>
             <ResponsiveContainer width="100%" height={250}>
@@ -99,7 +175,7 @@ const FinanceModule = ({ onBack }: Props) => {
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </>
+        </div>
       )}
 
       {tab === 'transactions' && (

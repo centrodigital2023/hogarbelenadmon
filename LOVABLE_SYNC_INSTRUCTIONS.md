@@ -5,20 +5,17 @@
 Si tu proyecto Lovable está conectado a GitHub:
 
 ```bash
-# En tu terminal local
 cd /workspaces/hogarbelenadmon
 
-# 1. Verifica que todo esté en git
 git status
-
-# 2. Agrega todos los cambios
 git add .
-
-# 3. Crea un commit descriptivo
 git commit -m "feat: agregar historial de 180 días con exportación a Word, PDF, Excel para módulos HB-G01 a HB-G06"
 
-# 4. Sube a GitHub
+# Empuja al remote que usa Lovable
+# Normalmente origin o humanix
 git push origin main
+# o
+git push humanix main
 ```
 
 Luego en Lovable:
@@ -26,6 +23,8 @@ Luego en Lovable:
 2. Ve a Settings → Git Sync
 3. Haz clic en "Pull Latest Changes"
 4. Los cambios se sincronizarán automáticamente
+
+> Nota: confirma qué repositorio GitHub está conectado a tu proyecto Lovable antes de hacer `git push`.
 
 ---
 
@@ -130,6 +129,8 @@ Si tu proyecto tiene un script sync:
 
 ```bash
 cd /workspaces/hogarbelenadmon
+npm run sync:lovable
+# o
 ./lovable-export/sync.sh
 ```
 

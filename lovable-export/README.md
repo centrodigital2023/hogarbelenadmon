@@ -13,10 +13,17 @@ Este es tu **kit de integración HB-F22 para Lovable**. Contiene todos los archi
 ### Paso 1: Configurar Conexión GitHub en Lovable
 
 1. Abre tu proyecto en Lovable:  
-   👉 https://lovable.dev/projects/c9a020a5-6f2c-4b89-aaec-9b2c898ae954
+   👉 https://lovable.dev/projects/ea6fc079-e3d3-421b-9a3b-b62e3ddcdc44
+   👉 O usa el magic link si lo tienes: `https://lovable.dev/projects/ea6fc079-e3d3-421b-9a3b-b62e3ddcdc44?magic_link=mc_9e427cc0-6ae2-43eb-9a14-82b9c65eb2d0`
 
 2. Haz clic en el **engranaje** (⚙️) en la esquina superior derecha
+> Nota: tu proyecto puede estar conectado a `centrodigital2023/hogarbelenadmon` o a `centrodigital2023/humanix-care-connect`.
 
+> Desde la raíz del repositorio también puedes ejecutar:
+>
+> ```bash
+> npm run sync:lovable
+> ```
 3. Ve a **Repository** / **Repositorio**
 
 4. Si no está conectado a GitHub:

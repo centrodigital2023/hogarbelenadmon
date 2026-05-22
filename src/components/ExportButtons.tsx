@@ -56,6 +56,42 @@ const ExportButtons = ({ contentRef, title, fileName, data, textContent, signatu
     await exportWord({ title, fileName, textContent: fullText, data, signatureDataUrl, responsibleName, responsibleRole });
   });
 
+  const objectToCSV = (rows: Record<string, any>[]) => {
+    if (!rows || rows.length === 0) return "";
+    const headers = Array.from(rows.reduce((keys, row) => {
+      Object.keys(row).forEach(key => keys.add(key));
+      return keys;
+    }, new Set<string>()));
+
+    const escapeValue = (value: any) => {
+      if (value === null || value === undefined) return "";
+      const text = String(value).replace(/"/g, '""');
+      return `"${text}"`;
+    };
+
+    const csvRows = [headers.join(",")];
+    for (const row of rows) {
+      csvRows.push(headers.map(header => escapeValue(row[header])).join(","));
+    }
+    return csvRows.join("\n");
+  };
+
+  const handleCSV = () => {
+    if (!data || data.length === 0) return;
+    handleExport("csv", async () => {
+      const csv = objectToCSV(data!);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${fileName}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    });
+  };
+
   const handleExcel = () => {
     if (!data || data.length === 0) return;
     handleExport("xlsx", async () => {
@@ -114,10 +150,16 @@ const ExportButtons = ({ contentRef, title, fileName, data, textContent, signatu
         {getIcon("docx", FileType)} Word
       </button>
       {data && (
-        <button onClick={handleExcel} disabled={!!exporting}
-          className={`${btnBase} bg-cat-nutritional/10 text-cat-nutritional hover:bg-cat-nutritional/20 hover:shadow-sm`}>
-          {getIcon("xlsx", FileSpreadsheet)} Excel
-        </button>
+        <>
+              <button onClick={handleCSV} disabled={!!exporting}
+            className={`${btnBase} bg-muted/10 text-muted-foreground hover:bg-muted/20 hover:shadow-sm`}>
+            {getIcon("csv", FileSpreadsheet)} CSV
+          </button>
+          <button onClick={handleExcel} disabled={!!exporting}
+            className={`${btnBase} bg-cat-nutritional/10 text-cat-nutritional hover:bg-cat-nutritional/20 hover:shadow-sm`}>
+            {getIcon("xlsx", FileSpreadsheet)} Excel
+          </button>
+        </>
       )}
       {showDrive && (
         <button onClick={handleDrive} disabled={!!exporting}

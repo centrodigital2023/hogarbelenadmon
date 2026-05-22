@@ -32,7 +32,7 @@ Se han confirmado y pusheado 15 nuevos archivos a la rama `main`:
 - ✅ html2canvas: 1.4.1
 
 **Commit SHA**: `350e358`  
-**Remote**: `https://github.com/centrodigital2023/hogarbelenadmon`
+**Remote**: `https://github.com/centrodigital2023/hogarbelenadmon` (o `https://github.com/centrodigital2023/humanix-care-connect` si ese es el repo conectado a Lovable)
 
 ---
 
@@ -43,7 +43,8 @@ Se han confirmado y pusheado 15 nuevos archivos a la rama `main`:
 Si tu repositorio ya está conectado en Lovable:
 
 1. **Abre tu proyecto Lovable**:
-   - Ve a: https://lovable.dev/projects/c9a020a5-6f2c-4b89-aaec-9b2c898ae954
+   - Ve a: https://lovable.dev/projects/ea6fc079-e3d3-421b-9a3b-b62e3ddcdc44
+   - O usa el magic link: https://lovable.dev/projects/ea6fc079-e3d3-421b-9a3b-b62e3ddcdc44?magic_link=mc_9e427cc0-6ae2-43eb-9a14-82b9c65eb2d0
 
 2. **Sincroniza desde GitHub**:
    - Busca el botón "Sync" (esquina superior derecha)
@@ -137,7 +138,9 @@ Si necesitas ayuda adicional:
 - Documentación técnica: `src/lib/HB-F22_IMPLEMENTATION_GUIDE.md`
 - Ejemplo de uso: `src/lib/HB-F22_INTEGRATION_EXAMPLE.tsx`
 
-**Proyecto Lovable**: c9a020a5-6f2c-4b89-aaec-9b2c898ae954
+**Proyecto Lovable**: ea6fc079-e3d3-421b-9a3b-b62e3ddcdc44
+
+**Magic link**: https://lovable.dev/projects/ea6fc079-e3d3-421b-9a3b-b62e3ddcdc44?magic_link=mc_9e427cc0-6ae2-43eb-9a14-82b9c65eb2d0
 
 ---
 
