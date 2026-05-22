@@ -134,6 +134,14 @@ npm run sync:lovable
 ./lovable-export/sync.sh
 ```
 
+> Para sincronización continua local, también puedes ejecutar:
+>
+> ```bash
+> npm run watch:lovable
+> ```
+>
+> Esto mantendrá actualizado el directorio `lovable-export/` cada vez que salves los archivos HB-F22.
+
 ---
 
 ## ✅ Verificación Después de Sincronizar

@@ -23,8 +23,14 @@ Este es tu **kit de integración HB-F22 para Lovable**. Contiene todos los archi
 >
 > ```bash
 > npm run sync:lovable
+> ```>
+> Para sincronizar automáticamente al guardar cambios locales, usa:
+>
+> ```bash
+> npm run watch:lovable
 > ```
-3. Ve a **Repository** / **Repositorio**
+>
+> Esto mantiene `lovable-export/` actualizado con los archivos HB-F22 cada vez que se editan.3. Ve a **Repository** / **Repositorio**
 
 4. Si no está conectado a GitHub:
    - Haz clic en **"Connect to GitHub"** / **"Conectar a GitHub"**
