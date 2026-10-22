@@ -91,37 +91,37 @@ const ResidentTimeline = ({ onBack, onNavigateForm, initialResidentId }: Props) 
 
     const residentName = residents.find(r => r.id === selectedResident)?.full_name || '';
 
-    logs.data?.forEach((l: any) => results.push({
+    logs.data?.forEach((l) => results.push({
       id: l.id, source: 'daily_logs', sourceLabel: cfg.daily_logs.label,
       date: l.log_date, summary: `Turno ${l.shift} — Ánimo: ${l.mood || '-'} — ${l.observations || 'Sin novedades'}`,
       residentName, residentId: selectedResident, icon: cfg.daily_logs.icon, color: cfg.daily_logs.color,
     }));
 
-    notes.data?.forEach((n: any) => results.push({
+    notes.data?.forEach((n) => results.push({
       id: n.id, source: 'nursing_notes', sourceLabel: cfg.nursing_notes.label,
       date: n.note_date, summary: (n.note || '').substring(0, 120) + '...',
       residentName, residentId: selectedResident, icon: cfg.nursing_notes.icon, color: cfg.nursing_notes.color,
     }));
 
-    incidents.data?.forEach((i: any) => results.push({
+    incidents.data?.forEach((i) => results.push({
       id: i.id, source: 'incidents', sourceLabel: cfg.incidents.label,
       date: i.incident_datetime?.split('T')[0] || '', summary: `${i.incident_type}: ${i.description || ''}`.substring(0, 120),
       residentName, residentId: selectedResident, icon: cfg.incidents.icon, color: cfg.incidents.color,
     }));
 
-    appointments.data?.forEach((a: any) => results.push({
+    appointments.data?.forEach((a) => results.push({
       id: a.id, source: 'medical_appointments', sourceLabel: cfg.medical_appointments.label,
       date: a.appointment_date, summary: `${a.specialty || 'Cita'} en ${a.location || '-'} — ${a.was_attended ? '✅ Asistió' : '⏳ Pendiente'}`,
       residentName, residentId: selectedResident, icon: cfg.medical_appointments.icon, color: cfg.medical_appointments.color,
     }));
 
-    medAdmin.data?.forEach((m: any) => results.push({
+    medAdmin.data?.forEach((m) => results.push({
       id: m.id, source: 'medication_admin', sourceLabel: cfg.medication_admin.label,
       date: m.admin_datetime?.split('T')[0] || '', summary: `${m.medications?.medication_name || 'Med.'} — ${m.dose_given || ''} — ${m.was_administered ? '✅' : '❌ No admin.'}`,
       residentName, residentId: selectedResident, icon: cfg.medication_admin.icon, color: cfg.medication_admin.color,
     }));
 
-    assessments.data?.forEach((a: any) => results.push({
+    assessments.data?.forEach((a) => results.push({
       id: a.id, source: 'geriatric_assessments', sourceLabel: cfg.geriatric_assessments.label,
       date: a.assessment_date, summary: `${a.test_name}: ${a.score}/${a.max_score} — ${a.interpretation || ''}`,
       residentName, residentId: selectedResident, icon: cfg.geriatric_assessments.icon, color: cfg.geriatric_assessments.color,

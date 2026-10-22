@@ -45,7 +45,7 @@ const PerformanceEval = ({ onBack }: Props) => {
     setSaving(false);
   };
 
-  const update = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
+  const update = (k: string, v: string | number | boolean) => setForm(p => ({ ...p, [k]: v }));
 
   const CRITERIA = [
     { key: 'score_resident_care', label: 'Trato al Residente' },

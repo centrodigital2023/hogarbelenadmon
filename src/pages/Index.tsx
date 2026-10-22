@@ -1,6 +1,6 @@
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { usePermissions, MODULE_PERMISSION_MAP } from "@/hooks/usePermissions";
+import { usePermissions, MODULE_PERMISSION_MAP, type Module } from "@/hooks/usePermissions";
 import CrossNavigation from "@/components/CrossNavigation";
 import Login from "@/pages/Login";
 import AppLayout from "@/components/AppLayout";
@@ -61,8 +61,9 @@ import {
   ShieldCheck, AlertTriangle, LogOut, Briefcase, TrendingUp, Settings,
   BookOpen, Share2, DollarSign, FileText
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-const MODULE_INFO: Record<string, { title: string; subtitle: string; icon: any; forms: { id: string; label: string }[] }> = {
+const MODULE_INFO: Record<string, { title: string; subtitle: string; icon: LucideIcon; forms: { id: string; label: string }[] }> = {
   '3': { title: '3. Alimentación', subtitle: 'Nutrición y cocina', icon: Utensils, forms: [
     { id: 'UNIFIED-KITCHEN', label: '🍳 Control Diario Cocina' },
     { id: 'HB-F6', label: 'HB-F6: Ingreso Alimentos' },
@@ -194,7 +195,7 @@ const Index = () => {
         );
         if (permModule && !canAccessModule(permModule === 'ingreso' ? '1' : permModule === 'valoracion' ? '2' : permModule)) {
           return (
-            <ProtectedModule module={permModule as any}>
+            <ProtectedModule module={permModule as Module}>
               {formContent}
             </ProtectedModule>
           );

@@ -8,6 +8,7 @@ import ExportButtons from "@/components/ExportButtons";
 import ShareButtons from "@/components/ShareButtons";
 import SmartReportSection from "@/components/SmartReportSection";
 import SignaturePad from "@/components/SignaturePad";
+import type { Json } from "@/integrations/supabase/types";
 
 interface Props { onBack: () => void; }
 
@@ -29,14 +30,14 @@ const TrainingRecord = ({ onBack }: Props) => {
     setSaving(true);
     const { error } = await supabase.from('trainings').insert({
       ...form, created_by: user.id,
-      attendees: attendees.filter(a => a.name) as any,
+      attendees: attendees.filter(a => a.name) as unknown as Json,
     });
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else toast({ title: "Capacitación registrada" });
     setSaving(false);
   };
 
-  const update = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
+  const update = (k: string, v: string | number | boolean) => setForm(p => ({ ...p, [k]: v }));
 
   return (
     <div className="animate-fade-in">

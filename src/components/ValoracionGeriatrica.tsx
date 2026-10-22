@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import GeneradorHBF22 from "./GeneradorHBF22";
 import type { AssessmentResults } from "@/lib/hb-f22-report";
 import { ROLE_LABELS } from "@/hooks/usePermissions";
+import type { Json } from "@/integrations/supabase/types";
 
 const iconMap: Record<string, React.ReactNode> = {
   Activity: <Activity size={20} />,
@@ -194,7 +195,7 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
       score,
       max_score: activeTest.max,
       interpretation,
-      answers: answers as any,
+      answers: answers as unknown as Json,
       signature_evaluator: sigEval,
       signature_supervisor: sigSuper,
     });

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -42,15 +43,13 @@ const BlogModule = ({ onBack }: Props) => {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const payload: any = { title, content, excerpt, category, status, updated_at: new Date().toISOString() };
+    const payload: TablesUpdate<"blog_posts"> & { title: string } = { title, content, excerpt, category, status, updated_at: new Date().toISOString() };
     if (status === 'publicado' && !editPost?.published_at) payload.published_at = new Date().toISOString();
 
-    if (editPost) {
-      await supabase.from('blog_posts').update(payload).eq('id', editPost.id);
-    } else {
-      payload.created_by = user.id;
-      await supabase.from('blog_posts').insert(payload);
-    }
+    const { error: dbError } = editPost
+      ? await supabase.from('blog_posts').update(payload).eq('id', editPost.id)
+      : await supabase.from('blog_posts').insert({ ...payload, created_by: user.id });
+    if (dbError) { toast({ title: "No se pudo guardar", description: dbError.message, variant: "destructive" }); setSaving(false); return; }
     toast({ title: editPost ? "Entrada actualizada" : "Entrada creada" });
     setSaving(false);
     setView('list');
@@ -59,7 +58,8 @@ const BlogModule = ({ onBack }: Props) => {
 
   const handleDelete = async (id: string) => {
     if (!confirm('¿Eliminar esta entrada?')) return;
-    await supabase.from('blog_posts').delete().eq('id', id);
+    const { error: dbError } = await supabase.from('blog_posts').delete().eq('id', id);
+    if (dbError) { toast({ title: "No se pudo eliminar", description: dbError.message, variant: "destructive" }); return; }
     toast({ title: "Entrada eliminada" });
     fetchPosts();
   };

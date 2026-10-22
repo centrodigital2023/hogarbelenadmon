@@ -8,6 +8,7 @@ import ShareButtons from "@/components/ShareButtons";
 import SignaturePad from "@/components/SignaturePad";
 import { Sparkles, Loader2, Calendar, BarChart3, Users, HeartPulse, AlertTriangle, Pill, Pencil, Save } from "lucide-react";
 import { errorMessage } from "@/lib/errors";
+import type { LucideIcon } from "lucide-react";
 
 interface Props { onBack: () => void; }
 
@@ -23,7 +24,14 @@ const NursingReport = ({ onBack }: Props) => {
   const [dateTo, setDateTo] = useState(today);
   const [reportType, setReportType] = useState("semanal");
   const [report, setReport] = useState("");
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<{
+    totalResidents: number;
+    totalLogs: number;
+    totalVitals: number;
+    totalIncidents: number;
+    totalAppointments: number;
+    avgNutrition: number;
+  } | null>(null);
   const [generating, setGenerating] = useState(false);
   const [editing, setEditing] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
@@ -70,7 +78,7 @@ const NursingReport = ({ onBack }: Props) => {
     return header + report;
   };
 
-  const StatCard = ({ icon: Icon, label, value, color }: { icon: any; label: string; value: string | number; color: string }) => (
+  const StatCard = ({ icon: Icon, label, value, color }: { icon: LucideIcon; label: string; value: string | number; color: string }) => (
     <div className={`flex items-center gap-3 p-4 rounded-xl border border-border bg-${color}/5`}>
       <div className={`w-10 h-10 rounded-lg bg-${color}/10 flex items-center justify-center`}>
         <Icon size={18} className={`text-${color}`} />

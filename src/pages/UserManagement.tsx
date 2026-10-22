@@ -58,7 +58,7 @@ const UserManagement = ({ onBack }: { onBack: () => void }) => {
 
   const isSuperAdmin = hasRole('super_admin');
 
-  const callAdmin = useCallback(async (body: any) => {
+  const callAdmin = useCallback(async (body: Record<string, unknown>) => {
     const { data, error } = await supabase.functions.invoke('admin-users', { body });
     if (error) throw new Error(error.message);
     if (data?.error) throw new Error(data.error);

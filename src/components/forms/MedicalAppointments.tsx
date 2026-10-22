@@ -95,7 +95,8 @@ const MedicalAppointments = ({ onBack }: Props) => {
   };
 
   const toggleAttended = async (id: string, current: boolean | null) => {
-    await supabase.from('medical_appointments').update({ was_attended: !current }).eq('id', id);
+    const { error: dbError } = await supabase.from('medical_appointments').update({ was_attended: !current }).eq('id', id);
+    if (dbError) { toast({ title: "No se pudo guardar", description: dbError.message, variant: "destructive" }); return; }
     loadAppointments();
   };
 
@@ -209,7 +210,7 @@ const MedicalAppointments = ({ onBack }: Props) => {
         selectClause="*, residents(full_name)"
         columns={[
           { key: 'appointment_date', label: 'Fecha' },
-          { key: 'residents', label: 'Residente', render: (v: any) => v?.full_name || '-' },
+          { key: 'residents', label: 'Residente', render: (v) => (v as { full_name?: string } | null)?.full_name || '-' },
           { key: 'specialty', label: 'Especialidad' },
           { key: 'location', label: 'Lugar' },
           { key: 'was_attended', label: 'Asistió', render: (v: boolean | null) => v ? '✅' : '❌' },

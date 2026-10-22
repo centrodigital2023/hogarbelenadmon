@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
 
     // Score server-side
     let score = 0;
-    quiz.forEach((q: any, i: number) => {
+    quiz.forEach((q, i: number) => {
       if (answers[String(i)] === q.correct) score++;
     });
     const passed = score / quiz.length >= 0.6;

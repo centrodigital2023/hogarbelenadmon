@@ -27,7 +27,7 @@ const DOCS = [
 ];
 
 interface Resident { id: string; full_name: string; }
-interface StoredFile { name: string; id: string; created_at: string; metadata: any; }
+interface StoredFile { name: string; id: string; created_at: string; metadata: Record<string, unknown> | null; }
 
 const AdmissionChecklist = ({ onBack }: Props) => {
   const { user } = useAuth();

@@ -105,7 +105,7 @@ serve(async (req) => {
     }
 
     const aiData = await response.json();
-    let quiz: any[] = [];
+    let quiz: { question: string; options: string[]; correct_index?: number; [key: string]: unknown }[] = [];
 
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall) {

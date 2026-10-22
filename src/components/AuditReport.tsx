@@ -4,6 +4,7 @@ import FormHeader from "@/components/FormHeader";
 import ExportButtons from "@/components/ExportButtons";
 import { useRef } from "react";
 import { FileText, Download } from "lucide-react";
+import type { Row } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 
@@ -11,7 +12,15 @@ const AuditReport = ({ onBack }: Props) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const [dateFrom, setDateFrom] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() - 12); return d.toISOString().split('T')[0]; });
   const [dateTo, setDateTo] = useState(new Date().toISOString().split('T')[0]);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<{
+    residents: Row<"residents">[];
+    incidents: Row<"incidents">[];
+    appointments: Row<"medical_appointments">[];
+    pqrsf: Row<"pqrsf">[];
+    assessments: Row<"geriatric_assessments">[];
+    trainings: { id: string; title: string }[];
+    invoices: Row<"invoices">[];
+  } | null>(null);
   const [loading, setLoading] = useState(false);
 
   const generateReport = async () => {
@@ -37,11 +46,11 @@ const AuditReport = ({ onBack }: Props) => {
     setLoading(false);
   };
 
-  const falls = data?.incidents?.filter((i: any) => i.incident_type === 'caída')?.length || 0;
-  const attendedAppts = data?.appointments?.filter((a: any) => a.was_attended)?.length || 0;
+  const falls = data?.incidents?.filter((i) => i.incident_type === 'caída')?.length || 0;
+  const attendedAppts = data?.appointments?.filter((a) => a.was_attended)?.length || 0;
   const totalAppts = data?.appointments?.length || 0;
-  const pqrsfOpen = data?.pqrsf?.filter((p: any) => p.status === 'abierto')?.length || 0;
-  const pqrsfClosed = data?.pqrsf?.filter((p: any) => p.status === 'cerrado')?.length || 0;
+  const pqrsfOpen = data?.pqrsf?.filter((p) => p.status === 'abierto')?.length || 0;
+  const pqrsfClosed = data?.pqrsf?.filter((p) => p.status === 'cerrado')?.length || 0;
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -80,7 +89,7 @@ const AuditReport = ({ onBack }: Props) => {
                     <th className="text-left py-2 font-bold text-muted-foreground">Ingreso</th>
                     <th className="text-left py-2 font-bold text-muted-foreground">Estado</th>
                   </tr></thead>
-                  <tbody>{data.residents.map((r: any) => (
+                  <tbody>{data.residents.map((r) => (
                     <tr key={r.id} className="border-b border-border/50">
                       <td className="py-2 font-medium text-foreground">{r.full_name}</td>
                       <td className="py-2">{r.document_id || '-'}</td>
@@ -125,7 +134,7 @@ const AuditReport = ({ onBack }: Props) => {
                       <th className="text-left py-2 font-bold text-muted-foreground">Tipo</th>
                       <th className="text-left py-2 font-bold text-muted-foreground">Descripción</th>
                     </tr></thead>
-                    <tbody>{data.incidents.slice(0, 20).map((inc: any) => (
+                    <tbody>{data.incidents.slice(0, 20).map((inc) => (
                       <tr key={inc.id} className="border-b border-border/50">
                         <td className="py-2">{new Date(inc.incident_datetime).toLocaleDateString()}</td>
                         <td className="py-2 capitalize">{inc.incident_type}</td>
@@ -149,7 +158,7 @@ const AuditReport = ({ onBack }: Props) => {
                       <th className="text-left py-2 font-bold text-muted-foreground">Remitente</th>
                       <th className="text-left py-2 font-bold text-muted-foreground">Estado</th>
                     </tr></thead>
-                    <tbody>{data.pqrsf.map((p: any) => (
+                    <tbody>{data.pqrsf.map((p) => (
                       <tr key={p.id} className="border-b border-border/50">
                         <td className="py-2">{new Date(p.record_date).toLocaleDateString()}</td>
                         <td className="py-2 capitalize">{p.pqrsf_type}</td>

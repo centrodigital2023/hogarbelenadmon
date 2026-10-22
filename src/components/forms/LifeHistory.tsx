@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import type { TablesInsert } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -122,7 +123,7 @@ const LifeHistory = ({ onBack }: Props) => {
   const handleSave = async () => {
     if (!selectedResident || !user) return;
     setSaving(true);
-    const payload: any = { resident_id: selectedResident, created_by: user.id, ...form };
+    const payload: TablesInsert<"life_histories"> = { resident_id: selectedResident, created_by: user.id, ...form };
     if (avatarPreview) payload.photos = [avatarPreview];
     const { error } = await supabase.from('life_histories').upsert(payload, { onConflict: 'resident_id' });
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });

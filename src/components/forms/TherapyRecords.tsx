@@ -36,7 +36,7 @@ const TherapyRecords = ({ onBack }: Props) => {
       .then(({ data }) => { if (data) setResidents(data); });
   }, []);
 
-  const updateEntry = (rid: string, key: string, val: any) => {
+  const updateEntry = (rid: string, key: string, val: string | number | boolean) => {
     setEntries(prev => ({
       ...prev,
       [rid]: { ...prev[rid] || { attended_monday: false, attended_wednesday: false, attended_friday: false, therapy_type: '', evolution_code: '', observations: '' }, [key]: val }

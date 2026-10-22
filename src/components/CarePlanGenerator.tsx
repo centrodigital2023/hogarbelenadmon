@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import { ClipboardList, AlertTriangle, CheckCircle2, Target } from "lucide-react";
 import type { ResidentOption, Row } from "@/integrations/supabase/tables";
+import type { Json } from "@/integrations/supabase/types";
 
 interface Props { onBack: () => void; }
 
@@ -17,13 +18,14 @@ const PAI_RULES = [
     'Evaluación de ayudas técnicas (andador, silla de ruedas)',
     'Registro diario de actividades realizadas de forma autónoma',
   ]},
-  { test: 'tug', condition: (s: number) => s >= 20, title: 'Fisioterapia para equilibrio y marcha', interventions: [
+  // Cut-offs follow the scale definitions in src/data/tests-geriatricos.ts
+  { test: 'tinetti', condition: (s: number) => s < 25, title: 'Fisioterapia para equilibrio y marcha', interventions: [
     'Fisioterapia enfocada en equilibrio y fortalecimiento de MMII',
     'Revisión farmacológica (sedantes, hipotensores)',
     'Protocolo de prevención de caídas: iluminación, tapetes, barandas',
     'Ejercicios de Tai Chi o yoga adaptado 2x/semana',
   ]},
-  { test: 'mna', condition: (s: number) => s < 12, title: 'Intervención nutricional', interventions: [
+  { test: 'mna', condition: (s: number) => s < 24, title: 'Intervención nutricional', interventions: [
     'Derivación a nutricionista para plan alimentario individualizado',
     'Suplementos nutricionales orales según prescripción',
     'Monitorización mensual de peso e IMC',
@@ -35,19 +37,49 @@ const PAI_RULES = [
     'Terapia ocupacional con actividades significativas',
     'Monitorización semanal del estado de ánimo',
   ]},
-  { test: 'zarit', condition: (s: number) => s > 23, title: 'Apoyo al cuidador', interventions: [
+  { test: 'zarit', condition: (s: number) => s >= 21, title: 'Apoyo al cuidador', interventions: [
     'Contacto con familia para ofrecer apoyo y orientación',
     'Grupos de apoyo para cuidadores (mensual)',
     'Servicio de respiro programado',
     'Derivación a trabajo social si es necesario',
   ]},
-  { test: 'gijon', condition: (s: number) => s > 15, title: 'Intervención social', interventions: [
+  { test: 'gijon', condition: (s: number) => s >= 10, title: 'Intervención social', interventions: [
     'Derivación a trabajo social para evaluación de recursos',
     'Contacto con redes de apoyo comunitario',
     'Evaluación de necesidades de vivienda y transporte',
     'Gestión de subsidios o ayudas sociales si aplica',
   ]},
+  { test: 'pfeiffer', condition: (s: number) => s >= 3, title: 'Estimulación cognitiva', interventions: [
+    'Taller de estimulación cognitiva 3x/semana (memoria, orientación, cálculo)',
+    'Orientación a la realidad: calendario, reloj y rutinas visibles',
+    'Descartar causas reversibles con médico (fármacos, tiroides, B12)',
+    'Supervisión de seguridad y prevención de desorientación nocturna',
+  ]},
+  { test: 'mmse', condition: (s: number) => s < 24, title: 'Estimulación cognitiva (MMSE)', interventions: [
+    'Taller de estimulación cognitiva 3x/semana (memoria, orientación, cálculo)',
+    'Valoración neuropsicológica y seguimiento por medicina',
+    'Supervisión de seguridad y prevención de desorientación nocturna',
+  ]},
+  { test: 'braden', condition: (s: number) => s <= 16, title: 'Prevención de úlceras por presión', interventions: [
+    'Cambios posturales cada 2-3 horas con registro',
+    'Superficie de alivio de presión (colchón antiescaras)',
+    'Inspección diaria de piel e hidratación',
+    'Control de humedad e incontinencia',
+  ]},
+  { test: 'fried', condition: (s: number) => s >= 1, title: 'Programa de fragilidad', interventions: [
+    'Ejercicio multicomponente (fuerza, equilibrio, resistencia) 3x/semana',
+    'Revisión nutricional con aporte proteico adecuado',
+    'Revisión de polifarmacia',
+  ]},
 ];
+
+interface PlanItem {
+  title: string;
+  test: string;
+  score: number;
+  interpretation: string | null;
+  interventions: string[];
+}
 
 const CarePlanGenerator = ({ onBack }: Props) => {
   const { user } = useAuth();
@@ -55,7 +87,7 @@ const CarePlanGenerator = ({ onBack }: Props) => {
   const [residents, setResidents] = useState<ResidentOption[]>([]);
   const [selectedResident, setSelectedResident] = useState("");
   const [assessments, setAssessments] = useState<Assessment[]>([]);
-  const [generatedPlan, setGeneratedPlan] = useState<any[]>([]);
+  const [generatedPlan, setGeneratedPlan] = useState<PlanItem[]>([]);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [existingPlans, setExistingPlans] = useState<Row<"care_plans">[]>([]);
@@ -83,7 +115,7 @@ const CarePlanGenerator = ({ onBack }: Props) => {
   }, [selectedResident]);
 
   const generatePlan = () => {
-    const plan: any[] = [];
+    const plan: PlanItem[] = [];
     PAI_RULES.forEach(rule => {
       const assessment = assessments.find(a => a.test_key === rule.test);
       if (assessment && rule.condition(assessment.score)) {
@@ -106,8 +138,8 @@ const CarePlanGenerator = ({ onBack }: Props) => {
     const { error } = await supabase.from('care_plans').insert({
       resident_id: selectedResident,
       version,
-      objectives: generatedPlan.map(p => p.title) as any,
-      interventions: generatedPlan as any,
+      objectives: generatedPlan.map(p => p.title) as unknown as Json,
+      interventions: generatedPlan as unknown as Json,
       generated_from: Object.fromEntries(assessments.map(a => [a.test_key, a.score])),
       notes,
       created_by: user.id,

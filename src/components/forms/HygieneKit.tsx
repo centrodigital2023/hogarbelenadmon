@@ -8,6 +8,7 @@ import ExportButtons from "@/components/ExportButtons";
 import ShareButtons from "@/components/ShareButtons";
 import { Package, History } from "lucide-react";
 import type { Row } from "@/integrations/supabase/tables";
+import type { Json } from "@/integrations/supabase/types";
 
 interface Props { onBack: () => void; }
 
@@ -58,7 +59,7 @@ const HygieneKit = ({ onBack }: Props) => {
       .then(({ data }) => { if (data) setHistory(data); });
   }, [selectedResident]);
 
-  const updateItem = (key: string, field: string, value: any) => {
+  const updateItem = (key: string, field: string, value: string | number | boolean) => {
     setItems(prev => ({ ...prev, [key]: { ...prev[key], [field]: value } }));
   };
 
@@ -69,7 +70,7 @@ const HygieneKit = ({ onBack }: Props) => {
     if (!selectedResident || !user) return;
     setSaving(true);
     const { error } = await supabase.from('hygiene_kits').insert({
-      resident_id: selectedResident, created_by: user.id, kit_date: kitDate, items: items as any, observations,
+      resident_id: selectedResident, created_by: user.id, kit_date: kitDate, items: items as unknown as Json, observations,
     });
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else toast({ title: "Kit guardado", description: `${checkedCount} artículos entregados` });
@@ -112,7 +113,7 @@ const HygieneKit = ({ onBack }: Props) => {
                   {history.map(h => (
                     <div key={h.id} className="flex items-center justify-between bg-card rounded-xl px-4 py-2 text-xs">
                       <span className="font-medium">{h.kit_date}</span>
-                      <span className="text-muted-foreground">{Object.values(h.items as Record<string, any>).filter((i: any) => i.checked).length} artículos</span>
+                      <span className="text-muted-foreground">{Object.values((h.items ?? {}) as Record<string, { checked?: boolean }>).filter(i => i.checked).length} artículos</span>
                     </div>
                   ))}
                 </div>

@@ -8,6 +8,7 @@ import ExportButtons from "@/components/ExportButtons";
 import ShareButtons from "@/components/ShareButtons";
 import SignaturePad from "@/components/SignaturePad";
 import { Plus, Minus } from "lucide-react";
+import type { Json } from "@/integrations/supabase/types";
 
 interface Props { onBack: () => void; }
 
@@ -60,7 +61,7 @@ const BelongingsInventory = ({ onBack }: Props) => {
       resident_id: selectedResident,
       created_by: user.id,
       reason,
-      items: items as any,
+      items: items as unknown as Json,
       total_items: totalItems,
     });
 
@@ -124,7 +125,7 @@ const BelongingsInventory = ({ onBack }: Props) => {
           </div>
           <div>
             <label className="text-xs font-bold text-muted-foreground uppercase">Motivo</label>
-            <select value={reason} onChange={e => setReason(e.target.value as any)}
+            <select value={reason} onChange={e => setReason(e.target.value as typeof reason)}
               className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm">
               <option value="ingreso">Ingreso</option>
               <option value="egreso">Egreso</option>

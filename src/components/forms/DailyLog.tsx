@@ -84,7 +84,7 @@ const DailyLog = ({ onBack }: Props) => {
     }
   }, [user, responsibleManual]);
 
-  const updateEntry = (rid: string, field: string, val: any) => {
+  const updateEntry = (rid: string, field: string, val: string | number | boolean) => {
     setEntries(prev => ({
       ...prev,
       [rid]: { ...(prev[rid] || { ...emptyEntry }), [field]: val },
@@ -134,7 +134,7 @@ const DailyLog = ({ onBack }: Props) => {
     { key: 'mood', label: 'Ánimo', type: 'select' as const, options: MOODS },
   ];
 
-  const historyExportTransform = (h: any) => ({
+  const historyExportTransform = (h: Record<string, unknown> & { residents?: { full_name?: string } | null }) => ({
     Fecha: h.log_date, Turno: h.shift,
     Residente: h.residents?.full_name || '',
     Responsable: h.responsible_name || '',

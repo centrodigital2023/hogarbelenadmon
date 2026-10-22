@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     const serviceClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { data: userRoles } = await serviceClient.from("user_roles").select("role").eq("user_id", user.id);
     const allowedRoles = ["super_admin", "coordinador", "administrativo", "enfermera"];
-    const hasAccess = !!userRoles?.some((r: any) => allowedRoles.includes(r.role));
+    const hasAccess = !!userRoles?.some((r) => allowedRoles.includes(r.role));
     if (!hasAccess) {
       return new Response(JSON.stringify({ error: "Acceso restringido a personal autorizado" }), {
         status: 403,
@@ -185,7 +185,7 @@ Deno.serve(async (req) => {
 });
 
 // Generate Google OAuth2 access token from service account JWT
-async function getGoogleAccessToken(credentials: any): Promise<string> {
+async function getGoogleAccessToken(credentials: { client_email: string; private_key: string }): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: "RS256", typ: "JWT" };
   const payload = {

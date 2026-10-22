@@ -29,7 +29,7 @@ const VitalSigns = ({ onBack }: Props) => {
       .then(({ data }) => { if (data) setResidents(data); });
   }, []);
 
-  const updateEntry = (rid: string, field: string, val: any) => {
+  const updateEntry = (rid: string, field: string, val: string | number | boolean) => {
     setEntries(prev => ({
       ...prev,
       [rid]: { ...prev[rid] || { blood_pressure: '', spo2: 0, temperature: 0, glucose: 0, heart_rate: 0, weight: 0, notes: '' }, [field]: val }

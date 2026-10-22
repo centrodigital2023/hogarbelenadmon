@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,7 +9,7 @@ import type { Row } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 
-const FILE_ICONS: Record<string, any> = {
+const FILE_ICONS: Record<string, LucideIcon> = {
   'pdf': FileText,
   'doc': File,
   'docx': File,
@@ -54,7 +55,7 @@ const DocumentManager = ({ onBack }: Props) => {
 
     const { data: urlData } = supabase.storage.from('documents').getPublicUrl(fileName);
 
-    await supabase.from('institutional_documents').insert({
+    const { error: dbError } = await supabase.from('institutional_documents').insert({
       name: docName || file.name.replace(/\.[^.]+$/, ''),
       original_name: file.name,
       file_url: urlData.publicUrl,
@@ -62,6 +63,7 @@ const DocumentManager = ({ onBack }: Props) => {
       file_size: file.size,
       uploaded_by: user.id,
     });
+    if (dbError) { toast({ title: "No se pudo guardar", description: dbError.message, variant: "destructive" }); setUploading(false); return; }
 
     setDocName("");
     setUploading(false);
@@ -71,7 +73,8 @@ const DocumentManager = ({ onBack }: Props) => {
 
   const handleDelete = async (doc: Row<"institutional_documents">) => {
     if (!confirm('¿Eliminar este documento?')) return;
-    await supabase.from('institutional_documents').delete().eq('id', doc.id);
+    const { error: dbError } = await supabase.from('institutional_documents').delete().eq('id', doc.id);
+    if (dbError) { toast({ title: "No se pudo eliminar", description: dbError.message, variant: "destructive" }); return; }
     toast({ title: "Eliminado" });
     loadDocs();
   };

@@ -25,7 +25,7 @@ const FoodIntake = ({ onBack }: Props) => {
   const [saving, setSaving] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const updateWeek = (idx: number, key: string, val: any) => {
+  const updateWeek = (idx: number, key: string, val: string | number | boolean) => {
     setWeeks(prev => prev.map((w, i) => i === idx ? { ...w, [key]: val } : w));
   };
 

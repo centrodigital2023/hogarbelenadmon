@@ -11,7 +11,7 @@ export const ROLE_LABELS: Record<AppRole, string> = {
   manipuladora: 'Manipuladora Alimentos',
 };
 
-type Module = 'ingreso' | 'valoracion' | 'alimentacion' | 'bienestar' | 'salud' | 'sistema_salud' | 'higiene' | 'seguridad' | 'egreso' | 'personal' | 'calidad' | 'admin' | 'finanzas' | 'usuarios' | 'residentes' | 'blog' | 'redes' | 'gerencial';
+export type Module = 'ingreso' | 'valoracion' | 'alimentacion' | 'bienestar' | 'salud' | 'sistema_salud' | 'higiene' | 'seguridad' | 'egreso' | 'personal' | 'calidad' | 'admin' | 'finanzas' | 'usuarios' | 'residentes' | 'blog' | 'redes' | 'gerencial';
 type Action = 'read' | 'create' | 'update' | 'delete';
 
 const ALL: Action[] = ['read', 'create', 'update', 'delete'];

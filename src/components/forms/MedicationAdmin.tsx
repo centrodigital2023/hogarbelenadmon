@@ -37,7 +37,7 @@ const MedicationAdmin = ({ onBack }: Props) => {
       .then(({ data }) => { if (data) setMedications(data); });
   }, [selectedResident]);
 
-  const updateRecord = (medId: string, key: string, val: any) => {
+  const updateRecord = (medId: string, key: string, val: string | number | boolean) => {
     setAdminRecords(prev => ({
       ...prev,
       [medId]: { ...prev[medId] || { was_administered: true, check_patient: false, check_medication: false, check_dose: false, check_route: false, check_time: false, dose_given: '', route: '', skip_reason: '', notes: '' }, [key]: val }

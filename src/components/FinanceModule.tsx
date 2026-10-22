@@ -82,7 +82,7 @@ const FinanceModule = ({ onBack }: Props) => {
 
       <div className="flex gap-2 flex-wrap">
         {[{k:'dashboard',l:'📊 Dashboard'},{k:'transactions',l:'📋 Transacciones'},{k:'invoices',l:'🧾 Facturas'},{k:'vouchers',l:'💳 Comprobantes'}].map(t => (
-          <button key={t.k} onClick={() => setTab(t.k as any)}
+          <button key={t.k} onClick={() => setTab(t.k as typeof tab)}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${tab === t.k ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>{t.l}</button>
         ))}
       </div>

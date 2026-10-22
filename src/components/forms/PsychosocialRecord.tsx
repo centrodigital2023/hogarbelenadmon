@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import type { TablesInsert } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -35,7 +36,7 @@ const PsychosocialRecord = ({ onBack }: Props) => {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const payload: any = {
+    const payload: TablesInsert<"psychosocial_records"> = {
       record_type: recordType, record_date: recordDate,
       created_by: user.id, evolution, recommendations,
     };

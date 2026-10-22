@@ -37,7 +37,7 @@ serve(async (req) => {
     const serviceClient = createClient(supabaseUrl, supabaseKey);
     const { data: userRoles } = await serviceClient.from("user_roles").select("role").eq("user_id", user.id);
     const allowedRoles = ["super_admin", "coordinador", "enfermera"];
-    const hasAccess = !!userRoles?.some((r: any) => allowedRoles.includes(r.role));
+    const hasAccess = !!userRoles?.some((r) => allowedRoles.includes(r.role));
     if (!hasAccess) {
       return new Response(JSON.stringify({ error: "Acceso restringido a personal médico autorizado" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -93,27 +93,27 @@ serve(async (req) => {
     // Build data summaries
     const totalResidents = residents?.length || 0;
 
-    const logsText = (logs || []).map((l: any) =>
+    const logsText = (logs || []).map((l) =>
       `${l.log_date} ${l.shift}: ${l.residents?.full_name} - Nutrición:${l.nutrition_pct}%, Hidratación:${l.hydration_glasses} vasos, Ánimo:${l.mood}, Eliminación:${l.elimination}, Obs:${l.observations || 'N/A'}`
     ).join("\n");
 
-    const vitalsText = (vitals || []).map((v: any) =>
+    const vitalsText = (vitals || []).map((v) =>
       `${v.record_date}: ${v.residents?.full_name} - PA:${v.blood_pressure}, FC:${v.heart_rate}, T:${v.temperature}°C, SpO2:${v.spo2}%, Peso:${v.weight}kg, Glicemia:${v.glucose}`
     ).join("\n");
 
-    const incText = (incidents || []).map((i: any) =>
+    const incText = (incidents || []).map((i) =>
       `${i.incident_datetime}: ${i.residents?.full_name} - Tipo:${i.incident_type}, Desc:${i.description}, Primeros auxilios:${i.first_aid ? 'Sí' : 'No'}, Familia notificada:${i.family_notified ? 'Sí' : 'No'}`
     ).join("\n");
 
-    const medText = (medications || []).slice(0, 100).map((m: any) =>
+    const medText = (medications || []).slice(0, 100).map((m) =>
       `${m.admin_datetime}: ${m.residents?.full_name} - ${m.medications?.medication_name}, Administrado:${m.was_administered ? 'Sí' : 'No'}${m.skip_reason ? `, Motivo omisión:${m.skip_reason}` : ''}`
     ).join("\n");
 
-    const apptText = (appointments || []).map((a: any) =>
+    const apptText = (appointments || []).map((a) =>
       `${a.appointment_date}: ${a.residents?.full_name} - ${a.specialty}, ${a.location || 'N/A'}, Asistió:${a.was_attended ? 'Sí' : 'Pendiente'}`
     ).join("\n");
 
-    const notesText = (nursingNotes || []).map((n: any) =>
+    const notesText = (nursingNotes || []).map((n) =>
       `[${n.note_date} ${n.shift}${n.is_consolidated ? ' CONSOLIDADA' : ''}]: ${n.note.substring(0, 200)}...`
     ).join("\n");
 
@@ -122,7 +122,7 @@ serve(async (req) => {
     const totalVitals = vitals?.length || 0;
     const totalIncidents = incidents?.length || 0;
     const totalAppointments = appointments?.length || 0;
-    const avgNutrition = totalLogs > 0 ? Math.round((logs || []).reduce((s: number, l: any) => s + (l.nutrition_pct || 0), 0) / totalLogs) : 0;
+    const avgNutrition = totalLogs > 0 ? Math.round((logs || []).reduce((s: number, l) => s + (l.nutrition_pct || 0), 0) / totalLogs) : 0;
 
     const systemPrompt = `Eres la Coordinadora de Enfermería del Hogar Belén, centro geriátrico en Buesaco, Colombia, con más de 20 años de experiencia en gestión de enfermería geriátrica. Redactas informes de enfermería institucionales profesionales, completos y ejecutivos.
 

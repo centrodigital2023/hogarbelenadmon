@@ -43,11 +43,12 @@ const SocialMediaModule = ({ onBack }: Props) => {
   const handleSave = async () => {
     if (!user || !generatedText) return;
     setSaving(true);
-    await supabase.from('social_media_posts').insert({
+    const { error: dbError } = await supabase.from('social_media_posts').insert({
       platforms: selectedPlatforms, content_text: generatedText,
       hashtags, status: scheduledAt ? 'programada' : 'borrador',
       scheduled_at: scheduledAt || null, ai_generated: true, created_by: user.id,
     });
+    if (dbError) { toast({ title: "No se pudo guardar", description: dbError.message, variant: "destructive" }); setSaving(false); return; }
     toast({ title: "Publicación guardada" });
     setSaving(false);
     setGeneratedText(""); setPrompt(""); setHashtags("");
