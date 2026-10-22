@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { fromTable, type TableName } from "@/integrations/supabase/tables";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, ChevronRight, Download, Eye, Trash2, Loader2 } from "lucide-react";
 
 interface ActivityHistoryProps {
-  tableName: string;
+  tableName: TableName;
   residentId?: string;
   columns: Array<{ key: string; label: string; format?: (val: any) => string }>;
   onReexport: (id: string, format: 'pdf' | 'word' | 'excel') => Promise<void>;
@@ -38,7 +38,7 @@ export const ActivityHistory = ({
     setLoading(true);
     try {
       const offset = (currentPage - 1) * pageSize;
-      let query = supabase.from(tableName).select('*', { count: 'exact' });
+      let query = fromTable(tableName).select('*', { count: 'exact' });
 
       if (residentId) {
         query = query.eq('resident_id', residentId);

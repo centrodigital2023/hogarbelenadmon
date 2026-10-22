@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fromTable, type TableName } from "@/integrations/supabase/tables";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import ExportButtons from "@/components/ExportButtons";
@@ -15,7 +16,7 @@ export interface HistoryColumn {
 }
 
 interface FormHistoryProps {
-  tableName: string;
+  tableName: TableName;
   columns: HistoryColumn[];
   title: string;
   fileName: string;
@@ -70,13 +71,13 @@ const FormHistory = ({
       }
     }
 
-    let query = supabase.from(tableName as any).select(selectClause)
+    let query = fromTable(tableName).select(selectClause)
       .gte(dateColumn, cutoff.toISOString().split('T')[0])
       .order(dateColumn, { ascending: false })
       .limit(1000);
 
     filters.forEach(([col, op, val]) => {
-      query = (query as any).filter(col, op, val);
+      query = query.filter(col, op, val);
     });
 
     const { data: result, error } = await query;
@@ -98,7 +99,7 @@ const FormHistory = ({
 
   const handleSaveEdit = async () => {
     if (!editingId) return;
-    const { error } = await supabase.from(tableName as any).update(editData as any).eq('id', editingId);
+    const { error } = await fromTable(tableName).update(editData).eq('id', editingId);
     if (error) {
       toast({ title: "Error al editar", description: error.message, variant: "destructive" });
     } else {
@@ -111,7 +112,7 @@ const FormHistory = ({
   const handleDelete = async () => {
     if (!deleteId) return;
     setDeleting(true);
-    const { error } = await supabase.from(tableName as any).delete().eq('id', deleteId);
+    const { error } = await fromTable(tableName).delete().eq('id', deleteId);
     if (error) {
       toast({ title: "Error al eliminar", description: error.message, variant: "destructive" });
     } else {

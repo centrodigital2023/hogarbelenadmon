@@ -133,7 +133,7 @@ const SanitationRecord = ({ onBack }: Props) => {
       <HistorialGerencial 
         moduleId="HB-G04" 
         moduleName="HB-G04: Saneamiento Básico"
-        tableName="sanitation_record"
+        tableName="sanitation_records"
       />
     </div>
   );

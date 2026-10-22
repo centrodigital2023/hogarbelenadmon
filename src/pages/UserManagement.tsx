@@ -5,18 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import { UserPlus, Trash2, Shield, Edit, Key, Search, X, Plus } from "lucide-react";
 
-type AppRole = 'super_admin' | 'coordinador' | 'enfermera' | 'cuidadora' | 'terapeuta' | 'psicologo' | 'administrativo' | 'manipuladora';
-
-const ROLE_LABELS: Record<AppRole, string> = {
-  super_admin: 'Super Admin',
-  coordinador: 'Coordinador/a',
-  enfermera: 'Enfermera',
-  cuidadora: 'Cuidadora',
-  terapeuta: 'Terapeuta',
-  psicologo: 'Psicólogo/a',
-  administrativo: 'Administrativo/a',
-  manipuladora: 'Manipuladora Alimentos',
-};
+import type { AppRole } from "@/hooks/useAuth";
+import { ROLE_LABELS } from "@/hooks/usePermissions";
 
 const ROLE_COLORS: Record<string, string> = {
   super_admin: 'bg-destructive/10 text-destructive',

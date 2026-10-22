@@ -1,4 +1,15 @@
-import { useAuth } from "./useAuth";
+import { useAuth, type AppRole } from "./useAuth";
+
+export const ROLE_LABELS: Record<AppRole, string> = {
+  super_admin: 'Super Admin',
+  coordinador: 'Coordinador/a',
+  enfermera: 'Enfermera',
+  cuidadora: 'Cuidadora',
+  terapeuta: 'Terapeuta',
+  psicologo: 'Psicólogo/a',
+  administrativo: 'Administrativo/a',
+  manipuladora: 'Manipuladora Alimentos',
+};
 
 type Module = 'ingreso' | 'valoracion' | 'alimentacion' | 'bienestar' | 'salud' | 'sistema_salud' | 'higiene' | 'seguridad' | 'egreso' | 'personal' | 'calidad' | 'admin' | 'finanzas' | 'usuarios' | 'residentes' | 'blog' | 'redes' | 'gerencial';
 type Action = 'read' | 'create' | 'update' | 'delete';

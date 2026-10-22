@@ -148,7 +148,7 @@ const EmergencyPlan = ({ onBack }: Props) => {
       <HistorialGerencial 
         moduleId="HB-G05" 
         moduleName="HB-G05: Plan de Emergencias y Evacuación"
-        tableName="emergency_plan"
+        tableName="emergency_plans"
       />
     </div>
   );

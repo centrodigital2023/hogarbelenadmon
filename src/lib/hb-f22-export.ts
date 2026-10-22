@@ -22,10 +22,17 @@ import {
   PageNumber,
   HeadingLevel,
   VerticalAlign,
-  Color,
 } from "docx";
 import { saveAs } from "file-saver";
 import { HBF22Report, RiskAlert, CareRecommendation, ScaleScore } from "./hb-f22-report";
+
+// jsPDF's built-in fonts cannot render emoji, so they are removed from PDF text
+const stripEmoji = (text: string) =>
+  text.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]\uFE0F?\s*/gu, "").trim();
+
+const stripMarkdown = (text: string) => text.replace(/\*\*/g, "");
+
+const LEVEL_LABEL: Record<RiskAlert["level"], string> = { HIGH: "ALTO", MODERATE: "MODERADO", LOW: "BAJO" };
 import logoImg from "@/assets/logo.png";
 
 // ─── CONSTANTES DE MARCA ───
@@ -420,7 +427,7 @@ export function buildHBF22HTML(report: HBF22Report): string {
     role: escHtml(pRaw.role),
     nit: pRaw.nit ? escHtml(pRaw.nit) : pRaw.nit,
   };
-  const summary = escHtml(summaryRaw);
+  const summary = escHtml(summaryRaw).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
   const scales = sRaw.map((s) => ({ ...s, name: escHtml(s.name), category: escHtml(s.category) }));
   const riskAlerts = aRaw.map((a) => ({
     ...a,
@@ -736,7 +743,7 @@ export async function exportHBF22PDF(report: HBF22Report, fileName: string = "In
 
   pdf.setFont("helvetica", "normal");
   pdf.setTextColor(50, 50, 50);
-  const summaryLines = pdf.splitTextToSize(report.summary, contentW);
+  const summaryLines = pdf.splitTextToSize(stripMarkdown(report.summary), contentW);
   summaryLines.forEach((line: string) => {
     if (y > pageH - 25) {
       drawFooter();
@@ -843,10 +850,10 @@ export async function exportHBF22PDF(report: HBF22Report, fileName: string = "In
       y = 45;
     }
 
-    const color = alert.level === "HIGH" ? [200, 16, 46] : [212, 160, 23];
+    const color: [number, number, number] = alert.level === "HIGH" ? [200, 16, 46] : [212, 160, 23];
     pdf.setTextColor(...color);
     pdf.setFont("helvetica", "bold");
-    pdf.text(`[${alert.level}] ${alert.message}`, margin, y);
+    pdf.text(`[${LEVEL_LABEL[alert.level]}] ${stripEmoji(alert.message)}`, margin, y);
     y += 4;
 
     pdf.setTextColor(50, 50, 50);
@@ -964,7 +971,7 @@ export async function exportHBF22Word(report: HBF22Report, fileName: string = "I
 
   bodyContent.push(
     new Paragraph({
-      children: [new TextRun({ text: "INFORME INTELIGENTE CON ANÁLISIS DE CORRELACIONES", italic: true, size: 22, color: "666666", font: "Arial" })],
+      children: [new TextRun({ text: "INFORME INTELIGENTE CON ANÁLISIS DE CORRELACIONES", italics: true, size: 22, color: "666666", font: "Arial" })],
       alignment: AlignmentType.CENTER,
       spacing: { after: 300 },
     })
@@ -1043,7 +1050,7 @@ export async function exportHBF22Word(report: HBF22Report, fileName: string = "I
 
   bodyContent.push(
     new Paragraph({
-      children: [new TextRun({ text: summary, size: 22, font: "Arial" })],
+      children: [new TextRun({ text: stripMarkdown(summary), size: 22, font: "Arial" })],
       spacing: { after: 200 },
       alignment: AlignmentType.JUSTIFIED,
     })

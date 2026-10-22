@@ -2,7 +2,9 @@ import { createContext, useContext, useEffect, useState, useCallback, type React
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
-type AppRole = 'super_admin' | 'coordinador' | 'enfermera' | 'cuidadora' | 'terapeuta' | 'psicologo' | 'administrativo';
+import type { Database } from "@/integrations/supabase/types";
+
+export type AppRole = Database["public"]["Enums"]["app_role"];
 
 interface AuthContextType {
   user: User | null;

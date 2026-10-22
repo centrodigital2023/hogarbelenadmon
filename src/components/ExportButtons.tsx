@@ -58,7 +58,7 @@ const ExportButtons = ({ contentRef, title, fileName, data, textContent, signatu
 
   const objectToCSV = (rows: Record<string, any>[]) => {
     if (!rows || rows.length === 0) return "";
-    const headers = Array.from(rows.reduce((keys, row) => {
+    const headers = Array.from(rows.reduce<Set<string>>((keys, row) => {
       Object.keys(row).forEach(key => keys.add(key));
       return keys;
     }, new Set<string>()));

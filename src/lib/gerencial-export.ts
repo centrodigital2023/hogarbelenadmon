@@ -20,7 +20,6 @@ import {
   PageNumber,
   HeadingLevel,
   VerticalAlign,
-  Color,
 } from "docx";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -123,7 +122,7 @@ export const CORPORATE_STYLES = `
 // ─── TIPOS ───
 export interface GerencialRecord {
   id: string;
-  module_id: string;
+  module_id?: string;
   period_month?: number;
   period_year?: number;
   period_quarter?: number;
@@ -283,22 +282,22 @@ export const exportGerencialWord = async (options: HistoryExportOptions): Promis
     new TableRow({
       children: [
         new TableCell({
-          children: [new Paragraph({ text: 'Fecha', bold: true })],
+          children: [new Paragraph({ children: [new TextRun({ bold: true, color: 'FFFFFF', text: 'Fecha' })] })],
           shading: { fill: 'C8102E', color: 'auto' },
           margins: { top: 60, bottom: 60, left: 60, right: 60 },
         }),
         new TableCell({
-          children: [new Paragraph({ text: 'Responsable', bold: true })],
+          children: [new Paragraph({ children: [new TextRun({ bold: true, color: 'FFFFFF', text: 'Responsable' })] })],
           shading: { fill: 'C8102E', color: 'auto' },
           margins: { top: 60, bottom: 60, left: 60, right: 60 },
         }),
         new TableCell({
-          children: [new Paragraph({ text: 'Período', bold: true })],
+          children: [new Paragraph({ children: [new TextRun({ bold: true, color: 'FFFFFF', text: 'Período' })] })],
           shading: { fill: 'C8102E', color: 'auto' },
           margins: { top: 60, bottom: 60, left: 60, right: 60 },
         }),
         new TableCell({
-          children: [new Paragraph({ text: 'Observaciones', bold: true })],
+          children: [new Paragraph({ children: [new TextRun({ bold: true, color: 'FFFFFF', text: 'Observaciones' })] })],
           shading: { fill: 'C8102E', color: 'auto' },
           margins: { top: 60, bottom: 60, left: 60, right: 60 },
         }),
@@ -345,50 +344,28 @@ export const exportGerencialWord = async (options: HistoryExportOptions): Promis
     ),
   ];
 
+  const styled = (
+    text: string,
+    run: { bold?: boolean; size?: number; color?: string } = {},
+    spacing: { before?: number; after?: number } = {},
+    heading?: (typeof HeadingLevel)[keyof typeof HeadingLevel]
+  ) =>
+    new Paragraph({
+      heading,
+      spacing,
+      children: [new TextRun({ text, ...run })],
+    });
+
   const sections = [
     {
       children: [
-        new Paragraph({
-          text: MODULE_INFO[moduleId]?.title || moduleName,
-          heading: HeadingLevel.HEADING_1,
-          thematicBreak: false,
-          bold: true,
-          size: 28,
-          color: 'C8102E',
-        }),
-        new Paragraph({
-          text: MODULE_INFO[moduleId]?.subtitle || '',
-          heading: HeadingLevel.HEADING_2,
-          size: 20,
-          color: '666666',
-          marginBottom: 200,
-        }),
-        new Paragraph({
-          text: BRAND.name,
-          size: 16,
-          bold: true,
-          marginBottom: 100,
-        }),
-        new Paragraph({
-          text: `${BRAND.nit} | ${BRAND.phone} | ${BRAND.email}`,
-          size: 16,
-          color: '666666',
-          marginBottom: 300,
-        }),
-        new Paragraph({
-          text: `Rango de fechas: ${formatDate(dateRange.start)} a ${formatDate(dateRange.end)}`,
-          marginBottom: 100,
-        }),
-        new Paragraph({
-          text: `Total de registros: ${records.length}`,
-          marginBottom: 200,
-        }),
-        new Paragraph({
-          text: 'Historial de Registros:',
-          heading: HeadingLevel.HEADING_3,
-          bold: true,
-          marginBottom: 100,
-        }),
+        styled(MODULE_INFO[moduleId]?.title || moduleName, { bold: true, size: 28, color: 'C8102E' }, {}, HeadingLevel.HEADING_1),
+        styled(MODULE_INFO[moduleId]?.subtitle || '', { size: 20, color: '666666' }, { after: 200 }, HeadingLevel.HEADING_2),
+        styled(BRAND.name, { size: 16, bold: true }, { after: 100 }),
+        styled(`${BRAND.nit} | ${BRAND.phone} | ${BRAND.email}`, { size: 16, color: '666666' }, { after: 300 }),
+        styled(`Rango de fechas: ${formatDate(dateRange.start)} a ${formatDate(dateRange.end)}`, {}, { after: 100 }),
+        styled(`Total de registros: ${records.length}`, {}, { after: 200 }),
+        styled('Historial de Registros:', { bold: true }, { after: 100 }, HeadingLevel.HEADING_3),
         new Table({
           rows: tableRows,
           width: {
@@ -396,12 +373,7 @@ export const exportGerencialWord = async (options: HistoryExportOptions): Promis
             type: WidthType.PERCENTAGE,
           },
         }),
-        new Paragraph({
-          text: `\nDocumento generado: ${new Date().toLocaleString('es-CO')}`,
-          size: 14,
-          color: '999999',
-          marginTop: 300,
-        }),
+        styled(`Documento generado: ${new Date().toLocaleString('es-CO')}`, { size: 14, color: '999999' }, { before: 300 }),
       ],
     },
   ];

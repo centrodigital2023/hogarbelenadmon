@@ -203,7 +203,7 @@ const TherapyRecords = ({ onBack }: Props) => {
           <p className="text-[11px] font-bold text-amber-900">⚠️ FIRMA OBLIGATORIA</p>
           <p className="text-[10px] text-amber-800">La firma del responsable se incluirá en todos los documentos exportados.</p>
         </div>
-        <SignaturePad value={signature || undefined} onChange={setSignature} />
+        <SignaturePad label="Firma del responsable" value={signature || undefined} onChange={setSignature} />
       </div>
 
       {/* Report */}
