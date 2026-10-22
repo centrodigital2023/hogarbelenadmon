@@ -658,29 +658,6 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
         )}
       </div>
 
-      {/* Automatic clinical analysis (deterministic, works without AI) */}
-      {selectedResident && (
-        <div className="bg-card border border-border rounded-2xl p-5 mb-6">
-          <h3 className="text-sm font-black text-foreground flex items-center gap-2 mb-1">
-            <Activity size={16} className="text-primary" />
-            Análisis clínico instantáneo
-          </h3>
-          <p className="text-xs text-muted-foreground mb-4">
-            Correlación automática de las últimas escalas: perfil de dependencia, alertas y plan de cuidado.
-          </p>
-          <GeneradorHBF22
-            residentId={selectedResident.id}
-            residentName={selectedResident.full_name}
-            residentDocId={selectedResident.document_id || undefined}
-            residentGender={selectedResident.gender || undefined}
-            residentAge={ageFromBirthDate(selectedResident.birth_date)}
-            assessmentResults={assessmentResults}
-            professionalName={profile?.full_name || user?.email || "Profesional"}
-            professionalRole={roles[0] ? ROLE_LABELS[roles[0]] : "Profesional"}
-          />
-        </div>
-      )}
-
       {/* History panel */}
       {showHistory && history.length > 0 && (
         <div className="bg-card border border-border rounded-2xl p-5 mb-6">
@@ -739,6 +716,29 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
           );
         })}
       </div>
+
+      {/* Automatic clinical analysis (deterministic, works without AI) */}
+      {selectedResident && (
+        <div className="bg-card border border-border rounded-2xl p-5 mt-6">
+          <h3 className="text-sm font-black text-foreground flex items-center gap-2 mb-1">
+            <Activity size={16} className="text-primary" />
+            Análisis clínico instantáneo
+          </h3>
+          <p className="text-xs text-muted-foreground mb-4">
+            Correlación automática de las últimas escalas: perfil de dependencia, alertas y plan de cuidado.
+          </p>
+          <GeneradorHBF22
+            residentId={selectedResident.id}
+            residentName={selectedResident.full_name}
+            residentDocId={selectedResident.document_id || undefined}
+            residentGender={selectedResident.gender || undefined}
+            residentAge={ageFromBirthDate(selectedResident.birth_date)}
+            assessmentResults={assessmentResults}
+            professionalName={profile?.full_name || user?.email || "Profesional"}
+            professionalRole={roles[0] ? ROLE_LABELS[roles[0]] : "Profesional"}
+          />
+        </div>
+      )}
     </div>
   );
 };

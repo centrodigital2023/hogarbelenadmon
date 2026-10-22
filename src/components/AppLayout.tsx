@@ -1,12 +1,15 @@
-import { useState, useEffect, useCallback, memo } from "react";
+import { useState, useCallback, memo } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { usePermissions } from "@/hooks/usePermissions";
+import { usePermissions, ROLE_LABELS } from "@/hooks/usePermissions";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import InstallAppButton from "@/components/InstallAppButton";
+import logo from "@/assets/logo.png";
 import {
   Users, ClipboardList, Utensils, Heart, Activity,
   Stethoscope, ShieldCheck, AlertTriangle, LogOut,
-  Briefcase, TrendingUp, Settings, Sparkles, Menu,
+  Briefcase, TrendingUp, Settings, Menu,
   X, UserPlus, Home, ChevronRight, DollarSign,
-  BookOpen, Share2, FileText
+  BookOpen, Share2, FileText, WifiOff, Clock
 } from "lucide-react";
 
 interface AppLayoutProps {
@@ -30,11 +33,13 @@ const modules = [
   { id: '11', title: "11. Calidad", subtitle: "PQRSF", icon: TrendingUp },
   { id: '12', title: "12. Admin.", subtitle: "Gerencia", icon: Settings },
   { id: 'gerencial', title: "Gestión Admin.", subtitle: "HB-G01 a G06", icon: FileText },
+  { id: 'instituciones', title: "Instituciones", subtitle: "Resumen", icon: FileText },
   { id: 'finanzas', title: "Finanzas", subtitle: "Control", icon: DollarSign },
   { id: 'blog', title: "Blog", subtitle: "Noticias", icon: BookOpen },
   { id: 'redes', title: "Redes Sociales", subtitle: "Publicaciones", icon: Share2 },
   { id: 'usuarios', title: "Usuarios", subtitle: "Gestión", icon: UserPlus },
   { id: 'residentes', title: "Residentes", subtitle: "Directorio", icon: Users },
+  { id: 'timeline', title: "Timeline", subtitle: "Vista unificada", icon: Clock },
 ];
 
 const NavItem = memo(({ m, isActive, onClick }: { m: typeof modules[0]; isActive: boolean; onClick: () => void }) => {
@@ -60,15 +65,7 @@ const AppLayout = ({ children, activeModule, onModuleChange }: AppLayoutProps) =
   const { profile, roles, signOut } = useAuth();
   const { canAccessModule } = usePermissions();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [autoSave, setAutoSave] = useState(false);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setAutoSave(true);
-      setTimeout(() => setAutoSave(false), 1500);
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  const online = useOnlineStatus();
 
   const handleModuleClick = useCallback((id: string) => {
     onModuleChange(id);
@@ -76,6 +73,14 @@ const AppLayout = ({ children, activeModule, onModuleChange }: AppLayoutProps) =
   }, [onModuleChange]);
 
   const visibleModules = modules.filter(m => canAccessModule(m.id));
+
+  // Thumb-reachable shortcuts for phones; everything else stays in the side menu
+  const bottomNav = [
+    { id: 'dashboard', label: 'Inicio', icon: Home },
+    { id: '2', label: 'Valoración', icon: Stethoscope },
+    { id: '5', label: 'Salud', icon: Activity },
+    { id: 'residentes', label: 'Residentes', icon: Users },
+  ].filter(item => canAccessModule(item.id));
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -87,8 +92,8 @@ const AppLayout = ({ children, activeModule, onModuleChange }: AppLayoutProps) =
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="flex items-center gap-3 px-5 py-4 border-b border-secondary-foreground/10">
-          <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-sm">
-            <Sparkles size={18} className="text-primary-foreground" />
+          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm p-1">
+            <img src={logo} alt="" className="w-full h-full object-contain" />
           </div>
           <div className="flex-1 min-w-0">
             <h1 className="text-sm font-black tracking-tight truncate">HOGAR BELÉN</h1>
@@ -111,7 +116,7 @@ const AppLayout = ({ children, activeModule, onModuleChange }: AppLayoutProps) =
 
         <div className="px-4 py-3 border-t border-secondary-foreground/10">
           <p className="text-[10px] font-bold text-secondary-foreground/60 truncate">{profile?.full_name}</p>
-          <p className="text-[9px] text-secondary-foreground/40 capitalize">{roles.map(r => r.replace('_', ' ')).join(', ') || 'Sin rol'}</p>
+          <p className="text-[9px] text-secondary-foreground/40">{roles.map(r => ROLE_LABELS[r] ?? r).join(', ') || 'Sin rol'}</p>
           <button
             onClick={signOut}
             className="mt-2 w-full text-[10px] font-bold text-secondary-foreground/50 hover:text-destructive transition-colors text-left touch-manipulation"
@@ -121,14 +126,37 @@ const AppLayout = ({ children, activeModule, onModuleChange }: AppLayoutProps) =
         </div>
       </aside>
 
-      {/* Mobile bottom logout bar - visible only on small screens when sidebar is closed */}
-      <button
-        onClick={signOut}
-        className="fixed bottom-0 left-0 right-0 z-30 lg:hidden flex items-center justify-center gap-2 py-3 bg-card border-t border-border text-xs font-bold text-muted-foreground hover:text-destructive transition-colors safe-bottom touch-manipulation"
+      {/* Mobile bottom navigation */}
+      <nav
+        aria-label="Navegación principal"
+        className="fixed bottom-0 left-0 right-0 z-30 lg:hidden grid bg-card/95 glass border-t border-border safe-bottom"
+        style={{ gridTemplateColumns: `repeat(${bottomNav.length + 1}, minmax(0, 1fr))` }}
       >
-        <LogOut size={14} />
-        Cerrar sesión
-      </button>
+        {bottomNav.map(item => {
+          const Icon = item.icon;
+          const active = activeModule === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => handleModuleClick(item.id)}
+              aria-current={active ? 'page' : undefined}
+              className={`flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-bold touch-manipulation min-h-[56px] transition-colors ${
+                active ? 'text-primary' : 'text-muted-foreground'
+              }`}
+            >
+              <Icon size={20} strokeWidth={active ? 2.5 : 2} />
+              {item.label}
+            </button>
+          );
+        })}
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-bold text-muted-foreground touch-manipulation min-h-[56px]"
+        >
+          <Menu size={20} />
+          Más
+        </button>
+      </nav>
 
       {/* Overlay */}
       {sidebarOpen && (
@@ -149,19 +177,27 @@ const AppLayout = ({ children, activeModule, onModuleChange }: AppLayoutProps) =
             <Menu size={20} />
           </button>
           <div className="flex items-center gap-2 text-xs ml-auto">
-            <span className={`w-2 h-2 rounded-full transition-colors ${autoSave ? 'bg-accent-foreground/50 animate-pulse' : 'bg-cat-nutritional'}`} />
-            <span className="text-muted-foreground font-medium">
-              {autoSave ? 'Sincronizando…' : 'En Línea'}
-            </span>
-            <span className="font-black bg-muted px-2 py-1 rounded-lg text-[10px]">CO</span>
+            <InstallAppButton />
+            <span
+              className={`w-2 h-2 rounded-full ${online ? 'bg-cat-nutritional' : 'bg-destructive animate-pulse'}`}
+              aria-hidden
+            />
+            <span className="text-muted-foreground font-medium">{online ? 'En línea' : 'Sin conexión'}</span>
           </div>
         </header>
+
+        {!online && (
+          <div role="status" className="bg-destructive/10 text-destructive text-xs font-bold px-4 py-2 flex items-center gap-2 justify-center">
+            <WifiOff size={14} />
+            Sin conexión. Los registros no se podrán guardar hasta que vuelva el internet.
+          </div>
+        )}
 
         <main className="flex-1 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
           {children}
         </main>
 
-        <footer className="text-center py-3 pb-14 lg:pb-3 text-[10px] text-muted-foreground font-medium border-t border-border safe-bottom">
+        <footer className="text-center py-3 pb-20 lg:pb-3 text-[10px] text-muted-foreground font-medium border-t border-border safe-bottom">
           Hogar Belén • Gestión Segura • Hecho en Colombia 🇨🇴
         </footer>
       </div>

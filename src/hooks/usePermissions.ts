@@ -62,7 +62,7 @@ export const MODULE_PERMISSION_MAP: Record<string, Module> = {
   '7': 'higiene', '8': 'seguridad', '9': 'egreso',
   '10': 'personal', '11': 'calidad', '12': 'admin',
   'finanzas': 'finanzas', 'instituciones': 'admin', 'usuarios': 'usuarios',
-  'residentes': 'residentes', 'blog': 'blog',
+  'residentes': 'residentes', 'timeline': 'residentes', 'blog': 'blog',
   'redes': 'redes', 'gerencial': 'gerencial',
   'dashboard': 'ingreso', // dashboard always visible
 };

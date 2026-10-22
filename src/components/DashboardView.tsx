@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useAuth } from "@/hooks/useAuth";
 import AlertsPanel from "@/components/AlertsPanel";
 import {
   Users, ClipboardList, Utensils, Heart, Activity,
@@ -71,13 +72,21 @@ ModuleCard.displayName = "ModuleCard";
 
 const DashboardView = ({ onModuleChange }: DashboardViewProps) => {
   const { canAccessModule } = usePermissions();
+  const { profile } = useAuth();
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Buenos días" : hour < 19 ? "Buenas tardes" : "Buenas noches";
+  const firstName = profile?.full_name?.split(" ")[0];
+  const today = new Date().toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" });
   const visibleModules = modules.filter(m => canAccessModule(m.id));
 
   return (
     <div className="animate-fade-in">
       <div className="mb-6 sm:mb-8">
-        <h2 className="text-2xl sm:text-3xl font-black text-foreground">Panel de Control</h2>
-        <p className="text-sm text-muted-foreground mt-1">Operación Belén • 2026</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-primary first-letter:uppercase">{today}</p>
+        <h2 className="text-2xl sm:text-3xl font-black text-foreground mt-1">
+          {greeting}{firstName ? `, ${firstName}` : ""} 👋
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">Gracias por cuidar hoy de nuestros abuelos. ¿Por dónde empezamos?</p>
       </div>
       <AlertsPanel />
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">

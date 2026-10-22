@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions, MODULE_PERMISSION_MAP } from "@/hooks/usePermissions";
 import CrossNavigation from "@/components/CrossNavigation";
@@ -151,8 +151,21 @@ const FORM_COMPONENTS: Record<string, React.FC<{ onBack: () => void }>> = {
 const Index = () => {
   const { user, loading } = useAuth();
   const { canAccessModule } = usePermissions();
-  const [view, setView] = useState('dashboard');
-  const [form, setForm] = useState<string | null>(null);
+  // Navigation lives in the URL (?modulo=…&form=…) so the phone's back button and
+  // the installed app's shortcuts work like in any native app
+  const [searchParams, setSearchParams] = useSearchParams();
+  const view = searchParams.get('modulo') || 'dashboard';
+  const form = searchParams.get('form');
+
+  const navigate = (nextView: string, nextForm: string | null) => {
+    const params = new URLSearchParams();
+    if (nextView !== 'dashboard') params.set('modulo', nextView);
+    if (nextForm) params.set('form', nextForm);
+    setSearchParams(params);
+    window.scrollTo({ top: 0 });
+  };
+  const setView = (nextView: string) => navigate(nextView, null);
+  const setForm = (nextForm: string | null) => navigate(view, nextForm);
 
   if (loading) {
     return (
@@ -238,7 +251,7 @@ const Index = () => {
   };
 
   return (
-    <AppLayout activeModule={view} onModuleChange={(id) => { setView(id); setForm(null); }}>
+    <AppLayout activeModule={view} onModuleChange={setView}>
       {renderContent()}
     </AppLayout>
   );
