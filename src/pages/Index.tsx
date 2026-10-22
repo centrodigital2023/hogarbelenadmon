@@ -80,7 +80,7 @@ const MODULE_INFO: Record<string, { title: string; subtitle: string; icon: Lucid
   '5': { title: '5. Salud Diaria', subtitle: 'Enfermería', icon: Activity, forms: [
     { id: 'HB-F14', label: 'HB-F14: Medicamentos' },
     { id: 'HB-F15', label: 'HB-F15: Administración Med.' }, { id: 'HB-F16', label: 'HB-F16: Signos Vitales' },
-    { id: 'NURSING-AI', label: '🤖 Notas Enfermería IA' },
+    { id: 'NURSING-AI', label: '📝 Notas de Enfermería' },
     { id: 'NURSING-REPORT', label: '📊 Informe Enfermería IA' },
   ]},
   '6': { title: '6. Sistema Salud', subtitle: 'Urgencias y citas', icon: Stethoscope, forms: [

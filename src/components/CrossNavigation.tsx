@@ -22,7 +22,7 @@ const RELATED_FORMS: Record<string, { id: string; label: string; module: string 
   'HB-F4': [
     { id: 'HB-F16', label: 'Signos Vitales', module: 'Salud' },
     { id: 'HB-F15', label: 'Administración Med.', module: 'Salud' },
-    { id: 'NURSING-AI', label: 'Notas Enfermería IA', module: 'Salud' },
+    { id: 'NURSING-AI', label: 'Notas de Enfermería', module: 'Salud' },
     { id: 'HB-F9', label: 'Terapias', module: 'Bienestar' },
     { id: 'HB-F20', label: 'Incidentes/Caídas', module: 'Seguridad' },
   ],
@@ -73,7 +73,7 @@ const RELATED_FORMS: Record<string, { id: string; label: string; module: string 
     { id: 'HB-F16', label: 'Signos Vitales', module: 'Salud' },
   ],
   'NURSING-REPORT': [
-    { id: 'NURSING-AI', label: 'Notas Enfermería IA', module: 'Salud' },
+    { id: 'NURSING-AI', label: 'Notas de Enfermería', module: 'Salud' },
     { id: 'HB-F4', label: 'Bitácora Diaria', module: 'Bienestar' },
     { id: 'PAI', label: 'Plan de Atención', module: 'Calidad' },
   ],
