@@ -11,6 +11,7 @@ import SignaturePad from "@/components/SignaturePad";
 import { ActivityHistory } from "@/components/ActivityHistory";
 import { History, Loader2 } from "lucide-react";
 import { errorMessage } from "@/lib/errors";
+import { fromTable } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 interface Resident { id: string; full_name: string; }
@@ -50,7 +51,7 @@ const TherapyRecords = ({ onBack }: Props) => {
     }
     setSaving(true);
     try {
-      const inserts = Object.entries(entries).map(([rid, e]) => ({
+      const base = Object.entries(entries).map(([rid, e]) => ({
         resident_id: rid,
         created_by: user.id,
         week_start: weekStart,
@@ -60,14 +61,26 @@ const TherapyRecords = ({ onBack }: Props) => {
         attended_friday: e.attended_friday,
         evolution_code: e.evolution_code,
         observations: e.observations,
+      }));
+      const signed = base.map(row => ({
+        ...row,
         signature: signature,
         responsible_id: user.id,
         responsible_name: responsibleName || user.email?.split('@')[0] || 'Terapeuta',
         responsible_role: responsibleRole,
       }));
-      const { error } = await supabase.from('therapy_records').insert(inserts);
-      if (error) throw error;
-      toast({ title: "✅ Terapias registradas con firma" });
+      // The signature columns come from migration 20260428; until it is applied to the
+      // database, save the attendance without them instead of losing the whole record
+      const { error } = await fromTable('therapy_records').insert(signed);
+      if (error && /column|schema cache/i.test(error.message)) {
+        const { error: baseError } = await supabase.from('therapy_records').insert(base);
+        if (baseError) throw baseError;
+        toast({ title: "Terapias registradas", description: "La firma no se guardó: falta actualizar la base de datos." });
+      } else if (error) {
+        throw error;
+      } else {
+        toast({ title: "✅ Terapias registradas con firma" });
+      }
       setEntries({});
       setSignature(null);
     } catch (e) {

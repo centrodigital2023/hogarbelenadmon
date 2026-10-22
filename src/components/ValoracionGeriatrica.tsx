@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Activity, Brain, Heart, Utensils, AlertTriangle,
   Users, ShieldCheck, Briefcase, ChevronRight, User, History, Save,
@@ -85,6 +86,8 @@ interface ValoracionGeriatricaProps {
 
 const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
   const { user, profile, roles } = useAuth();
+  const [searchParams] = useSearchParams();
+  const initialResidentId = searchParams.get('residente');
   const { toast } = useToast();
   const [step, setStep] = useState<'select-resident' | 'menu' | 'assessment' | 'summary' | 'ai-report'>('select-resident');
   const [testKey, setTestKey] = useState<string | null>(null);
@@ -171,6 +174,14 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
     fetchLatestAssessments(r.id);
     setStep('menu');
   };
+
+  // Deep link from the Clinical Intelligence panel (?residente=id) opens the resident directly
+  useEffect(() => {
+    if (!initialResidentId || selectedResident) return;
+    const preselected = residents.find(r => r.id === initialResidentId);
+    if (preselected) handleSelectResident(preselected);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once when the resident list arrives
+  }, [residents, initialResidentId]);
 
   const handleAnswer = (qId: string, value: number, optionIndex: number) => {
     setAnswers(prev => ({ ...prev, [qId]: value }));

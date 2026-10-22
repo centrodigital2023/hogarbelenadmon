@@ -5,6 +5,7 @@ import ExportButtons from "@/components/ExportButtons";
 import { useRef } from "react";
 import { FileText, Download } from "lucide-react";
 import type { Row } from "@/integrations/supabase/tables";
+import { isFall } from "@/lib/clinical-intelligence";
 
 interface Props { onBack: () => void; }
 
@@ -46,7 +47,7 @@ const AuditReport = ({ onBack }: Props) => {
     setLoading(false);
   };
 
-  const falls = data?.incidents?.filter((i) => i.incident_type === 'caída')?.length || 0;
+  const falls = data?.incidents?.filter((i) => isFall(i.incident_type))?.length || 0;
   const attendedAppts = data?.appointments?.filter((a) => a.was_attended)?.length || 0;
   const totalAppts = data?.appointments?.length || 0;
   const pqrsfOpen = data?.pqrsf?.filter((p) => p.status === 'abierto')?.length || 0;

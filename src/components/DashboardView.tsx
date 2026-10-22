@@ -2,6 +2,7 @@ import { memo } from "react";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/hooks/useAuth";
 import AlertsPanel from "@/components/AlertsPanel";
+import ClinicalIntelligencePanel from "@/components/ClinicalIntelligencePanel";
 import {
   Users, ClipboardList, Utensils, Heart, Activity,
   Stethoscope, ShieldCheck, AlertTriangle, LogOut,
@@ -71,7 +72,7 @@ const ModuleCard = memo(({ mod, onClick }: { mod: typeof modules[0]; onClick: ()
 ModuleCard.displayName = "ModuleCard";
 
 const DashboardView = ({ onModuleChange }: DashboardViewProps) => {
-  const { canAccessModule } = usePermissions();
+  const { canAccessModule, canAccess } = usePermissions();
   const { profile } = useAuth();
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Buenos días" : hour < 19 ? "Buenas tardes" : "Buenas noches";
@@ -88,6 +89,7 @@ const DashboardView = ({ onModuleChange }: DashboardViewProps) => {
         </h2>
         <p className="text-sm text-muted-foreground mt-1">Gracias por cuidar hoy de nuestros abuelos. ¿Por dónde empezamos?</p>
       </div>
+      {(canAccess('valoracion') || canAccess('salud')) && <ClinicalIntelligencePanel />}
       <AlertsPanel />
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
         {visibleModules.map(mod => (
