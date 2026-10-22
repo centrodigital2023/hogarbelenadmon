@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import { Upload, Download, Trash2, FileText, FileSpreadsheet, File, Search, Loader2 } from "lucide-react";
+import type { Row } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 
@@ -18,7 +19,7 @@ const FILE_ICONS: Record<string, any> = {
 const DocumentManager = ({ onBack }: Props) => {
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
-  const [docs, setDocs] = useState<any[]>([]);
+  const [docs, setDocs] = useState<Row<"institutional_documents">[]>([]);
   const [uploading, setUploading] = useState(false);
   const [search, setSearch] = useState("");
   const [docName, setDocName] = useState("");
@@ -68,14 +69,14 @@ const DocumentManager = ({ onBack }: Props) => {
     loadDocs();
   };
 
-  const handleDelete = async (doc: any) => {
+  const handleDelete = async (doc: Row<"institutional_documents">) => {
     if (!confirm('¿Eliminar este documento?')) return;
     await supabase.from('institutional_documents').delete().eq('id', doc.id);
     toast({ title: "Eliminado" });
     loadDocs();
   };
 
-  const handleDownload = (doc: any) => {
+  const handleDownload = (doc: Row<"institutional_documents">) => {
     window.open(doc.file_url, '_blank');
   };
 

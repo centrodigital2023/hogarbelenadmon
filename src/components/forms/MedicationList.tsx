@@ -7,6 +7,7 @@ import ActionButtons from "@/components/ActionButtons";
 import ExportButtons from "@/components/ExportButtons";
 import ShareButtons from "@/components/ShareButtons";
 import { Upload } from "lucide-react";
+import type { Row } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 interface Resident { id: string; full_name: string; eps: string | null; allergies: string | null; }
@@ -17,7 +18,7 @@ const MedicationList = ({ onBack }: Props) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [selectedResident, setSelectedResident] = useState("");
-  const [medications, setMedications] = useState<any[]>([]);
+  const [medications, setMedications] = useState<Row<"medications">[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({
     medication_name: '', concentration: '', dose: '', route: 'Oral', schedule: '',

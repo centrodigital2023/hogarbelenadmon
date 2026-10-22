@@ -7,6 +7,7 @@ import ActionButtons from "@/components/ActionButtons";
 import ExportButtons from "@/components/ExportButtons";
 import ShareButtons from "@/components/ShareButtons";
 import { Package, History } from "lucide-react";
+import type { Row } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 
@@ -39,7 +40,7 @@ const HygieneKit = ({ onBack }: Props) => {
   const [items, setItems] = useState<Record<string, { checked: boolean; qty: number; obs: string }>>({});
   const [observations, setObservations] = useState("");
   const [saving, setSaving] = useState(false);
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<Row<"hygiene_kits">[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {

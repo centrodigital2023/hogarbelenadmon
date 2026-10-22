@@ -7,6 +7,7 @@ import ExportButtons from "@/components/ExportButtons";
 import SignaturePad from "@/components/SignaturePad";
 import { Sparkles, Loader2, Save, Calendar, ChevronDown, ChevronUp, Share2, Mail, MessageCircle } from "lucide-react";
 import { errorMessage } from "@/lib/errors";
+import type { Row } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 interface Resident { id: string; full_name: string; }
@@ -24,7 +25,7 @@ const NursingNotes = ({ onBack }: Props) => {
   const [note, setNote] = useState("");
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<Row<"nursing_notes">[]>([]);
   const [isConsolidated, setIsConsolidated] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [signature, setSignature] = useState<string | null>(null);
@@ -105,7 +106,7 @@ const NursingNotes = ({ onBack }: Props) => {
     setExpandedId(prev => prev === id ? null : id);
   };
 
-  const loadHistoryNote = (h: any) => {
+  const loadHistoryNote = (h: Row<"nursing_notes">) => {
     setNote(h.note);
     setExpandedId(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });

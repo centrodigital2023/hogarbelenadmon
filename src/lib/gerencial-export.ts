@@ -5,6 +5,7 @@
  */
 
 import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import {
   Document,
   Packer,
@@ -129,9 +130,9 @@ export interface GerencialRecord {
   responsible?: string;
   created_by?: string;
   created_at?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   observations?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface HistoryExportOptions {
@@ -241,7 +242,7 @@ export const exportGerencialPDF = async (options: HistoryExportOptions): Promise
       r.observations?.substring(0, 50) || '-',
     ]);
 
-    (doc as any).autoTable({
+    autoTable(doc, {
       head: [['Fecha', 'Responsable', 'Período', 'Observaciones']],
       body: tableData,
       startY: yPosition,
@@ -261,7 +262,7 @@ export const exportGerencialPDF = async (options: HistoryExportOptions): Promise
       },
     });
 
-    yPosition = (doc as any).lastAutoTable.finalY + 10;
+    yPosition = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
   }
 
   // ─── FOOTER ───

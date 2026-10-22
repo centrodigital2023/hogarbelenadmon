@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ExportButtons from "@/components/ExportButtons";
 import { DollarSign, Plus, FileText, Printer, User, Calendar, Trash2, Edit } from "lucide-react";
+import type { Row, WithResident } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 
@@ -13,8 +14,8 @@ const BillingModule = ({ onBack }: Props) => {
   const { toast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<'list' | 'create'>('list');
-  const [invoices, setInvoices] = useState<any[]>([]);
-  const [residents, setResidents] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<WithResident<Row<"invoices">>[]>([]);
+  const [residents, setResidents] = useState<Pick<Row<"residents">, "id" | "full_name" | "responsible_family_name" | "responsible_family_phone">[]>([]);
   const [selectedResident, setSelectedResident] = useState("");
   const [period, setPeriod] = useState("");
   const [dueDate, setDueDate] = useState("");

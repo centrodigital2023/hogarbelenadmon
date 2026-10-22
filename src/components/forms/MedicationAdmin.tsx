@@ -7,6 +7,7 @@ import ActionButtons from "@/components/ActionButtons";
 import ExportButtons from "@/components/ExportButtons";
 import ShareButtons from "@/components/ShareButtons";
 import SignaturePad from "@/components/SignaturePad";
+import type { Row } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 interface Resident { id: string; full_name: string; }
@@ -17,7 +18,7 @@ const MedicationAdmin = ({ onBack }: Props) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [selectedResident, setSelectedResident] = useState("");
-  const [medications, setMedications] = useState<any[]>([]);
+  const [medications, setMedications] = useState<Row<"medications">[]>([]);
   const [adminRecords, setAdminRecords] = useState<Record<string, {
     was_administered: boolean; check_patient: boolean; check_medication: boolean;
     check_dose: boolean; check_route: boolean; check_time: boolean;

@@ -22,6 +22,7 @@ import {
   PageNumber,
   HeadingLevel,
   VerticalAlign,
+  ShadingType,
 } from "docx";
 import { saveAs } from "file-saver";
 import { HBF22Report, RiskAlert, CareRecommendation, ScaleScore } from "./hb-f22-report";
@@ -993,7 +994,7 @@ export async function exportHBF22Word(report: HBF22Report, fileName: string = "I
         children: [
           new TableCell({
             children: [new Paragraph({ children: [new TextRun({ text: "Nombre", bold: true, color: "FFFFFF", font: "Arial" })], alignment: AlignmentType.CENTER })],
-            shading: { fill: BRAND.colorHex, type: "clear" as any },
+            shading: { fill: BRAND.colorHex, type: ShadingType.CLEAR },
           }),
           new TableCell({
             children: [new Paragraph({ children: [new TextRun({ text: resident.fullName, font: "Arial" })], spacing: { before: 40, after: 40 } })],
@@ -1004,7 +1005,7 @@ export async function exportHBF22Word(report: HBF22Report, fileName: string = "I
         children: [
           new TableCell({
             children: [new Paragraph({ children: [new TextRun({ text: "Documento", bold: true, color: "FFFFFF", font: "Arial" })], alignment: AlignmentType.CENTER })],
-            shading: { fill: BRAND.colorHex, type: "clear" as any },
+            shading: { fill: BRAND.colorHex, type: ShadingType.CLEAR },
           }),
           new TableCell({
             children: [new Paragraph({ children: [new TextRun({ text: resident.documentId || "N/A", font: "Arial" })], spacing: { before: 40, after: 40 } })],
@@ -1015,7 +1016,7 @@ export async function exportHBF22Word(report: HBF22Report, fileName: string = "I
         children: [
           new TableCell({
             children: [new Paragraph({ children: [new TextRun({ text: "Edad", bold: true, color: "FFFFFF", font: "Arial" })], alignment: AlignmentType.CENTER })],
-            shading: { fill: BRAND.colorHex, type: "clear" as any },
+            shading: { fill: BRAND.colorHex, type: ShadingType.CLEAR },
           }),
           new TableCell({
             children: [new Paragraph({ children: [new TextRun({ text: (resident.age || "N/A") + " años", font: "Arial" })], spacing: { before: 40, after: 40 } })],
@@ -1026,7 +1027,7 @@ export async function exportHBF22Word(report: HBF22Report, fileName: string = "I
         children: [
           new TableCell({
             children: [new Paragraph({ children: [new TextRun({ text: "Fecha de Evaluación", bold: true, color: "FFFFFF", font: "Arial" })], alignment: AlignmentType.CENTER })],
-            shading: { fill: BRAND.colorHex, type: "clear" as any },
+            shading: { fill: BRAND.colorHex, type: ShadingType.CLEAR },
           }),
           new TableCell({
             children: [new Paragraph({ children: [new TextRun({ text: formatDate(new Date(report.generatedDate)), font: "Arial" })], spacing: { before: 40, after: 40 } })],
@@ -1093,23 +1094,23 @@ export async function exportHBF22Word(report: HBF22Report, fileName: string = "I
       children: [
         new TableCell({
           children: [new Paragraph({ children: [new TextRun({ text: "Escala", bold: true, color: "FFFFFF", font: "Arial" })], alignment: AlignmentType.CENTER })],
-          shading: { fill: BRAND.colorHex, type: "clear" as any },
+          shading: { fill: BRAND.colorHex, type: ShadingType.CLEAR },
         }),
         new TableCell({
           children: [new Paragraph({ children: [new TextRun({ text: "Puntuación", bold: true, color: "FFFFFF", font: "Arial" })], alignment: AlignmentType.CENTER })],
-          shading: { fill: BRAND.colorHex, type: "clear" as any },
+          shading: { fill: BRAND.colorHex, type: ShadingType.CLEAR },
         }),
         new TableCell({
           children: [new Paragraph({ children: [new TextRun({ text: "Máximo", bold: true, color: "FFFFFF", font: "Arial" })], alignment: AlignmentType.CENTER })],
-          shading: { fill: BRAND.colorHex, type: "clear" as any },
+          shading: { fill: BRAND.colorHex, type: ShadingType.CLEAR },
         }),
         new TableCell({
           children: [new Paragraph({ children: [new TextRun({ text: "Porcentaje", bold: true, color: "FFFFFF", font: "Arial" })], alignment: AlignmentType.CENTER })],
-          shading: { fill: BRAND.colorHex, type: "clear" as any },
+          shading: { fill: BRAND.colorHex, type: ShadingType.CLEAR },
         }),
         new TableCell({
           children: [new Paragraph({ children: [new TextRun({ text: "Categoría", bold: true, color: "FFFFFF", font: "Arial" })], alignment: AlignmentType.CENTER })],
-          shading: { fill: BRAND.colorHex, type: "clear" as any },
+          shading: { fill: BRAND.colorHex, type: ShadingType.CLEAR },
         }),
       ],
     }),
@@ -1119,23 +1120,23 @@ export async function exportHBF22Word(report: HBF22Report, fileName: string = "I
           children: [
             new TableCell({
               children: [new Paragraph({ children: [new TextRun({ text: scale.name, font: "Arial" })], spacing: { before: 40, after: 40 } })],
-              shading: idx % 2 === 0 ? { fill: "F2F2F2", type: "clear" as any } : undefined,
+              shading: idx % 2 === 0 ? { fill: "F2F2F2", type: ShadingType.CLEAR } : undefined,
             }),
             new TableCell({
               children: [new Paragraph({ children: [new TextRun({ text: scale.score.toString(), font: "Arial" })], alignment: AlignmentType.CENTER, spacing: { before: 40, after: 40 } })],
-              shading: idx % 2 === 0 ? { fill: "F2F2F2", type: "clear" as any } : undefined,
+              shading: idx % 2 === 0 ? { fill: "F2F2F2", type: ShadingType.CLEAR } : undefined,
             }),
             new TableCell({
               children: [new Paragraph({ children: [new TextRun({ text: scale.maxScore.toString(), font: "Arial" })], alignment: AlignmentType.CENTER, spacing: { before: 40, after: 40 } })],
-              shading: idx % 2 === 0 ? { fill: "F2F2F2", type: "clear" as any } : undefined,
+              shading: idx % 2 === 0 ? { fill: "F2F2F2", type: ShadingType.CLEAR } : undefined,
             }),
             new TableCell({
               children: [new Paragraph({ children: [new TextRun({ text: ((scale.score / scale.maxScore) * 100).toFixed(1) + "%", font: "Arial" })], alignment: AlignmentType.CENTER, spacing: { before: 40, after: 40 } })],
-              shading: idx % 2 === 0 ? { fill: "F2F2F2", type: "clear" as any } : undefined,
+              shading: idx % 2 === 0 ? { fill: "F2F2F2", type: ShadingType.CLEAR } : undefined,
             }),
             new TableCell({
               children: [new Paragraph({ children: [new TextRun({ text: scale.category, font: "Arial" })], spacing: { before: 40, after: 40 } })],
-              shading: idx % 2 === 0 ? { fill: "F2F2F2", type: "clear" as any } : undefined,
+              shading: idx % 2 === 0 ? { fill: "F2F2F2", type: ShadingType.CLEAR } : undefined,
             }),
           ],
         })
@@ -1276,7 +1277,7 @@ export async function exportHBF22Word(report: HBF22Report, fileName: string = "I
   const doc = new Document({
     sections: [
       {
-        children: bodyContent as any,
+        children: bodyContent,
         properties: {
           page: {
             margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
@@ -1297,7 +1298,8 @@ export async function exportHBF22Word(report: HBF22Report, fileName: string = "I
  */
 export async function exportHBF22Excel(report: HBF22Report, fileName: string = "Informe_HBF22") {
   const ExcelJSModule = await import("exceljs");
-  const ExcelJS = (ExcelJSModule as any).default || ExcelJSModule;
+  // exceljs is CommonJS; depending on the bundler the API is on .default or on the module
+  const ExcelJS = (ExcelJSModule as unknown as { default?: typeof ExcelJSModule }).default ?? ExcelJSModule;
   const workbook = new ExcelJS.Workbook();
 
   // Hoja 1: Información General

@@ -7,7 +7,7 @@ interface ExportButtonsProps {
   contentRef: React.RefObject<HTMLDivElement>;
   title: string;
   fileName: string;
-  data?: Record<string, any>[] | null;
+  data?: Record<string, unknown>[] | null;
   textContent?: string;
   signatureDataUrl?: string | null;
   showDrive?: boolean;
@@ -57,14 +57,14 @@ const ExportButtons = ({ contentRef, title, fileName, data, textContent, signatu
     await exportWord({ title, fileName, textContent: fullText, data, signatureDataUrl, responsibleName, responsibleRole });
   });
 
-  const objectToCSV = (rows: Record<string, any>[]) => {
+  const objectToCSV = (rows: Record<string, unknown>[]) => {
     if (!rows || rows.length === 0) return "";
     const headers = Array.from(rows.reduce<Set<string>>((keys, row) => {
       Object.keys(row).forEach(key => keys.add(key));
       return keys;
     }, new Set<string>()));
 
-    const escapeValue = (value: any) => {
+    const escapeValue = (value: unknown) => {
       if (value === null || value === undefined) return "";
       const text = String(value).replace(/"/g, '""');
       return `"${text}"`;

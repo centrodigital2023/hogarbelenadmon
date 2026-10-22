@@ -6,6 +6,7 @@ import FormHeader from "@/components/FormHeader";
 import ExportButtons from "@/components/ExportButtons";
 import { DollarSign, TrendingUp, TrendingDown, CreditCard, FileText } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import type { Row, WithResident } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 
@@ -15,9 +16,9 @@ const FinanceModule = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [invoices, setInvoices] = useState<any[]>([]);
-  const [vouchers, setVouchers] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<Row<"financial_transactions">[]>([]);
+  const [invoices, setInvoices] = useState<WithResident<Row<"invoices">>[]>([]);
+  const [vouchers, setVouchers] = useState<Row<"payment_vouchers">[]>([]);
   const [residentCount, setResidentCount] = useState(0);
   const [appointmentCount, setAppointmentCount] = useState(0);
   const [tab, setTab] = useState<'dashboard' | 'transactions' | 'invoices' | 'vouchers'>('dashboard');
@@ -34,7 +35,7 @@ const FinanceModule = ({ onBack }: Props) => {
     ]);
     if (txRes.data) setTransactions(txRes.data);
     if (invRes.data) setInvoices(invRes.data);
-    if (vcRes.data) setVouchers(vcRes.data as any[]);
+    if (vcRes.data) setVouchers(vcRes.data);
     if (typeof residentsRes.count === 'number') setResidentCount(residentsRes.count);
     if (typeof appointmentsRes.count === 'number') setAppointmentCount(appointmentsRes.count);
   };
@@ -254,7 +255,7 @@ const FinanceModule = ({ onBack }: Props) => {
               <th className="text-right p-3 font-bold text-muted-foreground">Neto</th>
               <th className="text-left p-3 font-bold text-muted-foreground">Estado</th>
             </tr></thead>
-            <tbody>{vouchers.map((v: any) => (
+            <tbody>{vouchers.map((v) => (
               <tr key={v.id} className="border-b border-border/50 hover:bg-muted/30">
                 <td className="p-3 font-mono">{v.voucher_number}</td>
                 <td className="p-3">{v.provider_name}</td>

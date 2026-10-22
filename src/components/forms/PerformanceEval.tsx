@@ -6,6 +6,7 @@ import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
 import SmartReportSection from "@/components/SmartReportSection";
 import SignaturePad from "@/components/SignaturePad";
+import type { Row } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 
@@ -13,7 +14,7 @@ const PerformanceEval = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
-  const [profiles, setProfiles] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<Pick<Row<"profiles">, "user_id" | "full_name">[]>([]);
   const [form, setForm] = useState({
     evaluated_user_id: '', period: '',
     score_resident_care: 3, score_compliance: 3, score_safety: 3,

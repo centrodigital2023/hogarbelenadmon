@@ -7,7 +7,7 @@ import { errorMessage } from "@/lib/errors";
 interface ActivityHistoryProps {
   tableName: TableName;
   residentId?: string;
-  columns: Array<{ key: string; label: string; format?: (val: any) => string }>;
+  columns: Array<{ key: string; label: string; format?: (val: unknown) => string }>;
   onReexport: (id: string, format: 'pdf' | 'word' | 'excel') => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
   pageSize?: number;
@@ -16,7 +16,7 @@ interface ActivityHistoryProps {
 interface ActivityRecord {
   id: string;
   created_at: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export const ActivityHistory = ({
@@ -135,7 +135,7 @@ export const ActivityHistory = ({
                   <tr key={record.id} className="hover:bg-muted/30 transition">
                     {columns.map(col => (
                       <td key={`${record.id}-${col.key}`} className="px-4 py-3">
-                        {col.format ? col.format(record[col.key]) : record[col.key]}
+                        {col.format ? col.format(record[col.key]) : String(record[col.key] ?? "")}
                       </td>
                     ))}
                     <td className="px-4 py-3">

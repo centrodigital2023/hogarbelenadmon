@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import { ClipboardList, AlertTriangle, CheckCircle2, Target } from "lucide-react";
+import type { ResidentOption, Row } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 
@@ -51,13 +52,13 @@ const PAI_RULES = [
 const CarePlanGenerator = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [residents, setResidents] = useState<any[]>([]);
+  const [residents, setResidents] = useState<ResidentOption[]>([]);
   const [selectedResident, setSelectedResident] = useState("");
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [generatedPlan, setGeneratedPlan] = useState<any[]>([]);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
-  const [existingPlans, setExistingPlans] = useState<any[]>([]);
+  const [existingPlans, setExistingPlans] = useState<Row<"care_plans">[]>([]);
 
   useEffect(() => {
     supabase.from('residents').select('id, full_name').in('status', ['prueba', 'permanente'])

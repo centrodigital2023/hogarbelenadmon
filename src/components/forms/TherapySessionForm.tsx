@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
+import type { ResidentOption } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 
@@ -13,7 +14,7 @@ const THERAPY_TYPES = ['Física', 'Ocupacional', 'Cognitiva', 'Lúdica', 'Musica
 const TherapySessionForm = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [residents, setResidents] = useState<any[]>([]);
+  const [residents, setResidents] = useState<ResidentOption[]>([]);
   const [therapyName, setTherapyName] = useState("");
   const [therapyType, setTherapyType] = useState(THERAPY_TYPES[0]);
   const [sessionDate, setSessionDate] = useState(new Date().toISOString().split('T')[0]);

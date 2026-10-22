@@ -95,8 +95,8 @@ const TherapyRecords = ({ onBack }: Props) => {
           <ActivityHistory
             tableName="therapy_records"
             columns={[
-              { key: 'created_at', label: 'Fecha', format: (v) => new Date(v).toLocaleDateString() },
-              { key: 'week_start', label: 'Semana del', format: (v) => new Date(v).toLocaleDateString() },
+              { key: 'created_at', label: 'Fecha', format: (v) => new Date(String(v)).toLocaleDateString() },
+              { key: 'week_start', label: 'Semana del', format: (v) => new Date(String(v)).toLocaleDateString() },
               { key: 'therapy_type', label: 'Tipo' },
               { key: 'evolution_code', label: 'Evolución' },
               { key: 'responsible_name', label: 'Responsable' },

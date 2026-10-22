@@ -4,15 +4,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import { FileText, Plus, Trash2, Eye, Edit2 } from "lucide-react";
+import type { Row } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 
 const BlogModule = ({ onBack }: Props) => {
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<Row<"blog_posts">[]>([]);
   const [view, setView] = useState<'list' | 'edit'>('list');
-  const [editPost, setEditPost] = useState<any>(null);
+  const [editPost, setEditPost] = useState<Row<"blog_posts"> | null>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [excerpt, setExcerpt] = useState("");
@@ -22,7 +23,7 @@ const BlogModule = ({ onBack }: Props) => {
 
   const fetchPosts = async () => {
     const { data } = await supabase.from('blog_posts').select('*').order('created_at', { ascending: false });
-    if (data) setPosts(data as any[]);
+    if (data) setPosts(data);
   };
 
   useEffect(() => { fetchPosts(); }, []);
@@ -32,7 +33,7 @@ const BlogModule = ({ onBack }: Props) => {
     setView('edit');
   };
 
-  const handleEdit = (post: any) => {
+  const handleEdit = (post: Row<"blog_posts">) => {
     setEditPost(post); setTitle(post.title); setContent(post.content); setExcerpt(post.excerpt || '');
     setCategory(post.category || 'general'); setStatus(post.status || 'borrador');
     setView('edit');

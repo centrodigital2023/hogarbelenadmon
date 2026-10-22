@@ -12,6 +12,7 @@ import { Calendar, CheckCircle2, XCircle, Pencil, Trash2, Save, X } from "lucide
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose,
 } from "@/components/ui/dialog";
+import type { Row, WithResident } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 interface Resident { id: string; full_name: string; }
@@ -22,7 +23,7 @@ const MedicalAppointments = ({ onBack }: Props) => {
   const { canAccessModule } = usePermissions();
   const contentRef = useRef<HTMLDivElement>(null);
   const [residents, setResidents] = useState<Resident[]>([]);
-  const [appointments, setAppointments] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState<WithResident<Row<"medical_appointments">>[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     resident_id: '', appointment_date: '', appointment_time: '', specialty: '',
@@ -73,7 +74,7 @@ const MedicalAppointments = ({ onBack }: Props) => {
     setSaving(false);
   };
 
-  const startEdit = (a: any) => {
+  const startEdit = (a: WithResident<Row<"medical_appointments">>) => {
     setForm({
       resident_id: a.resident_id, appointment_date: a.appointment_date, appointment_time: a.appointment_time || '',
       specialty: a.specialty || '', location: a.location || '', companion: a.companion || '',

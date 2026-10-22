@@ -10,3 +10,11 @@ export type TableName = keyof Database["public"]["Tables"];
  * shared components can filter on columns only some tables have (resident_id).
  */
 export const fromTable = (table: TableName) => (supabase as unknown as SupabaseClient).from(table);
+
+export type Row<T extends TableName> = Database["public"]["Tables"][T]["Row"];
+
+/** Minimal resident shape used by selectors across forms. */
+export type ResidentOption = Pick<Row<"residents">, "id" | "full_name">;
+
+/** Row joined with the resident's name via `residents(full_name)`. */
+export type WithResident<T> = T & { residents: { full_name: string } | null };

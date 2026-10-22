@@ -65,7 +65,7 @@ export interface HBF22Report {
     riskFactors: string[];
   };
   assessmentDetails: {
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 

@@ -16,7 +16,7 @@ export interface HistoricalRecord {
   period_year?: number;
   period_quarter?: number;
   observations?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface UseGerencialHistoryReturn {

@@ -29,7 +29,7 @@ interface FormHistoryProps {
   /** Additional filters as [column, operator, value] */
   filters?: [string, string, any][];
   /** Transform row for export table data */
-  exportTransform?: (row: any) => Record<string, any>;
+  exportTransform?: (row: any) => Record<string, unknown>;
   /** Transform row for text content */
   textTransform?: (row: any) => string;
   /** Editable fields config for inline editing */
@@ -47,7 +47,7 @@ const FormHistory = ({
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editData, setEditData] = useState<Record<string, any>>({});
+  const [editData, setEditData] = useState<Record<string, unknown>>({});
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [expanded, setExpanded] = useState(true);
@@ -92,7 +92,7 @@ const FormHistory = ({
 
   const handleEdit = (row: any) => {
     setEditingId(row.id);
-    const ed: Record<string, any> = {};
+    const ed: Record<string, unknown> = {};
     editableFields?.forEach(f => { ed[f.key] = row[f.key] ?? ''; });
     setEditData(ed);
   };
@@ -133,7 +133,7 @@ const FormHistory = ({
   const getTableData = () => {
     if (exportTransform) return data.map(exportTransform);
     return data.map(row => {
-      const obj: Record<string, any> = {};
+      const obj: Record<string, unknown> = {};
       columns.forEach(c => { obj[c.label] = row[c.key] ?? ''; });
       return obj;
     });
@@ -190,7 +190,7 @@ const FormHistory = ({
                                 const field = editableFields!.find(f => f.key === c.key)!;
                                 if (field.type === 'select') {
                                   return (
-                                    <select value={editData[c.key] || ''} onChange={e => setEditData(prev => ({ ...prev, [c.key]: e.target.value }))}
+                                    <select value={String(editData[c.key] ?? "")} onChange={e => setEditData(prev => ({ ...prev, [c.key]: e.target.value }))}
                                       className="px-1 py-1 rounded border border-input bg-background text-xs w-full">
                                       <option value="">--</option>
                                       {field.options?.map(o => <option key={o} value={o}>{o}</option>)}
@@ -198,7 +198,7 @@ const FormHistory = ({
                                   );
                                 }
                                 return (
-                                  <input type={field.type} value={editData[c.key] || ''}
+                                  <input type={field.type} value={String(editData[c.key] ?? "")}
                                     onChange={e => setEditData(prev => ({ ...prev, [c.key]: field.type === 'number' ? Number(e.target.value) : e.target.value }))}
                                     className="px-1 py-1 rounded border border-input bg-background text-xs w-full" />
                                 );
