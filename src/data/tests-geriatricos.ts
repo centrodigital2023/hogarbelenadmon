@@ -93,15 +93,19 @@ export const TESTS_GERIATRICOS: Record<string, {
       { id: 'q5', text: 'Equilibrio en bipedestación', opts: [{ l: 'Inestable', v: 0 }, { l: 'Estable con bastón o base de sustentación amplia (>12cm)', v: 1 }, { l: 'Base de sustentación estrecha sin apoyo', v: 2 }] },
       { id: 'q6', text: 'Empujón (examinador empuja suavemente el esternón 3 veces)', opts: [{ l: 'Empieza a caer', v: 0 }, { l: 'Tambalea, se agarra pero se mantiene', v: 1 }, { l: 'Estable', v: 2 }] },
       { id: 'q7', text: 'Ojos cerrados (en bipedestación)', opts: [{ l: 'Inestable', v: 0 }, { l: 'Estable', v: 1 }] },
-      { id: 'q8', text: 'Giro 360°', opts: [{ l: 'Pasos discontinuos', v: 0 }, { l: 'Pasos continuos', v: 1 }, { l: 'Inestable (se agarra)', v: 0 }, { l: 'Estable', v: 1 }] },
+      { id: 'q8', text: 'Giro 360°: continuidad de los pasos', opts: [{ l: 'Pasos discontinuos', v: 0 }, { l: 'Pasos continuos', v: 1 }] },
+      { id: 'q8b', text: 'Giro 360°: estabilidad', opts: [{ l: 'Inestable (se agarra o tambalea)', v: 0 }, { l: 'Estable', v: 1 }] },
       { id: 'q9', text: 'Sentarse', opts: [{ l: 'Inseguro, calcula mal distancia, cae en la silla', v: 0 }, { l: 'Usa los brazos o el movimiento es brusco', v: 1 }, { l: 'Seguro, movimiento suave', v: 2 }] },
       { id: 'q10', text: 'MARCHA: Inicio de la marcha (inmediatamente después de decir "camine")', opts: [{ l: 'Cualquier vacilación o múltiples intentos', v: 0 }, { l: 'Sin vacilación', v: 1 }] },
-      { id: 'q11', text: 'Longitud y altura del paso (pie derecho)', opts: [{ l: 'No sobrepasa el pie izquierdo', v: 0 }, { l: 'Sobrepasa el pie izquierdo', v: 1 }, { l: 'El pie derecho no se separa completamente del suelo', v: 0 }, { l: 'El pie derecho se separa completamente del suelo', v: 1 }] },
-      { id: 'q12', text: 'Longitud y altura del paso (pie izquierdo)', opts: [{ l: 'No sobrepasa el pie derecho', v: 0 }, { l: 'Sobrepasa el pie derecho', v: 1 }, { l: 'El pie izquierdo no se separa completamente del suelo', v: 0 }, { l: 'El pie izquierdo se separa completamente del suelo', v: 1 }] },
+      { id: 'q11', text: 'Longitud del paso (pie derecho)', opts: [{ l: 'No sobrepasa el pie izquierdo', v: 0 }, { l: 'Sobrepasa el pie izquierdo', v: 1 }] },
+      { id: 'q11b', text: 'Altura del paso (pie derecho)', opts: [{ l: 'El pie derecho no se separa completamente del suelo', v: 0 }, { l: 'El pie derecho se separa completamente del suelo', v: 1 }] },
+      { id: 'q12', text: 'Longitud del paso (pie izquierdo)', opts: [{ l: 'No sobrepasa el pie derecho', v: 0 }, { l: 'Sobrepasa el pie derecho', v: 1 }] },
+      { id: 'q12b', text: 'Altura del paso (pie izquierdo)', opts: [{ l: 'El pie izquierdo no se separa completamente del suelo', v: 0 }, { l: 'El pie izquierdo se separa completamente del suelo', v: 1 }] },
       { id: 'q13', text: 'Simetría del paso', opts: [{ l: 'La longitud del paso derecho e izquierdo es diferente (estimación)', v: 0 }, { l: 'Los pasos son iguales en longitud', v: 1 }] },
       { id: 'q14', text: 'Continuidad del paso', opts: [{ l: 'Parada entre los pasos', v: 0 }, { l: 'Los pasos son continuos', v: 1 }] },
       { id: 'q15', text: 'Trayectoria (observar sobre distancia 3m)', opts: [{ l: 'Desviación marcada', v: 0 }, { l: 'Desviación leve o usa ayuda técnica', v: 1 }, { l: 'Sin desviación ni ayuda', v: 2 }] },
-      { id: 'q16', text: 'Tronco', opts: [{ l: 'Balanceo marcado o usa ayuda técnica', v: 0 }, { l: 'Sin balanceo pero flexión de rodillas/espalda o separa brazos', v: 1 }, { l: 'Sin balanceo, sin flexión, no usa brazos ni ayudas', v: 2 }] }
+      { id: 'q16', text: 'Tronco', opts: [{ l: 'Balanceo marcado o usa ayuda técnica', v: 0 }, { l: 'Sin balanceo pero flexión de rodillas/espalda o separa brazos', v: 1 }, { l: 'Sin balanceo, sin flexión, no usa brazos ni ayudas', v: 2 }] },
+      { id: 'q17', text: 'Postura al caminar', opts: [{ l: 'Talones separados', v: 0 }, { l: 'Talones casi se tocan al caminar', v: 1 }] }
     ]
   },
   mna: {
@@ -193,7 +197,7 @@ export const TESTS_GERIATRICOS: Record<string, {
     ]
   },
   charlson: {
-    name: 'Charlson', cat: 'Comorbilidad', max: 37, iconName: 'Activity', colorClass: 'cat-functional',
+    name: 'Charlson', cat: 'Comorbilidad', max: 42, iconName: 'Activity', colorClass: 'cat-functional',
     desc: 'Índice de comorbilidad de Charlson. Predice mortalidad a 10 años.',
     instructions: 'Marque las condiciones que presenta el paciente. Se suman los pesos. Agregar 1 punto por cada década >40 años. 0: Sin comorbilidad. 1-2: Comorbilidad baja. 3-4: Alta. ≥5: Muy alta.',
     questions: [

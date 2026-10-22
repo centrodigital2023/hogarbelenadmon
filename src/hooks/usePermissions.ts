@@ -1,6 +1,17 @@
-import { useAuth } from "./useAuth";
+import { useAuth, type AppRole } from "./useAuth";
 
-type Module = 'ingreso' | 'valoracion' | 'alimentacion' | 'bienestar' | 'salud' | 'sistema_salud' | 'higiene' | 'seguridad' | 'egreso' | 'personal' | 'calidad' | 'admin' | 'finanzas' | 'usuarios' | 'residentes' | 'blog' | 'redes' | 'gerencial';
+export const ROLE_LABELS: Record<AppRole, string> = {
+  super_admin: 'Super Admin',
+  coordinador: 'Coordinador/a',
+  enfermera: 'Enfermera',
+  cuidadora: 'Cuidadora',
+  terapeuta: 'Terapeuta',
+  psicologo: 'Psicólogo/a',
+  administrativo: 'Administrativo/a',
+  manipuladora: 'Manipuladora Alimentos',
+};
+
+export type Module = 'ingreso' | 'valoracion' | 'alimentacion' | 'bienestar' | 'salud' | 'sistema_salud' | 'higiene' | 'seguridad' | 'egreso' | 'personal' | 'calidad' | 'admin' | 'finanzas' | 'usuarios' | 'residentes' | 'blog' | 'redes' | 'gerencial';
 type Action = 'read' | 'create' | 'update' | 'delete';
 
 const ALL: Action[] = ['read', 'create', 'update', 'delete'];
@@ -51,7 +62,7 @@ export const MODULE_PERMISSION_MAP: Record<string, Module> = {
   '7': 'higiene', '8': 'seguridad', '9': 'egreso',
   '10': 'personal', '11': 'calidad', '12': 'admin',
   'finanzas': 'finanzas', 'instituciones': 'admin', 'usuarios': 'usuarios',
-  'residentes': 'residentes', 'blog': 'blog',
+  'residentes': 'residentes', 'timeline': 'residentes', 'blog': 'blog',
   'redes': 'redes', 'gerencial': 'gerencial',
   'dashboard': 'ingreso', // dashboard always visible
 };

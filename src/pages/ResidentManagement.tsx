@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
@@ -173,7 +174,7 @@ const ResidentManagement = ({ onBack }: { onBack: () => void }) => {
   };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
-    const { error } = await supabase.from('residents').update({ status: newStatus as any }).eq('id', id);
+    const { error } = await supabase.from('residents').update({ status: newStatus as Database["public"]["Enums"]["resident_status"] }).eq('id', id);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
@@ -225,7 +226,7 @@ const ResidentManagement = ({ onBack }: { onBack: () => void }) => {
             {FIELDS.map(f => (
               <div key={f.key}>
                 <label className="text-[10px] font-bold text-muted-foreground uppercase">{f.label}</label>
-                <input type={f.type || 'text'} value={(form as any)[f.key]}
+                <input type={f.type || 'text'} value={form[f.key as keyof typeof form]}
                   onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
                   className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm"
                   required={f.required} />
@@ -248,7 +249,7 @@ const ResidentManagement = ({ onBack }: { onBack: () => void }) => {
                 <label className="text-[10px] font-bold text-muted-foreground uppercase">
                   {k.replace('emergency_contact_1_', '').replace('_', ' ')}
                 </label>
-                <input type="text" value={(form as any)[k]}
+                <input type="text" value={String(form[k as keyof typeof form] ?? '')}
                   onChange={e => setForm(prev => ({ ...prev, [k]: e.target.value }))}
                   className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm" />
               </div>
@@ -264,7 +265,7 @@ const ResidentManagement = ({ onBack }: { onBack: () => void }) => {
             ].map(f => (
               <div key={f.key}>
                 <label className="text-[10px] font-bold text-muted-foreground uppercase">{f.label}</label>
-                <input type="text" value={(form as any)[f.key]}
+                <input type="text" value={form[f.key as keyof typeof form]}
                   onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
                   className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm" />
               </div>

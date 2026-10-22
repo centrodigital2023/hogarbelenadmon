@@ -25,7 +25,7 @@ const FoodIntake = ({ onBack }: Props) => {
   const [saving, setSaving] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const updateWeek = (idx: number, key: string, val: any) => {
+  const updateWeek = (idx: number, key: string, val: string | number | boolean) => {
     setWeeks(prev => prev.map((w, i) => i === idx ? { ...w, [key]: val } : w));
   };
 
@@ -70,7 +70,7 @@ const FoodIntake = ({ onBack }: Props) => {
               { key: 'temperature_ok', label: 'Temperatura OK' },
             ].map(c => (
               <label key={c.key} className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={(w as any)[c.key]}
+                <input type="checkbox" checked={Boolean(w[c.key as keyof typeof w])}
                   onChange={e => updateWeek(idx, c.key, e.target.checked)}
                   className="w-4 h-4 accent-primary" />
                 {c.label}

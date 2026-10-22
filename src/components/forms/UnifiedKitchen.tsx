@@ -105,7 +105,7 @@ const UnifiedKitchen = ({ onBack }: Props) => {
         {/* Premium Tabs */}
         <div className="flex gap-2 mt-6 overflow-x-auto pb-1">
           {tabs.map(t => (
-            <button key={t.k} onClick={() => setTab(t.k as any)}
+            <button key={t.k} onClick={() => setTab(t.k as typeof tab)}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap min-h-[44px] ${
                 tab === t.k 
                   ? 'bg-primary text-primary-foreground shadow-md' 

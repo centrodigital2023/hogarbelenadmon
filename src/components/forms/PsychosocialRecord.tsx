@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import type { TablesInsert } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -6,6 +7,7 @@ import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
 import SmartReportSection from "@/components/SmartReportSection";
 import SignaturePad from "@/components/SignaturePad";
+import type { ResidentOption } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 
@@ -15,7 +17,7 @@ const PsychosocialRecord = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
-  const [residents, setResidents] = useState<any[]>([]);
+  const [residents, setResidents] = useState<ResidentOption[]>([]);
   const [recordType, setRecordType] = useState<'individual' | 'grupal'>('individual');
   const [residentId, setResidentId] = useState("");
   const [recordDate, setRecordDate] = useState(new Date().toISOString().split('T')[0]);
@@ -34,7 +36,7 @@ const PsychosocialRecord = ({ onBack }: Props) => {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const payload: any = {
+    const payload: TablesInsert<"psychosocial_records"> = {
       record_type: recordType, record_date: recordDate,
       created_by: user.id, evolution, recommendations,
     };

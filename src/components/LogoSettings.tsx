@@ -34,11 +34,10 @@ const LogoSettings = ({ onBack }: Props) => {
 
     // Upsert setting
     const { data: existing } = await supabase.from('system_settings').select('id').eq('key', 'logo_url').maybeSingle();
-    if (existing) {
-      await supabase.from('system_settings').update({ value: url, updated_by: user.id }).eq('key', 'logo_url');
-    } else {
-      await supabase.from('system_settings').insert({ key: 'logo_url', value: url, updated_by: user.id });
-    }
+    const { error: dbError } = existing
+      ? await supabase.from('system_settings').update({ value: url, updated_by: user.id }).eq('key', 'logo_url')
+      : await supabase.from('system_settings').insert({ key: 'logo_url', value: url, updated_by: user.id });
+    if (dbError) { toast({ title: "No se pudo guardar", description: dbError.message, variant: "destructive" }); setUploading(false); return; }
 
     setLogoUrl(url);
     setUploading(false);

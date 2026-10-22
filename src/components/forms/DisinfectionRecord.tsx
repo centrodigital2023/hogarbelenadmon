@@ -49,7 +49,7 @@ const DisinfectionRecord = ({ onBack }: Props) => {
       <div className="bg-card border border-border rounded-2xl p-6 mb-6 flex flex-wrap gap-4">
         <div>
           <label className="text-xs font-bold text-muted-foreground uppercase">Tipo</label>
-          <select value={recordType} onChange={e => { setRecordType(e.target.value as any); setChecks({}); }}
+          <select value={recordType} onChange={e => { setRecordType(e.target.value as typeof recordType); setChecks({}); }}
             className="mt-1 px-4 py-3 rounded-xl border border-input bg-background text-sm">
             <option value="cocina">Cocina y comedor</option>
             <option value="general">General del hogar</option>

@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
+import type { ResidentOption } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 
@@ -13,7 +14,7 @@ const THERAPY_TYPES = ['Física', 'Ocupacional', 'Cognitiva', 'Lúdica', 'Musica
 const TherapySessionForm = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [residents, setResidents] = useState<any[]>([]);
+  const [residents, setResidents] = useState<ResidentOption[]>([]);
   const [therapyName, setTherapyName] = useState("");
   const [therapyType, setTherapyType] = useState(THERAPY_TYPES[0]);
   const [sessionDate, setSessionDate] = useState(new Date().toISOString().split('T')[0]);
@@ -36,11 +37,11 @@ const TherapySessionForm = ({ onBack }: Props) => {
       resident_id: id, resident_name: residents.find(r => r.id === id)?.full_name,
       attended: true, observations: attendeeObs[id] || '',
     }));
-    const { error } = await supabase.from('therapy_sessions' as any).insert({
+    const { error } = await supabase.from('therapy_sessions').insert({
       therapy_name: `${therapyType}: ${therapyName}`, session_date: sessionDate,
       session_time: sessionTime, days_of_week: selectedDays, frequency,
       attendees, observations, created_by: user.id,
-    } as any);
+    });
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else { toast({ title: "Sesión de terapia guardada" }); onBack(); }
     setSaving(false);

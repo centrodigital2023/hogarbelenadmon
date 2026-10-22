@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { errorMessage } from "@/lib/errors";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -29,19 +30,19 @@ const TrainingModule = ({ onBack }: Props) => {
   const [examResult, setExamResult] = useState<{ score: number; total: number; passed: boolean } | null>(null);
   const [loadingQuiz, setLoadingQuiz] = useState(false);
 
-  const canManage = isAdmin || roles.includes('coordinador' as any);
+  const canManage = isAdmin || roles.includes('coordinador');
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     // Use view that strips quiz answers
-    const { data: c } = await supabase.from('training_courses_public' as any).select('*').order('created_at', { ascending: false });
+    const { data: c } = await supabase.from('training_courses_public').select('*').order('created_at', { ascending: false });
     if (c) setCourses(c as unknown as CourseListItem[]);
     if (user) {
       const { data: r } = await supabase.from('exam_results').select('*').eq('user_id', user.id);
       if (r) setResults(r as ExamResult[]);
     }
-  };
+  }, [user]);
 
-  useEffect(() => { loadData(); }, [user]);
+  useEffect(() => { loadData(); }, [loadData]);
 
   const handleCreate = async () => {
     if (!user || !newTitle.trim()) return;
@@ -68,12 +69,15 @@ const TrainingModule = ({ onBack }: Props) => {
       const { data, error } = await supabase.functions.invoke('ai-quiz-generator', {
         body: { content, courseId },
       });
-      if (!error && data?.quiz) {
-        await supabase.from('training_courses').update({ quiz: data.quiz, is_published: true }).eq('id', courseId);
-        toast({ title: "Quiz generado con IA", description: `${data.quiz.length} preguntas creadas` });
-        loadData();
-      }
-    } catch (e) { console.error(e); }
+      if (error || !data?.quiz) throw error ?? new Error(data?.error || "La IA no devolvió preguntas");
+      const { error: dbError } = await supabase.from('training_courses').update({ quiz: data.quiz, is_published: true }).eq('id', courseId);
+      if (dbError) throw dbError;
+      toast({ title: "Quiz generado con IA", description: `${data.quiz.length} preguntas creadas` });
+      loadData();
+    } catch (e) {
+      console.error(e);
+      toast({ title: "No se pudo generar el quiz", description: errorMessage(e), variant: "destructive" });
+    }
     setGenerating(false);
   };
 

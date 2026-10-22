@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -6,6 +6,8 @@ import FormHeader from "@/components/FormHeader";
 import ExportButtons from "@/components/ExportButtons";
 import SignaturePad from "@/components/SignaturePad";
 import { Sparkles, Loader2, Save, Calendar, ChevronDown, ChevronUp, Share2, Mail, MessageCircle } from "lucide-react";
+import { errorMessage } from "@/lib/errors";
+import type { Row } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 interface Resident { id: string; full_name: string; }
@@ -23,7 +25,7 @@ const NursingNotes = ({ onBack }: Props) => {
   const [note, setNote] = useState("");
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<Row<"nursing_notes">[]>([]);
   const [isConsolidated, setIsConsolidated] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [signature, setSignature] = useState<string | null>(null);
@@ -35,7 +37,7 @@ const NursingNotes = ({ onBack }: Props) => {
       .order('full_name').then(({ data }) => { if (data) setResidents(data); });
   }, []);
 
-  const loadHistory = () => {
+  const loadHistory = useCallback(() => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
@@ -57,12 +59,12 @@ const NursingNotes = ({ onBack }: Props) => {
     }
 
     query.then(({ data }) => { if (data) setHistory(data); });
-  };
+  }, [selectedResident, isConsolidated]);
 
   useEffect(() => {
     if (!selectedResident && !isConsolidated) return;
     loadHistory();
-  }, [selectedResident, isConsolidated]);
+  }, [loadHistory, selectedResident, isConsolidated]);
 
   const generateNote = async () => {
     if (!user) return;
@@ -74,8 +76,8 @@ const NursingNotes = ({ onBack }: Props) => {
       if (error) throw error;
       if (data?.note) setNote(data.note);
       else toast({ title: "Sin datos", description: "No se encontraron registros para generar la nota. Guarde primero la bitácora.", variant: "destructive" });
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message || "Error generando nota", variant: "destructive" });
+    } catch (e) {
+      toast({ title: "Error", description: errorMessage(e, "Error generando nota"), variant: "destructive" });
     }
     setGenerating(false);
   };
@@ -104,7 +106,7 @@ const NursingNotes = ({ onBack }: Props) => {
     setExpandedId(prev => prev === id ? null : id);
   };
 
-  const loadHistoryNote = (h: any) => {
+  const loadHistoryNote = (h: Row<"nursing_notes">) => {
     setNote(h.note);
     setExpandedId(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });

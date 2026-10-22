@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
 
     // Verify caller is super_admin
     const { data: callerRoles } = await adminClient.from("user_roles").select("role").eq("user_id", callerId);
-    const isSuperAdmin = callerRoles?.some((r: any) => r.role === "super_admin");
+    const isSuperAdmin = callerRoles?.some((r) => r.role === "super_admin");
     if (!isSuperAdmin) return new Response(JSON.stringify({ error: "Solo super_admin puede gestionar usuarios" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const { action, ...payload } = await req.json();
@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
     if (action === "update_profile") {
       const { user_id, full_name, phone } = payload;
       if (!user_id) return new Response(JSON.stringify({ error: "user_id requerido" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      const updates: any = {};
+      const updates: { full_name?: string; phone?: string } = {};
       if (full_name) updates.full_name = full_name;
       if (phone !== undefined) updates.phone = phone;
       const { error } = await adminClient.from("profiles").update(updates).eq("user_id", user_id);
@@ -146,17 +146,17 @@ Deno.serve(async (req) => {
       const { data: allRoles } = await adminClient.from("user_roles").select("user_id, role");
       const { data: { users } } = await adminClient.auth.admin.listUsers();
 
-      const userMap: Record<string, any> = {};
-      users?.forEach((u: any) => {
+      const userMap: Record<string, { user_id: string; email?: string; full_name: string; phone: string; roles: string[]; created_at: string }> = {};
+      users?.forEach((u) => {
         userMap[u.id] = { user_id: u.id, email: u.email, full_name: '', phone: '', roles: [], created_at: u.created_at };
       });
-      profiles?.forEach((p: any) => {
+      profiles?.forEach((p) => {
         if (userMap[p.user_id]) {
           userMap[p.user_id].full_name = p.full_name;
           userMap[p.user_id].phone = p.phone || '';
         }
       });
-      allRoles?.forEach((r: any) => {
+      allRoles?.forEach((r) => {
         if (userMap[r.user_id]) userMap[r.user_id].roles.push(r.role);
       });
 

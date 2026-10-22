@@ -30,7 +30,7 @@ serve(async (req) => {
     const serviceClient = createClient(supabaseUrl, supabaseKey);
     const { data: userRoles } = await serviceClient.from("user_roles").select("role").eq("user_id", user.id);
     const allowedRoles = ["super_admin", "coordinador", "enfermera", "terapeuta", "psicologo"];
-    const hasAccess = !!userRoles?.some((r: any) => allowedRoles.includes(r.role));
+    const hasAccess = !!userRoles?.some((r) => allowedRoles.includes(r.role));
     if (!hasAccess) {
       return new Response(JSON.stringify({ error: "Acceso restringido a personal clínico autorizado" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -48,7 +48,7 @@ serve(async (req) => {
     const today = new Date().toLocaleDateString("es-CO", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 
     // Build assessment summary for the prompt
-    const assessmentSummary = assessments.map((a: any) =>
+    const assessmentSummary = assessments.map((a) =>
       `- ${a.test_name}: ${a.score}/${a.max_score} → ${a.interpretation} (Fecha: ${a.assessment_date})`
     ).join("\n");
 

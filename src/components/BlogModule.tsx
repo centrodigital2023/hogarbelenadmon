@@ -1,18 +1,20 @@
 import { useState, useEffect } from "react";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import { FileText, Plus, Trash2, Eye, Edit2 } from "lucide-react";
+import type { Row } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 
 const BlogModule = ({ onBack }: Props) => {
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<Row<"blog_posts">[]>([]);
   const [view, setView] = useState<'list' | 'edit'>('list');
-  const [editPost, setEditPost] = useState<any>(null);
+  const [editPost, setEditPost] = useState<Row<"blog_posts"> | null>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [excerpt, setExcerpt] = useState("");
@@ -21,8 +23,8 @@ const BlogModule = ({ onBack }: Props) => {
   const [saving, setSaving] = useState(false);
 
   const fetchPosts = async () => {
-    const { data } = await supabase.from('blog_posts' as any).select('*').order('created_at', { ascending: false });
-    if (data) setPosts(data as any[]);
+    const { data } = await supabase.from('blog_posts').select('*').order('created_at', { ascending: false });
+    if (data) setPosts(data);
   };
 
   useEffect(() => { fetchPosts(); }, []);
@@ -32,7 +34,7 @@ const BlogModule = ({ onBack }: Props) => {
     setView('edit');
   };
 
-  const handleEdit = (post: any) => {
+  const handleEdit = (post: Row<"blog_posts">) => {
     setEditPost(post); setTitle(post.title); setContent(post.content); setExcerpt(post.excerpt || '');
     setCategory(post.category || 'general'); setStatus(post.status || 'borrador');
     setView('edit');
@@ -41,15 +43,13 @@ const BlogModule = ({ onBack }: Props) => {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const payload: any = { title, content, excerpt, category, status, updated_at: new Date().toISOString() };
+    const payload: TablesUpdate<"blog_posts"> & { title: string } = { title, content, excerpt, category, status, updated_at: new Date().toISOString() };
     if (status === 'publicado' && !editPost?.published_at) payload.published_at = new Date().toISOString();
 
-    if (editPost) {
-      await (supabase.from('blog_posts' as any) as any).update(payload).eq('id', editPost.id);
-    } else {
-      payload.created_by = user.id;
-      await (supabase.from('blog_posts' as any) as any).insert(payload);
-    }
+    const { error: dbError } = editPost
+      ? await supabase.from('blog_posts').update(payload).eq('id', editPost.id)
+      : await supabase.from('blog_posts').insert({ ...payload, created_by: user.id });
+    if (dbError) { toast({ title: "No se pudo guardar", description: dbError.message, variant: "destructive" }); setSaving(false); return; }
     toast({ title: editPost ? "Entrada actualizada" : "Entrada creada" });
     setSaving(false);
     setView('list');
@@ -58,7 +58,8 @@ const BlogModule = ({ onBack }: Props) => {
 
   const handleDelete = async (id: string) => {
     if (!confirm('¿Eliminar esta entrada?')) return;
-    await (supabase.from('blog_posts' as any) as any).delete().eq('id', id);
+    const { error: dbError } = await supabase.from('blog_posts').delete().eq('id', id);
+    if (dbError) { toast({ title: "No se pudo eliminar", description: dbError.message, variant: "destructive" }); return; }
     toast({ title: "Entrada eliminada" });
     fetchPosts();
   };

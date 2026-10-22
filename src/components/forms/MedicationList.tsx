@@ -7,6 +7,7 @@ import ActionButtons from "@/components/ActionButtons";
 import ExportButtons from "@/components/ExportButtons";
 import ShareButtons from "@/components/ShareButtons";
 import { Upload } from "lucide-react";
+import type { Row } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 interface Resident { id: string; full_name: string; eps: string | null; allergies: string | null; }
@@ -17,7 +18,7 @@ const MedicationList = ({ onBack }: Props) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [selectedResident, setSelectedResident] = useState("");
-  const [medications, setMedications] = useState<any[]>([]);
+  const [medications, setMedications] = useState<Row<"medications">[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({
     medication_name: '', concentration: '', dose: '', route: 'Oral', schedule: '',
@@ -103,7 +104,7 @@ const MedicationList = ({ onBack }: Props) => {
                 ].map(f => (
                   <div key={f.key}>
                     <label className="text-[10px] font-bold text-muted-foreground uppercase">{f.label}</label>
-                    <input type={f.type || 'text'} value={(form as any)[f.key]}
+                    <input type={f.type || 'text'} value={form[f.key as keyof typeof form]}
                       onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
                       className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm" />
                   </div>

@@ -22,7 +22,6 @@ echo "📋 Copiando archivos HB-F22..."
 cp src/lib/hb-f22-report.ts lovable-export/
 cp src/lib/hb-f22-export.ts lovable-export/
 cp src/components/GeneradorHBF22.tsx lovable-export/
-cp src/lib/hb-f22-validation.ts lovable-export/
 cp README_HB-F22.md lovable-export/
 cp IMPLEMENTATION_SUMMARY.md lovable-export/
 echo "✅ Archivos copiados"

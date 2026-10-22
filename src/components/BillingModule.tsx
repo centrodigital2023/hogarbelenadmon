@@ -5,6 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ExportButtons from "@/components/ExportButtons";
 import { DollarSign, Plus, FileText, Printer, User, Calendar, Trash2, Edit } from "lucide-react";
+import type { Row, WithResident } from "@/integrations/supabase/tables";
+import type { Json } from "@/integrations/supabase/types";
 
 interface Props { onBack: () => void; }
 
@@ -13,8 +15,8 @@ const BillingModule = ({ onBack }: Props) => {
   const { toast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<'list' | 'create'>('list');
-  const [invoices, setInvoices] = useState<any[]>([]);
-  const [residents, setResidents] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<WithResident<Row<"invoices">>[]>([]);
+  const [residents, setResidents] = useState<Pick<Row<"residents">, "id" | "full_name" | "responsible_family_name" | "responsible_family_phone">[]>([]);
   const [selectedResident, setSelectedResident] = useState("");
   const [period, setPeriod] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -31,7 +33,7 @@ const BillingModule = ({ onBack }: Props) => {
 
   const addItem = () => setItems(prev => [...prev, { description: '', qty: 1, price: 0 }]);
   const removeItem = (idx: number) => setItems(prev => prev.filter((_, i) => i !== idx));
-  const updateItem = (idx: number, field: string, value: any) => {
+  const updateItem = (idx: number, field: string, value: string | number | boolean) => {
     setItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item));
   };
 
@@ -51,7 +53,7 @@ const BillingModule = ({ onBack }: Props) => {
       resident_id: selectedResident,
       invoice_number: generateNumber(),
       period, due_date: dueDate || null,
-      items: items as any,
+      items: items as unknown as Json,
       subtotal, tax: 0, total,
       payment_method: paymentMethod,
       status: 'pendiente',
@@ -66,7 +68,8 @@ const BillingModule = ({ onBack }: Props) => {
   };
 
   const markPaid = async (id: string) => {
-    await supabase.from('invoices').update({ status: 'pagada' }).eq('id', id);
+    const { error: dbError } = await supabase.from('invoices').update({ status: 'pagada' }).eq('id', id);
+    if (dbError) { toast({ title: "No se pudo guardar", description: dbError.message, variant: "destructive" }); return; }
     toast({ title: "Factura marcada como pagada" });
     supabase.from('invoices').select('*, residents(full_name)').order('created_at', { ascending: false })
       .then(({ data }) => { if (data) setInvoices(data); });

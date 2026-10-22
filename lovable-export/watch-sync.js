@@ -6,7 +6,6 @@ const watchedFiles = [
   'src/lib/hb-f22-report.ts',
   'src/lib/hb-f22-export.ts',
   'src/components/GeneradorHBF22.tsx',
-  'src/lib/hb-f22-validation.ts',
   'README_HB-F22.md',
   'IMPLEMENTATION_SUMMARY.md',
 ];

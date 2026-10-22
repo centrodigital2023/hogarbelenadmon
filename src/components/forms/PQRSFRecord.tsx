@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
 import SmartReportSection from "@/components/SmartReportSection";
+import type { Row } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 
@@ -14,7 +15,7 @@ const PQRSFRecord = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
-  const [records, setRecords] = useState<any[]>([]);
+  const [records, setRecords] = useState<Row<"pqrsf">[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     sender_name: '', pqrsf_type: '', description: '', analysis: '', improvement_plan: '',

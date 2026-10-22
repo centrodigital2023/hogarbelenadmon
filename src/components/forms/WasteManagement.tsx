@@ -32,11 +32,11 @@ const WasteManagement = ({ onBack }: Props) => {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from('waste_management' as any).insert({
+    const { error } = await supabase.from('waste_management').insert({
       period_month: month, period_year: year, responsible,
       classification_data: classification, storage_data: storage,
       disposal_data: disposalRows, observations, created_by: user.id,
-    } as any);
+    });
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else { toast({ title: "HB-G01 guardado correctamente" }); onBack(); }
     setSaving(false);

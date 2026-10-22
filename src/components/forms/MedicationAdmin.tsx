@@ -7,6 +7,7 @@ import ActionButtons from "@/components/ActionButtons";
 import ExportButtons from "@/components/ExportButtons";
 import ShareButtons from "@/components/ShareButtons";
 import SignaturePad from "@/components/SignaturePad";
+import type { Row } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 interface Resident { id: string; full_name: string; }
@@ -17,7 +18,7 @@ const MedicationAdmin = ({ onBack }: Props) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [selectedResident, setSelectedResident] = useState("");
-  const [medications, setMedications] = useState<any[]>([]);
+  const [medications, setMedications] = useState<Row<"medications">[]>([]);
   const [adminRecords, setAdminRecords] = useState<Record<string, {
     was_administered: boolean; check_patient: boolean; check_medication: boolean;
     check_dose: boolean; check_route: boolean; check_time: boolean;
@@ -36,7 +37,7 @@ const MedicationAdmin = ({ onBack }: Props) => {
       .then(({ data }) => { if (data) setMedications(data); });
   }, [selectedResident]);
 
-  const updateRecord = (medId: string, key: string, val: any) => {
+  const updateRecord = (medId: string, key: string, val: string | number | boolean) => {
     setAdminRecords(prev => ({
       ...prev,
       [medId]: { ...prev[medId] || { was_administered: true, check_patient: false, check_medication: false, check_dose: false, check_route: false, check_time: false, dose_given: '', route: '', skip_reason: '', notes: '' }, [key]: val }
@@ -98,8 +99,8 @@ const MedicationAdmin = ({ onBack }: Props) => {
                   { key: 'check_route', label: 'Vía ✓' },
                   { key: 'check_time', label: 'Hora ✓' },
                 ].map(c => (
-                  <label key={c.key} className={`flex items-center gap-1 text-xs px-3 py-2 rounded-lg border cursor-pointer ${(rec as any)[c.key] ? 'border-cat-nutritional/30 bg-cat-nutritional/10 text-cat-nutritional' : 'border-border'}`}>
-                    <input type="checkbox" checked={(rec as any)[c.key] || false}
+                  <label key={c.key} className={`flex items-center gap-1 text-xs px-3 py-2 rounded-lg border cursor-pointer ${rec[c.key as keyof typeof rec] ? 'border-cat-nutritional/30 bg-cat-nutritional/10 text-cat-nutritional' : 'border-border'}`}>
+                    <input type="checkbox" checked={Boolean(rec[c.key as keyof typeof rec])}
                       onChange={e => updateRecord(med.id, c.key, e.target.checked)} className="w-4 h-4 accent-primary" />
                     {c.label}
                   </label>

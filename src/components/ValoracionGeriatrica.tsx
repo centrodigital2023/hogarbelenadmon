@@ -1,10 +1,12 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Activity, Brain, Heart, Utensils, AlertTriangle,
   Users, ShieldCheck, Briefcase, ChevronRight, User, History, Save,
   Sparkles, Loader2, FileText, Edit3
 } from "lucide-react";
 import { TESTS_GERIATRICOS } from "@/data/tests-geriatricos";
+import { interpretScore } from "@/lib/geriatric-scoring";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +15,10 @@ import SignaturePad from "./SignaturePad";
 import ExportButtons from "./ExportButtons";
 import ShareButtons from "./ShareButtons";
 import { Textarea } from "@/components/ui/textarea";
+import GeneradorHBF22 from "./GeneradorHBF22";
+import type { AssessmentResults } from "@/lib/hb-f22-report";
+import { ROLE_LABELS } from "@/hooks/usePermissions";
+import type { Json } from "@/integrations/supabase/types";
 
 const iconMap: Record<string, React.ReactNode> = {
   Activity: <Activity size={20} />,
@@ -41,7 +47,19 @@ interface Resident {
   full_name: string;
   document_id: string | null;
   status: string;
+  gender: string | null;
+  birth_date: string | null;
 }
+
+const ageFromBirthDate = (birthDate: string | null) => {
+  if (!birthDate) return undefined;
+  const birth = new Date(birthDate);
+  if (Number.isNaN(birth.getTime())) return undefined;
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  if (now < new Date(now.getFullYear(), birth.getMonth(), birth.getDate())) age--;
+  return age;
+};
 
 interface AssessmentHistory {
   id: string;
@@ -67,11 +85,15 @@ interface ValoracionGeriatricaProps {
 }
 
 const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
-  const { user } = useAuth();
+  const { user, profile, roles } = useAuth();
+  const [searchParams] = useSearchParams();
+  const initialResidentId = searchParams.get('residente');
   const { toast } = useToast();
   const [step, setStep] = useState<'select-resident' | 'menu' | 'assessment' | 'summary' | 'ai-report'>('select-resident');
   const [testKey, setTestKey] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, number>>({});
+  // Index of the chosen option per question; several options can share a score
+  const [choices, setChoices] = useState<Record<string, number>>({});
   const [sigEval, setSigEval] = useState<string | null>(null);
   const [sigSuper, setSigSuper] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -104,13 +126,19 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
   });
   const [showReportHistory, setShowReportHistory] = useState(false);
 
+  // Latest score per scale, as input for the automatic HB-F22 clinical analysis
+  const assessmentResults = useMemo<AssessmentResults>(
+    () => Object.fromEntries(latestAssessments.map(a => [a.test_key, { score: Number(a.score) }])),
+    [latestAssessments]
+  );
+
   const activeTest = useMemo(() => testKey ? TESTS_GERIATRICOS[testKey] : null, [testKey]);
 
   useEffect(() => {
     const fetchResidents = async () => {
       setLoadingResidents(true);
       const { data } = await supabase.from('residents')
-        .select('id, full_name, document_id, status')
+        .select('id, full_name, document_id, status, gender, birth_date')
         .in('status', ['prueba', 'permanente'])
         .order('full_name');
       if (data) setResidents(data);
@@ -147,83 +175,22 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
     setStep('menu');
   };
 
-  const handleAnswer = (qId: string, value: number) => {
+  // Deep link from the Clinical Intelligence panel (?residente=id) opens the resident directly
+  useEffect(() => {
+    if (!initialResidentId || selectedResident) return;
+    const preselected = residents.find(r => r.id === initialResidentId);
+    if (preselected) handleSelectResident(preselected);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once when the resident list arrives
+  }, [residents, initialResidentId]);
+
+  const handleAnswer = (qId: string, value: number, optionIndex: number) => {
     setAnswers(prev => ({ ...prev, [qId]: value }));
+    setChoices(prev => ({ ...prev, [qId]: optionIndex }));
   };
 
   const getScore = () => Object.values(answers).reduce((a, b) => a + b, 0);
 
-  const getInterpretation = (score: number) => {
-    if (testKey === 'barthel') {
-      if (score === 100) return "Independiente";
-      if (score >= 60) return "Dependencia Leve";
-      if (score >= 40) return "Dependencia Moderada";
-      if (score >= 20) return "Dependencia Severa";
-      return "Dependencia Total";
-    }
-    if (testKey === 'lawton') {
-      if (score === 8) return "Independencia total";
-      if (score >= 6) return "Dependencia leve";
-      if (score >= 4) return "Dependencia moderada";
-      return "Dependencia severa";
-    }
-    if (testKey === 'pfeiffer') {
-      if (score <= 2) return "Normal";
-      if (score <= 4) return "Deterioro cognitivo leve";
-      if (score <= 7) return "Deterioro cognitivo moderado";
-      return "Deterioro cognitivo severo";
-    }
-    if (testKey === 'yesavage') {
-      if (score <= 5) return "Normal – sin depresión";
-      if (score <= 9) return "Depresión leve";
-      return "Depresión severa";
-    }
-    if (testKey === 'tinetti') {
-      if (score >= 25) return "Bajo riesgo de caídas";
-      if (score >= 19) return "Riesgo moderado de caídas";
-      return "Alto riesgo de caídas";
-    }
-    if (testKey === 'mna') {
-      if (score >= 24) return "Estado nutricional normal";
-      if (score >= 17) return "Riesgo de malnutrición";
-      return "Malnutrición";
-    }
-    if (testKey === 'fried') {
-      if (score === 0) return "Robusto – sin fragilidad";
-      if (score <= 2) return "Pre-frágil";
-      return "Frágil";
-    }
-    if (testKey === 'gijon') {
-      if (score < 10) return "Buena situación social";
-      if (score <= 14) return "Riesgo social";
-      return "Problema social severo";
-    }
-    if (testKey === 'braden') {
-      if (score >= 17) return "Sin riesgo de UPP";
-      if (score >= 15) return "Riesgo bajo de UPP";
-      if (score >= 13) return "Riesgo moderado de UPP";
-      return "Alto riesgo de UPP";
-    }
-    if (testKey === 'mmse') {
-      if (score >= 27) return "Normal";
-      if (score >= 24) return "Sospecha patológica";
-      if (score >= 12) return "Deterioro cognitivo";
-      return "Demencia";
-    }
-    if (testKey === 'charlson') {
-      if (score === 0) return "Sin comorbilidad";
-      if (score <= 2) return "Comorbilidad baja";
-      if (score <= 4) return "Comorbilidad alta";
-      return "Comorbilidad muy alta";
-    }
-    if (testKey === 'zarit') {
-      if (score < 21) return "No sobrecarga";
-      if (score <= 40) return "Sobrecarga leve";
-      if (score <= 60) return "Sobrecarga moderada";
-      return "Sobrecarga severa";
-    }
-    return "Pendiente de interpretación clínica";
-  };
+  const getInterpretation = (score: number) => interpretScore(testKey, score);
 
   const handleSave = async () => {
     if (!selectedResident || !activeTest || !testKey || !user) return;
@@ -239,7 +206,7 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
       score,
       max_score: activeTest.max,
       interpretation,
-      answers: answers as any,
+      answers: answers as unknown as Json,
       signature_evaluator: sigEval,
       signature_supervisor: sigSuper,
     });
@@ -598,12 +565,14 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
                 <span className="text-sm font-bold text-foreground">{q.text}</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {q.opts.map(opt => {
-                  const isSelected = answers[q.id] !== undefined && answers[q.id] === opt.v;
+                {q.opts.map((opt, optIdx) => {
+                  const isSelected = choices[q.id] === optIdx;
                   return (
                     <button
                       key={`${opt.l}-${opt.v}`}
-                      onClick={() => handleAnswer(q.id, opt.v)}
+                      type="button"
+                      aria-pressed={isSelected}
+                      onClick={() => handleAnswer(q.id, opt.v, optIdx)}
                       className={`p-3 rounded-xl text-xs font-bold text-left transition-all min-h-[48px] ${
                         isSelected
                           ? 'bg-primary text-primary-foreground shadow-lg'
@@ -739,7 +708,7 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
           return (
             <button
               key={key}
-              onClick={() => { setTestKey(key); setAnswers({}); setSigEval(null); setSigSuper(null); setStep('assessment'); }}
+              onClick={() => { setTestKey(key); setAnswers({}); setChoices({}); setSigEval(null); setSigSuper(null); setStep('assessment'); }}
               className="bg-card p-5 rounded-4xl border-2 border-border hover:border-primary transition-all text-left shadow-sm group active:scale-[0.97] min-h-[48px]"
             >
               <div className={`w-10 h-10 rounded-xl ${bgClass} flex items-center justify-center mb-3 ${textClass}`}>
@@ -759,6 +728,29 @@ const ValoracionGeriatrica = ({ onBack }: ValoracionGeriatricaProps) => {
           );
         })}
       </div>
+
+      {/* Automatic clinical analysis (deterministic, works without AI) */}
+      {selectedResident && (
+        <div className="bg-card border border-border rounded-2xl p-5 mt-6">
+          <h3 className="text-sm font-black text-foreground flex items-center gap-2 mb-1">
+            <Activity size={16} className="text-primary" />
+            Análisis clínico instantáneo
+          </h3>
+          <p className="text-xs text-muted-foreground mb-4">
+            Correlación automática de las últimas escalas: perfil de dependencia, alertas y plan de cuidado.
+          </p>
+          <GeneradorHBF22
+            residentId={selectedResident.id}
+            residentName={selectedResident.full_name}
+            residentDocId={selectedResident.document_id || undefined}
+            residentGender={selectedResident.gender || undefined}
+            residentAge={ageFromBirthDate(selectedResident.birth_date)}
+            assessmentResults={assessmentResults}
+            professionalName={profile?.full_name || user?.email || "Profesional"}
+            professionalRole={roles[0] ? ROLE_LABELS[roles[0]] : "Profesional"}
+          />
+        </div>
+      )}
     </div>
   );
 };

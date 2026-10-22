@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
-import { Document, Packer, Paragraph, TextRun, Header, Footer, ImageRun, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, PageNumber, HeadingLevel } from "docx";
+import { Document, Packer, Paragraph, TextRun, Header, Footer, ImageRun, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, PageNumber, HeadingLevel, ShadingType } from "docx";
+import type { Borders, Workbook } from "exceljs";
 import { saveAs } from "file-saver";
 import logoImg from "@/assets/logo.png";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,7 +29,7 @@ async function getDynamicLogoUrl(): Promise<string | null> {
   if (logoLookupDone) return cachedDynamicLogoUrl;
   logoLookupDone = true;
   try {
-    const { data } = await (supabase as any).from("system_settings").select("value").eq("key", "logo_url").maybeSingle();
+    const { data } = await supabase.from("system_settings").select("value").eq("key", "logo_url").maybeSingle();
     if (data?.value && typeof data.value === "string") {
       cachedDynamicLogoUrl = data.value;
     }
@@ -140,7 +141,7 @@ export async function exportPDF(opts: {
     pdf.setFillColor(r, g, b);
     pdf.rect(0, 0, pageW, headerH, "F");
     if (logoDataUrl) {
-      try { pdf.addImage(logoDataUrl, "PNG", margin, 2, 24, 24); } catch {}
+      try { pdf.addImage(logoDataUrl, "PNG", margin, 2, 24, 24); } catch { /* logo is optional; continue without it */ }
     }
     pdf.setFontSize(14);
     pdf.setFont("helvetica", "bold");
@@ -239,7 +240,7 @@ export async function exportPDF(opts: {
       pdf.setFont("helvetica", "bold");
       pdf.setTextColor(40, 40, 40);
       pdf.text("Firma del Responsable:", margin, y + 4);
-      try { pdf.addImage(opts.signatureDataUrl, "PNG", margin, y + 6, 40, 20); } catch {}
+      try { pdf.addImage(opts.signatureDataUrl, "PNG", margin, y + 6, 40, 20); } catch { /* logo is optional; continue without it */ }
       y += 32;
     }
 
@@ -269,7 +270,7 @@ export async function exportWord(opts: {
   title: string;
   fileName: string;
   textContent?: string;
-  data?: Record<string, any>[] | null;
+  data?: Record<string, unknown>[] | null;
   signatureDataUrl?: string | null;
   responsibleName?: string;
   responsibleRole?: string;
@@ -311,14 +312,14 @@ export async function exportWord(opts: {
     const headerRow = new TableRow({
       children: keys.map(k => new TableCell({
         children: [new Paragraph({ children: [new TextRun({ text: k, bold: true, size: 20, color: "FFFFFF", font: "Arial" })], alignment: AlignmentType.CENTER })],
-        shading: { fill: BRAND.colorHex, type: "clear" as any },
+        shading: { fill: BRAND.colorHex, type: ShadingType.CLEAR },
         width: { size: Math.floor(9360 / keys.length), type: WidthType.DXA },
       })),
     });
     const dataRows = opts.data.map((row, i) => new TableRow({
       children: keys.map(k => new TableCell({
         children: [new Paragraph({ children: [new TextRun({ text: String(row[k] ?? ""), size: 20, font: "Arial" })], spacing: { before: 40, after: 40 } })],
-        shading: i % 2 === 0 ? { fill: "F2F2F2", type: "clear" as any } : undefined,
+        shading: i % 2 === 0 ? { fill: "F2F2F2", type: ShadingType.CLEAR } : undefined,
         width: { size: Math.floor(9360 / keys.length), type: WidthType.DXA },
       })),
     }));
@@ -361,7 +362,7 @@ export async function exportWord(opts: {
       bodyChildren.push(new Paragraph({
         children: [new ImageRun({ data: sigBuf, transformation: { width: 150, height: 60 }, type: "png", altText: { title: "Firma", description: "Firma digital", name: "firma" } })],
       }));
-    } catch {}
+    } catch { /* logo is optional; continue without it */ }
   }
 
   const doc = new Document({
@@ -376,7 +377,7 @@ export async function exportWord(opts: {
           margin: { top: 1800, right: 1440, bottom: 1440, left: 1440 },
         },
       },
-      children: bodyChildren as any,
+      children: bodyChildren,
     }],
   });
 
@@ -388,10 +389,11 @@ export async function exportWord(opts: {
 export async function exportExcel(opts: {
   title: string;
   fileName: string;
-  data: Record<string, any>[];
+  data: Record<string, unknown>[];
 }) {
   const ExcelJSModule = await import("exceljs");
-  const ExcelJS = (ExcelJSModule as any).default || ExcelJSModule;
+  // exceljs is CommonJS; depending on the bundler the API is on .default or on the module
+  const ExcelJS = (ExcelJSModule as unknown as { default?: typeof ExcelJSModule }).default ?? ExcelJSModule;
   const workbook = new ExcelJS.Workbook();
   workbook.creator = BRAND.name;
   workbook.created = new Date();
@@ -412,7 +414,7 @@ export async function exportExcel(opts: {
 
   // Data sheet
   if (!opts.data || opts.data.length === 0) {
-    saveAsExcel(workbook, opts.fileName);
+    await saveAsExcel(workbook, opts.fileName);
     return;
   }
 
@@ -452,15 +454,15 @@ export async function exportExcel(opts: {
     col.width = Math.min(Math.max(maxLen + 4, 12), 50);
   });
 
-  saveAsExcel(workbook, opts.fileName);
+  await saveAsExcel(workbook, opts.fileName);
 }
 
-function thinBorder(): any {
+function thinBorder(): Partial<Borders> {
   const side = { style: "thin" as const, color: { argb: "FF000000" } };
   return { top: side, bottom: side, left: side, right: side };
 }
 
-async function saveAsExcel(workbook: any, fileName: string) {
+async function saveAsExcel(workbook: Workbook, fileName: string) {
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   saveAs(blob, `${fileName}.xlsx`);

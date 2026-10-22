@@ -4,19 +4,19 @@
  */
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { fromTable, type TableName } from '@/integrations/supabase/tables';
 import { getLast180Days } from '@/lib/gerencial-export';
 
 export interface HistoricalRecord {
   id: string;
-  module_id: string;
+  module_id?: string;
   created_at: string;
   responsible?: string;
   period_month?: number;
   period_year?: number;
   period_quarter?: number;
   observations?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface UseGerencialHistoryReturn {
@@ -40,7 +40,7 @@ export interface UseGerencialHistoryReturn {
  */
 export const useGerencialHistory = (
   moduleId: string,
-  tableName: string
+  tableName: TableName
 ): UseGerencialHistoryReturn => {
   const [records, setRecords] = useState<HistoricalRecord[]>([]);
   const [filteredRecords, setFilteredRecords] = useState<HistoricalRecord[]>([]);
@@ -59,8 +59,7 @@ export const useGerencialHistory = (
         const startDateStr = start.toISOString().split('T')[0];
 
         // Realizar query a Supabase
-        const { data, error: supabaseError } = await supabase
-          .from(tableName)
+        const { data, error: supabaseError } = await fromTable(tableName)
           .select('*')
           .gte('created_at', startDateStr)
           .order('created_at', { ascending: false });

@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fromTable, type TableName } from "@/integrations/supabase/tables";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import ExportButtons from "@/components/ExportButtons";
@@ -8,14 +9,24 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose,
 } from "@/components/ui/dialog";
 
+const formatCell = (value: unknown): string => {
+  if (value === null || value === undefined || value === '') return '-';
+  if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+};
+
+/** A row from any history table; `residents` is present when the query joins it. */
+export type HistoryRow = { id: string; residents?: { full_name?: string } | null } & Record<string, unknown>;
+
 export interface HistoryColumn {
   key: string;
   label: string;
-  render?: (value: any, row: any) => React.ReactNode;
+  render?: (value: unknown, row: HistoryRow) => React.ReactNode;
 }
 
 interface FormHistoryProps {
-  tableName: string;
+  tableName: TableName;
   columns: HistoryColumn[];
   title: string;
   fileName: string;
@@ -26,11 +37,11 @@ interface FormHistoryProps {
   /** Select clause for the query */
   selectClause?: string;
   /** Additional filters as [column, operator, value] */
-  filters?: [string, string, any][];
+  filters?: [string, string, unknown][];
   /** Transform row for export table data */
-  exportTransform?: (row: any) => Record<string, any>;
+  exportTransform?: (row: HistoryRow) => Record<string, unknown>;
   /** Transform row for text content */
-  textTransform?: (row: any) => string;
+  textTransform?: (row: HistoryRow) => string;
   /** Editable fields config for inline editing */
   editableFields?: { key: string; label: string; type: 'text' | 'number' | 'select'; options?: string[] }[];
 }
@@ -44,9 +55,9 @@ const FormHistory = ({
   const historyRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<HistoryRow[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editData, setEditData] = useState<Record<string, any>>({});
+  const [editData, setEditData] = useState<Record<string, unknown>>({});
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [expanded, setExpanded] = useState(true);
@@ -70,35 +81,35 @@ const FormHistory = ({
       }
     }
 
-    let query = supabase.from(tableName as any).select(selectClause)
+    let query = fromTable(tableName).select(selectClause)
       .gte(dateColumn, cutoff.toISOString().split('T')[0])
       .order(dateColumn, { ascending: false })
       .limit(1000);
 
     filters.forEach(([col, op, val]) => {
-      query = (query as any).filter(col, op, val);
+      query = query.filter(col, op, val);
     });
 
     const { data: result, error } = await query;
     if (error) {
       toast({ title: "Error cargando historial", description: error.message, variant: "destructive" });
     } else {
-      setData(result || []);
+      setData((result ?? []) as unknown as HistoryRow[]);
     }
     setLoading(false);
     setOpen(true);
   }, [tableName, selectClause, dateColumn, days, filters, user, toast]);
 
-  const handleEdit = (row: any) => {
+  const handleEdit = (row: HistoryRow) => {
     setEditingId(row.id);
-    const ed: Record<string, any> = {};
+    const ed: Record<string, unknown> = {};
     editableFields?.forEach(f => { ed[f.key] = row[f.key] ?? ''; });
     setEditData(ed);
   };
 
   const handleSaveEdit = async () => {
     if (!editingId) return;
-    const { error } = await supabase.from(tableName as any).update(editData as any).eq('id', editingId);
+    const { error } = await fromTable(tableName).update(editData).eq('id', editingId);
     if (error) {
       toast({ title: "Error al editar", description: error.message, variant: "destructive" });
     } else {
@@ -111,7 +122,7 @@ const FormHistory = ({
   const handleDelete = async () => {
     if (!deleteId) return;
     setDeleting(true);
-    const { error } = await supabase.from(tableName as any).delete().eq('id', deleteId);
+    const { error } = await fromTable(tableName).delete().eq('id', deleteId);
     if (error) {
       toast({ title: "Error al eliminar", description: error.message, variant: "destructive" });
     } else {
@@ -132,7 +143,7 @@ const FormHistory = ({
   const getTableData = () => {
     if (exportTransform) return data.map(exportTransform);
     return data.map(row => {
-      const obj: Record<string, any> = {};
+      const obj: Record<string, unknown> = {};
       columns.forEach(c => { obj[c.label] = row[c.key] ?? ''; });
       return obj;
     });
@@ -189,7 +200,7 @@ const FormHistory = ({
                                 const field = editableFields!.find(f => f.key === c.key)!;
                                 if (field.type === 'select') {
                                   return (
-                                    <select value={editData[c.key] || ''} onChange={e => setEditData(prev => ({ ...prev, [c.key]: e.target.value }))}
+                                    <select value={String(editData[c.key] ?? "")} onChange={e => setEditData(prev => ({ ...prev, [c.key]: e.target.value }))}
                                       className="px-1 py-1 rounded border border-input bg-background text-xs w-full">
                                       <option value="">--</option>
                                       {field.options?.map(o => <option key={o} value={o}>{o}</option>)}
@@ -197,13 +208,13 @@ const FormHistory = ({
                                   );
                                 }
                                 return (
-                                  <input type={field.type} value={editData[c.key] || ''}
+                                  <input type={field.type} value={String(editData[c.key] ?? "")}
                                     onChange={e => setEditData(prev => ({ ...prev, [c.key]: field.type === 'number' ? Number(e.target.value) : e.target.value }))}
                                     className="px-1 py-1 rounded border border-input bg-background text-xs w-full" />
                                 );
                               })()
                             ) : (
-                              c.render ? c.render(row[c.key], row) : (row[c.key] ?? '-')
+                              c.render ? c.render(row[c.key], row) : formatCell(row[c.key])
                             )}
                           </td>
                         ))}

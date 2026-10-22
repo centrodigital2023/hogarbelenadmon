@@ -1,7 +1,7 @@
 import { usePermissions } from "@/hooks/usePermissions";
 import { Shield } from "lucide-react";
 
-type Module = 'ingreso' | 'valoracion' | 'alimentacion' | 'bienestar' | 'salud' | 'sistema_salud' | 'higiene' | 'seguridad' | 'egreso' | 'personal' | 'calidad' | 'admin' | 'finanzas' | 'usuarios' | 'residentes' | 'blog' | 'redes' | 'gerencial';
+import type { Module } from "@/hooks/usePermissions";
 
 interface ProtectedModuleProps {
   module: Module;

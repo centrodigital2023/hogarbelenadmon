@@ -6,6 +6,7 @@ import FormHeader from "@/components/FormHeader";
 import ExportButtons from "@/components/ExportButtons";
 import { DollarSign, TrendingUp, TrendingDown, CreditCard, FileText } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import type { Row, WithResident } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 
@@ -15,9 +16,9 @@ const FinanceModule = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [invoices, setInvoices] = useState<any[]>([]);
-  const [vouchers, setVouchers] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<Row<"financial_transactions">[]>([]);
+  const [invoices, setInvoices] = useState<WithResident<Row<"invoices">>[]>([]);
+  const [vouchers, setVouchers] = useState<Row<"payment_vouchers">[]>([]);
   const [residentCount, setResidentCount] = useState(0);
   const [appointmentCount, setAppointmentCount] = useState(0);
   const [tab, setTab] = useState<'dashboard' | 'transactions' | 'invoices' | 'vouchers'>('dashboard');
@@ -28,13 +29,13 @@ const FinanceModule = ({ onBack }: Props) => {
     const [txRes, invRes, vcRes, residentsRes, appointmentsRes] = await Promise.all([
       supabase.from('financial_transactions').select('*').order('transaction_date', { ascending: false }).limit(100),
       supabase.from('invoices').select('*, residents(full_name)').order('created_at', { ascending: false }).limit(50),
-      supabase.from('payment_vouchers' as any).select('*').order('created_at', { ascending: false }).limit(50),
+      supabase.from('payment_vouchers').select('*').order('created_at', { ascending: false }).limit(50),
       supabase.from('residents').select('*', { count: 'exact', head: true }),
       supabase.from('medical_appointments').select('*', { count: 'exact', head: true }),
     ]);
     if (txRes.data) setTransactions(txRes.data);
     if (invRes.data) setInvoices(invRes.data);
-    if (vcRes.data) setVouchers(vcRes.data as any[]);
+    if (vcRes.data) setVouchers(vcRes.data);
     if (typeof residentsRes.count === 'number') setResidentCount(residentsRes.count);
     if (typeof appointmentsRes.count === 'number') setAppointmentCount(appointmentsRes.count);
   };
@@ -81,7 +82,7 @@ const FinanceModule = ({ onBack }: Props) => {
 
       <div className="flex gap-2 flex-wrap">
         {[{k:'dashboard',l:'📊 Dashboard'},{k:'transactions',l:'📋 Transacciones'},{k:'invoices',l:'🧾 Facturas'},{k:'vouchers',l:'💳 Comprobantes'}].map(t => (
-          <button key={t.k} onClick={() => setTab(t.k as any)}
+          <button key={t.k} onClick={() => setTab(t.k as typeof tab)}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${tab === t.k ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>{t.l}</button>
         ))}
       </div>
@@ -233,7 +234,7 @@ const FinanceModule = ({ onBack }: Props) => {
             <tbody>{invoices.map(inv => (
               <tr key={inv.id} className="border-b border-border/50 hover:bg-muted/30">
                 <td className="p-3 font-mono">{inv.invoice_number}</td>
-                <td className="p-3">{(inv.residents as any)?.full_name || '-'}</td>
+                <td className="p-3">{inv.residents?.full_name || '-'}</td>
                 <td className="p-3">{inv.period}</td>
                 <td className="p-3 text-right font-bold">${(inv.total || 0).toLocaleString()}</td>
                 <td className="p-3"><span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md ${inv.status === 'pagada' ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>{inv.status}</span></td>
@@ -254,7 +255,7 @@ const FinanceModule = ({ onBack }: Props) => {
               <th className="text-right p-3 font-bold text-muted-foreground">Neto</th>
               <th className="text-left p-3 font-bold text-muted-foreground">Estado</th>
             </tr></thead>
-            <tbody>{vouchers.map((v: any) => (
+            <tbody>{vouchers.map((v) => (
               <tr key={v.id} className="border-b border-border/50 hover:bg-muted/30">
                 <td className="p-3 font-mono">{v.voucher_number}</td>
                 <td className="p-3">{v.provider_name}</td>

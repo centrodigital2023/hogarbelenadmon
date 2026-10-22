@@ -6,6 +6,7 @@ import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
 import SmartReportSection from "@/components/SmartReportSection";
 import SignaturePad from "@/components/SignaturePad";
+import type { Row } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 
@@ -13,7 +14,7 @@ const PerformanceEval = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
-  const [profiles, setProfiles] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<Pick<Row<"profiles">, "user_id" | "full_name">[]>([]);
   const [form, setForm] = useState({
     evaluated_user_id: '', period: '',
     score_resident_care: 3, score_compliance: 3, score_safety: 3,
@@ -44,7 +45,7 @@ const PerformanceEval = ({ onBack }: Props) => {
     setSaving(false);
   };
 
-  const update = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
+  const update = (k: string, v: string | number | boolean) => setForm(p => ({ ...p, [k]: v }));
 
   const CRITERIA = [
     { key: 'score_resident_care', label: 'Trato al Residente' },
@@ -82,7 +83,7 @@ const PerformanceEval = ({ onBack }: Props) => {
             <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map(v => (
                 <button key={v} onClick={() => update(c.key, v)}
-                  className={`w-10 h-10 rounded-xl font-black text-sm ${(form as any)[c.key] === v ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}>
+                  className={`w-10 h-10 rounded-xl font-black text-sm ${form[c.key as keyof typeof form] === v ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}>
                   {v}
                 </button>
               ))}

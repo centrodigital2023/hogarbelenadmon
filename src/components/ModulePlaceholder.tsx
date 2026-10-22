@@ -1,10 +1,11 @@
 import FormHeader from "@/components/FormHeader";
 import { ChevronRight } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 interface ModulePlaceholderProps {
   title: string;
   subtitle: string;
-  icon: any;
+  icon: LucideIcon;
   forms: string[];
   onBack: () => void;
 }

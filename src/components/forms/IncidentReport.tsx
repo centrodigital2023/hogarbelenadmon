@@ -50,7 +50,7 @@ const IncidentReport = ({ onBack }: Props) => {
     setSaving(false);
   };
 
-  const update = (key: string, val: any) => setForm(prev => ({ ...prev, [key]: val }));
+  const update = (key: string, val: string | number | boolean) => setForm(prev => ({ ...prev, [key]: val }));
   const residentName = residents.find(r => r.id === form.resident_id)?.full_name || '';
 
   return (
@@ -151,7 +151,7 @@ const IncidentReport = ({ onBack }: Props) => {
         selectClause="*, residents(full_name)"
         columns={[
           { key: 'incident_datetime', label: 'Fecha', render: (v: string) => v ? new Date(v).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : '-' },
-          { key: 'residents', label: 'Residente', render: (v: any) => v?.full_name || '-' },
+          { key: 'residents', label: 'Residente', render: (v) => (v as { full_name?: string } | null)?.full_name || '-' },
           { key: 'incident_type', label: 'Tipo' },
           { key: 'consequences', label: 'Consecuencias' },
           { key: 'description', label: 'Descripción', render: (v: string) => v?.slice(0, 50) || '-' },

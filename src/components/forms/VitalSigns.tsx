@@ -8,6 +8,7 @@ import ExportButtons from "@/components/ExportButtons";
 import ShareButtons from "@/components/ShareButtons";
 import SmartReportSection from "@/components/SmartReportSection";
 import { AlertTriangle } from "lucide-react";
+import { isVitalAbnormal, vitalIssues } from "@/lib/vital-signs";
 
 interface Props { onBack: () => void; }
 interface Resident { id: string; full_name: string; }
@@ -28,19 +29,11 @@ const VitalSigns = ({ onBack }: Props) => {
       .then(({ data }) => { if (data) setResidents(data); });
   }, []);
 
-  const updateEntry = (rid: string, field: string, val: any) => {
+  const updateEntry = (rid: string, field: string, val: string | number | boolean) => {
     setEntries(prev => ({
       ...prev,
       [rid]: { ...prev[rid] || { blood_pressure: '', spo2: 0, temperature: 0, glucose: 0, heart_rate: 0, weight: 0, notes: '' }, [field]: val }
     }));
-  };
-
-  const isAbnormal = (field: string, val: number) => {
-    if (field === 'spo2' && val > 0 && val < 90) return true;
-    if (field === 'temperature' && val > 0 && (val < 35 || val > 38)) return true;
-    if (field === 'glucose' && val > 0 && (val < 70 || val > 180)) return true;
-    if (field === 'heart_rate' && val > 0 && (val < 50 || val > 120)) return true;
-    return false;
   };
 
   const handleSave = async () => {
@@ -78,7 +71,7 @@ const VitalSigns = ({ onBack }: Props) => {
         <div className="space-y-4 mb-6">
           {residents.map(r => {
             const e = entries[r.id] || { blood_pressure: '', spo2: 0, temperature: 0, glucose: 0, heart_rate: 0, weight: 0, notes: '' };
-            const hasAlert = isAbnormal('spo2', e.spo2) || isAbnormal('temperature', e.temperature) || isAbnormal('glucose', e.glucose) || isAbnormal('heart_rate', e.heart_rate);
+            const hasAlert = vitalIssues(e).length > 0;
             return (
               <div key={r.id} className={`bg-card border-2 rounded-2xl p-5 ${hasAlert ? 'border-destructive/40' : 'border-border'}`}>
                 <div className="flex items-center justify-between mb-3">
@@ -97,11 +90,11 @@ const VitalSigns = ({ onBack }: Props) => {
                   ].map(f => (
                     <div key={f.key}>
                       <label className="text-[9px] font-bold text-muted-foreground uppercase">{f.label}</label>
-                      <input type={f.type} value={(e as any)[f.key] || ''}
+                      <input type={f.type} value={e[f.key as keyof typeof e] || ''}
                         onChange={ev => updateEntry(r.id, f.key, f.type === 'number' ? parseFloat(ev.target.value) || 0 : ev.target.value)}
                         placeholder={f.placeholder}
                         className={`mt-1 w-full px-2 py-2 rounded-lg border text-sm text-center ${
-                          f.type === 'number' && isAbnormal(f.key, (e as any)[f.key]) ? 'border-destructive bg-destructive/5' : 'border-input bg-background'
+                          f.type === 'number' && isVitalAbnormal(f.key, e[f.key as keyof typeof e]) ? 'border-destructive bg-destructive/5' : 'border-input bg-background'
                         }`} />
                     </div>
                   ))}

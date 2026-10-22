@@ -11,7 +11,7 @@ interface SmartReportSectionProps {
   formTitle: string;
   residentId?: string;
   residentName?: string;
-  formData?: Record<string, any>;
+  formData?: Record<string, unknown>;
   contentRef: React.RefObject<HTMLDivElement>;
   responsibleName?: string;
   responsibleRole?: string;

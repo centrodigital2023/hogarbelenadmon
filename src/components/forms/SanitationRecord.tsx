@@ -31,11 +31,11 @@ const SanitationRecord = ({ onBack }: Props) => {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from('sanitation_records' as any).insert({
+    const { error } = await supabase.from('sanitation_records').insert({
       period_month: month, period_year: year, responsible,
       water_tests: waterTests, wastewater_systems: wastewater,
       sanitary_conditions: sanitary, observations, created_by: user.id,
-    } as any);
+    });
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else { toast({ title: "HB-G04 guardado" }); onBack(); }
     setSaving(false);
@@ -133,7 +133,7 @@ const SanitationRecord = ({ onBack }: Props) => {
       <HistorialGerencial 
         moduleId="HB-G04" 
         moduleName="HB-G04: Saneamiento Básico"
-        tableName="sanitation_record"
+        tableName="sanitation_records"
       />
     </div>
   );

@@ -48,7 +48,7 @@ serve(async (req) => {
     const serviceClient = createClient(supabaseUrl, supabaseKey);
     const { data: userRoles } = await serviceClient.from("user_roles").select("role").eq("user_id", user.id);
     const allowedRoles = ["super_admin", "coordinador", "enfermera", "administrativo", "terapeuta", "psicologo"];
-    const hasAccess = !!userRoles?.some((r: any) => allowedRoles.includes(r.role));
+    const hasAccess = !!userRoles?.some((r) => allowedRoles.includes(r.role));
     if (!hasAccess) {
       return new Response(JSON.stringify({ error: "Acceso restringido a personal autorizado" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -118,23 +118,23 @@ serve(async (req) => {
       if (residentId && reportType === "individual") incQ = incQ.eq("resident_id", residentId);
       const { data: incs } = await incQ;
 
-      const fmt = (rows: any[] | null, mapper: (r: any) => string) =>
+      const fmt = <T,>(rows: T[] | null, mapper: (r: T) => string) =>
         rows && rows.length ? rows.map(mapper).join("\n") : "Sin registros en el período.";
 
       crossContext = `
 ─── CONTEXTO CLÍNICO COMPLEMENTARIO (${from} a ${to}) ───
 
 MEDICAMENTOS ACTIVOS:
-${fmt(meds, (m: any) => `- ${m.residents?.full_name || "Residente"}: ${m.medication_name} ${m.dose || ""} ${m.route || ""} (${m.schedule || "según protocolo"})`)}
+${fmt(meds, (m) => `- ${m.residents?.full_name || "Residente"}: ${m.medication_name} ${m.dose || ""} ${m.route || ""} (${m.schedule || "según protocolo"})`)}
 
 ADMINISTRACIÓN DE MEDICAMENTOS:
-${fmt(adms, (a: any) => `- ${a.admin_datetime?.substring(0, 16)}: ${a.residents?.full_name || "Residente"} - ${a.medications?.medication_name || "med"} ${a.was_administered ? `✓ ${a.dose_given || ""}` : `✗ Omitido (${a.skip_reason || "n/a"})`}`)}
+${fmt(adms, (a) => `- ${a.admin_datetime?.substring(0, 16)}: ${a.residents?.full_name || "Residente"} - ${a.medications?.medication_name || "med"} ${a.was_administered ? `✓ ${a.dose_given || ""}` : `✗ Omitido (${a.skip_reason || "n/a"})`}`)}
 
 CITAS MÉDICAS:
-${fmt(apts, (a: any) => `- ${a.appointment_date} ${a.residents?.full_name || ""}: ${a.specialty || "consulta"} en ${a.location || "n/a"} ${a.was_attended === false ? "(NO asistida)" : a.was_attended ? "(asistida)" : ""}`)}
+${fmt(apts, (a) => `- ${a.appointment_date} ${a.residents?.full_name || ""}: ${a.specialty || "consulta"} en ${a.location || "n/a"} ${a.was_attended === false ? "(NO asistida)" : a.was_attended ? "(asistida)" : ""}`)}
 
 INCIDENTES Y CAÍDAS (HB-F20):
-${fmt(incs, (i: any) => `- ${i.incident_datetime?.substring(0, 16)} ${i.residents?.full_name || ""}: ${i.incident_type} - ${i.description || ""} ${i.first_aid ? "[Primeros auxilios]" : ""} ${i.transferred_to_er ? "[Trasladado a urgencias]" : ""}`)}
+${fmt(incs, (i) => `- ${i.incident_datetime?.substring(0, 16)} ${i.residents?.full_name || ""}: ${i.incident_type} - ${i.description || ""} ${i.first_aid ? "[Primeros auxilios]" : ""} ${i.transferred_to_er ? "[Trasladado a urgencias]" : ""}`)}
 `;
     }
 

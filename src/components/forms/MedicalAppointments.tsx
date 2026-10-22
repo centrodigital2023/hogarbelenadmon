@@ -12,6 +12,7 @@ import { Calendar, CheckCircle2, XCircle, Pencil, Trash2, Save, X } from "lucide
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose,
 } from "@/components/ui/dialog";
+import type { Row, WithResident } from "@/integrations/supabase/tables";
 
 interface Props { onBack: () => void; }
 interface Resident { id: string; full_name: string; }
@@ -22,7 +23,7 @@ const MedicalAppointments = ({ onBack }: Props) => {
   const { canAccessModule } = usePermissions();
   const contentRef = useRef<HTMLDivElement>(null);
   const [residents, setResidents] = useState<Resident[]>([]);
-  const [appointments, setAppointments] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState<WithResident<Row<"medical_appointments">>[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     resident_id: '', appointment_date: '', appointment_time: '', specialty: '',
@@ -73,7 +74,7 @@ const MedicalAppointments = ({ onBack }: Props) => {
     setSaving(false);
   };
 
-  const startEdit = (a: any) => {
+  const startEdit = (a: WithResident<Row<"medical_appointments">>) => {
     setForm({
       resident_id: a.resident_id, appointment_date: a.appointment_date, appointment_time: a.appointment_time || '',
       specialty: a.specialty || '', location: a.location || '', companion: a.companion || '',
@@ -94,7 +95,8 @@ const MedicalAppointments = ({ onBack }: Props) => {
   };
 
   const toggleAttended = async (id: string, current: boolean | null) => {
-    await supabase.from('medical_appointments').update({ was_attended: !current }).eq('id', id);
+    const { error: dbError } = await supabase.from('medical_appointments').update({ was_attended: !current }).eq('id', id);
+    if (dbError) { toast({ title: "No se pudo guardar", description: dbError.message, variant: "destructive" }); return; }
     loadAppointments();
   };
 
@@ -105,7 +107,7 @@ const MedicalAppointments = ({ onBack }: Props) => {
   };
 
   const getApptData = () => appointments.map(a => ({
-    Residente: (a.residents as any)?.full_name, Especialidad: a.specialty,
+    Residente: a.residents?.full_name, Especialidad: a.specialty,
     Fecha: a.appointment_date, Hora: a.appointment_time, Lugar: a.location,
     Asistió: a.was_attended ? 'Sí' : 'No',
   }));
@@ -171,7 +173,7 @@ const MedicalAppointments = ({ onBack }: Props) => {
         {appointments.map(a => (
           <div key={a.id} className="bg-card border border-border rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 shadow-sm hover:border-primary/20 transition-all">
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-foreground">{(a.residents as any)?.full_name}</p>
+              <p className="text-sm font-bold text-foreground">{a.residents?.full_name}</p>
               <p className="text-xs text-muted-foreground">{a.specialty} — {a.appointment_date} {a.appointment_time}</p>
               <p className="text-xs text-muted-foreground">{a.location}</p>
             </div>
@@ -208,7 +210,7 @@ const MedicalAppointments = ({ onBack }: Props) => {
         selectClause="*, residents(full_name)"
         columns={[
           { key: 'appointment_date', label: 'Fecha' },
-          { key: 'residents', label: 'Residente', render: (v: any) => v?.full_name || '-' },
+          { key: 'residents', label: 'Residente', render: (v) => (v as { full_name?: string } | null)?.full_name || '-' },
           { key: 'specialty', label: 'Especialidad' },
           { key: 'location', label: 'Lugar' },
           { key: 'was_attended', label: 'Asistió', render: (v: boolean | null) => v ? '✅' : '❌' },

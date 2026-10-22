@@ -27,11 +27,11 @@ const HazardousWaste = ({ onBack }: Props) => {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from('hazardous_waste' as any).insert({
+    const { error } = await supabase.from('hazardous_waste').insert({
       period_month: month, period_year: year, responsible,
       inventory_data: inventory, compliance_checks: compliance,
       disposal_records: disposals, incidents, created_by: user.id,
-    } as any);
+    });
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else { toast({ title: "HB-G03 guardado" }); onBack(); }
     setSaving(false);
@@ -73,7 +73,7 @@ const HazardousWaste = ({ onBack }: Props) => {
         <h3 className="text-sm font-black text-foreground mb-4">2. Verificación de Cumplimiento</h3>
         {[{k:'bio_48h',l:'Biocontaminados almacenados < 48 horas'},{k:'quim_30d',l:'Químicos almacenados < 30 días'},{k:'corto_80pct',l:'Cortopunzantes: cambio al 80% de capacidad'}].map(item => (
           <label key={item.k} className="flex items-center gap-3 p-3 rounded-xl border border-border mb-2 cursor-pointer">
-            <input type="checkbox" checked={(compliance as any)[item.k]} onChange={e => setCompliance(p => ({...p, [item.k]: e.target.checked}))} className="w-5 h-5 rounded accent-primary" />
+            <input type="checkbox" checked={compliance[item.k as keyof typeof compliance]} onChange={e => setCompliance(p => ({...p, [item.k]: e.target.checked}))} className="w-5 h-5 rounded accent-primary" />
             <span className="text-sm font-medium text-foreground">{item.l}</span>
           </label>
         ))}

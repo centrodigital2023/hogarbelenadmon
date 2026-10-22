@@ -65,33 +65,39 @@ export interface HBF22Report {
     riskFactors: string[];
   };
   assessmentDetails: {
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 
 // ─── ANÁLISIS DE ESCALAS Y CORRELACIONES ───
 
+export const NOT_ASSESSED = "NO EVALUADO";
+
 /**
- * Calcula el perfil de dependencia basado en Barthel y Lawton
+ * Perfil de dependencia para ABVD según Barthel (mismos cortes que la
+ * interpretación de la escala). Lawton, si se evaluó, señala dependencia en AIVD.
  */
 export function calculateDependencyProfile(
-  barthelScore: number,
-  lawtonScore: number,
-  lawtonMax: number
+  barthelScore: number | null | undefined,
+  lawtonScore?: number | null,
+  lawtonMax = 8
 ): string {
-  const barthelPct = (barthelScore / 100) * 100;
-  const lawtonPct = (lawtonScore / lawtonMax) * 100;
-
-  if (barthelPct >= 60 && lawtonPct >= 50) return "INDEPENDIENTE";
-  if (barthelPct >= 40 && lawtonPct >= 30) return "DEPENDENCIA LEVE";
-  if (barthelPct >= 20) return "DEPENDENCIA MODERADA";
-  return "DEPENDENCIA SEVERA";
+  if (barthelScore === null || barthelScore === undefined) return NOT_ASSESSED;
+  if (barthelScore >= 100) {
+    const iadlDependent = lawtonScore !== null && lawtonScore !== undefined && lawtonScore < lawtonMax;
+    return iadlDependent ? "INDEPENDIENTE ABVD (DEPENDENCIA EN AIVD)" : "INDEPENDIENTE";
+  }
+  if (barthelScore >= 60) return "DEPENDENCIA LEVE";
+  if (barthelScore >= 40) return "DEPENDENCIA MODERADA";
+  if (barthelScore >= 20) return "DEPENDENCIA SEVERA";
+  return "DEPENDENCIA TOTAL";
 }
 
 /**
  * Determina el estado de fragilidad según criterios de Fried
  */
-export function determineFragilityStatus(friedScore: number): string {
+export function determineFragilityStatus(friedScore: number | null | undefined): string {
+  if (friedScore === null || friedScore === undefined) return NOT_ASSESSED;
   if (friedScore === 0) return "ROBUSTO";
   if (friedScore <= 2) return "PRE-FRÁGIL";
   return "FRÁGIL";
@@ -149,7 +155,7 @@ export function assessCognitiveStatus(pfeifferOrMmseScore: number, useMMSE = fal
   // Pfeiffer: puntuación = errores
   if (pfeifferOrMmseScore <= 2) return { status: "NORMAL", severity: "Sin déficit" };
   if (pfeifferOrMmseScore <= 4) return { status: "LIGERO", severity: "Deterioro ligero" };
-  if (pfeifferOrMmseScore <= 6) return { status: "MODERADO", severity: "Deterioro moderado" };
+  if (pfeifferOrMmseScore <= 7) return { status: "MODERADO", severity: "Deterioro moderado" };
   return { status: "SEVERO", severity: "Deterioro severo" };
 }
 
@@ -281,6 +287,21 @@ export function generateRiskAlerts(
         message: "🟡 DETERIORO COGNITIVO MODERADO-SEVERO",
         scale: "Pfeiffer",
         currentValue: pfeiffer,
+        recommendation:
+          "Evaluación neuropsicológica, descartar causas reversibles, estimulación cognitiva, supervisión de seguridad.",
+      });
+    }
+
+    // ALERTA MODERADA: Deterioro Cognitivo por MMSE (< 24) cuando Pfeiffer no lo detectó
+    const mmse = results.mmse?.score ?? null;
+    if (mmse !== null && mmse < 24 && !(pfeiffer !== null && pfeiffer >= 5)) {
+      alerts.push({
+        level: mmse < 12 ? "HIGH" : "MODERATE",
+        category: "COGNITIVO",
+        message: mmse < 12 ? "🔴 DETERIORO COGNITIVO SEVERO (MMSE)" : "🟡 DETERIORO COGNITIVO (MMSE)",
+        scale: "MMSE",
+        threshold: 24,
+        currentValue: mmse,
         recommendation:
           "Evaluación neuropsicológica, descartar causas reversibles, estimulación cognitiva, supervisión de seguridad.",
       });
@@ -469,13 +490,14 @@ export function generateCareplan(
       });
     }
 
-    // PLAN 5: Estimulación Cognitiva (si Pfeiffer ≥ 5)
-    if (pfeiffer !== null && pfeiffer >= 5) {
+    // PLAN 5: Estimulación Cognitiva (Pfeiffer ≥ 5 o MMSE < 24)
+    const mmse = results.mmse?.score ?? null;
+    if ((pfeiffer !== null && pfeiffer >= 5) || (mmse !== null && mmse < 24)) {
       recommendations.push({
         title: "PLAN DE ESTIMULACIÓN COGNITIVA",
         description:
           "Intervención para mantener y estimular capacidades cognitivas residuales.",
-        priority: pfeiffer >= 8 ? "HIGH" : "MEDIUM",
+        priority: (pfeiffer !== null && pfeiffer >= 8) || (mmse !== null && mmse < 12) ? "HIGH" : "MEDIUM",
         scales: ["Pfeiffer", "MMSE"],
         interventions: [
           "Evaluación neuropsicológica completa",
@@ -617,14 +639,19 @@ export function generateExecutiveSummary(
   const mna = results.mna?.score ?? null;
   const pfeiffer = results.pfeiffer?.score ?? null;
 
-  const age = resident.age ? `de ${resident.age} años` : "";
-  const gender = resident.gender === "M" ? "Paciente masculino" : "Paciente femenino";
+  const age = resident.age ? ` de ${resident.age} años` : "";
+  const gender =
+    resident.gender === "M" ? "Paciente masculino" : resident.gender === "F" ? "Paciente femenina" : "Residente";
 
-  let summary = `${gender} ${age} con **${dependencyProfile}** para las ABVD (Barthel: ${barthel}/100). `;
+  let summary =
+    barthel !== null
+      ? `${gender}${age} con **${dependencyProfile}** para las ABVD (Barthel: ${barthel}/100). `
+      : `${gender}${age}; la funcionalidad para las ABVD (Barthel) aún no ha sido evaluada. `;
 
   if (fried !== null && fried >= 3) {
     summary += `Presenta **perfil de fragilidad severa** que requiere supervisión constante. `;
-  } else if (tinetti !== null && tinetti < 19) {
+  }
+  if (tinetti !== null && tinetti < 19) {
     summary += `Presenta **alto riesgo de caídas** (Tinetti: ${tinetti}/28). `;
   }
 
@@ -633,7 +660,8 @@ export function generateExecutiveSummary(
       `Existe **riesgo nutricional importante** (MNA: ${mna}/30) que requiere intervención. `;
   }
 
-  if (pfeiffer !== null && pfeiffer >= 5) {
+  const mmse = results.mmse?.score ?? null;
+  if ((pfeiffer !== null && pfeiffer >= 5) || (mmse !== null && mmse < 24)) {
     summary += `Existe **deterioro cognitivo** que requiere supervisión y estimulación. `;
   }
 
@@ -666,13 +694,13 @@ export function buildHBF22Report(
 
   // Calcular perfil de dependencia
   const dependencyProfile = calculateDependencyProfile(
-    assessmentResults.barthel?.score ?? 0,
-    assessmentResults.lawton?.score ?? 0,
-    8
+    assessmentResults.barthel?.score,
+    assessmentResults.lawton?.score,
+    TESTS_GERIATRICOS.lawton.max
   );
 
   // Calcular estado de fragilidad
-  const fragilityStatus = determineFragilityStatus(assessmentResults.fried?.score ?? 0);
+  const fragilityStatus = determineFragilityStatus(assessmentResults.fried?.score);
 
   // Identificar factores de riesgo
   const riskFactors: string[] = [];
@@ -682,7 +710,10 @@ export function buildHBF22Report(
     riskFactors.push("Riesgo de úlceras por presión");
   if (assessmentResults.mna && assessmentResults.mna.score < 17)
     riskFactors.push("Malnutrición");
-  if (assessmentResults.pfeiffer && assessmentResults.pfeiffer.score >= 5)
+  if (
+    (assessmentResults.pfeiffer && assessmentResults.pfeiffer.score >= 5) ||
+    (assessmentResults.mmse && assessmentResults.mmse.score < 24)
+  )
     riskFactors.push("Deterioro cognitivo");
   if (assessmentResults.yesavage && assessmentResults.yesavage.score >= 10)
     riskFactors.push("Depresión severa");

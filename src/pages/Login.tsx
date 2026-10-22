@@ -1,19 +1,25 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, EyeOff, Heart, Shield, Users, Activity } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import loginHero from "@/assets/login-hero.jpg";
+import loginHero from "@/assets/login-hero.webp";
 import logo from "@/assets/logo.png";
+import InstallAppButton from "@/components/InstallAppButton";
 
-const ROLES_INFO = [
-  { key: 'super_admin', label: 'Super Admin', icon: Shield, desc: 'Acceso total al sistema' },
-  { key: 'coordinador', label: 'Coordinador', icon: Users, desc: 'Gestión operativa y clínica' },
-  { key: 'enfermera', label: 'Enfermera', icon: Activity, desc: 'Salud diaria y medicamentos' },
-  { key: 'cuidadora', label: 'Cuidadora', icon: Heart, desc: 'Bienestar y acompañamiento' },
-  { key: 'terapeuta', label: 'Terapeuta', icon: Activity, desc: 'Terapias y valoraciones' },
-  { key: 'psicologo', label: 'Psicólogo', icon: Heart, desc: 'Atención psicosocial' },
-  { key: 'administrativo', label: 'Administrativo', icon: Shield, desc: 'Finanzas y gerencia' },
-];
+const friendlyAuthError = (message: string) => {
+  if (/invalid login credentials/i.test(message)) return "Correo o contraseña incorrectos. Revísalos e intenta de nuevo.";
+  if (/email not confirmed/i.test(message)) return "Tu correo aún no está confirmado. Revisa tu bandeja de entrada.";
+  if (/failed to fetch|network/i.test(message)) return "Sin conexión a internet. Verifica tu red e intenta de nuevo.";
+  if (/rate limit|too many/i.test(message)) return "Demasiados intentos. Espera un momento antes de volver a intentar.";
+  return message;
+};
+
+const greeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Buenos días";
+  if (hour < 19) return "Buenas tardes";
+  return "Buenas noches";
+};
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -21,7 +27,6 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<'login' | 'reset'>('login');
-  const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const { toast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -29,7 +34,7 @@ const Login = () => {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      toast({ title: "Error de autenticación", description: error.message, variant: "destructive" });
+      toast({ title: "No pudimos iniciar sesión", description: friendlyAuthError(error.message), variant: "destructive" });
     }
     setLoading(false);
   };
@@ -94,34 +99,12 @@ const Login = () => {
             <p className="text-xs text-muted-foreground mt-1 font-medium">Buesaco S.A.S. • Sistema de Gestión Geriátrica</p>
           </div>
 
-          {/* Roles */}
-          <div className="mb-6">
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-3">Seleccione su rol</p>
-            <div className="grid grid-cols-4 gap-2">
-              {ROLES_INFO.map(r => {
-                const Icon = r.icon;
-                const isActive = selectedRole === r.key;
-                return (
-                  <button
-                    key={r.key}
-                    onClick={() => setSelectedRole(r.key)}
-                    className={`flex flex-col items-center gap-1 p-2.5 sm:p-3 rounded-xl border-2 transition-all text-center min-h-[48px] touch-manipulation ${
-                      isActive
-                        ? 'border-primary bg-primary/10 text-primary shadow-sm'
-                        : 'border-border bg-card text-muted-foreground hover:border-primary/40 active:bg-muted'
-                    }`}
-                  >
-                    <Icon size={16} />
-                    <span className="text-[8px] sm:text-[9px] font-bold leading-tight">{r.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-            {selectedRole && (
-              <p className="text-[10px] text-primary font-medium mt-2 text-center animate-fade-in">
-                {ROLES_INFO.find(r => r.key === selectedRole)?.desc}
-              </p>
-            )}
+          {/* Warm welcome */}
+          <div className="mb-6 rounded-2xl bg-primary/5 border border-primary/15 px-4 py-3 text-center">
+            <p className="text-sm font-black text-foreground">{greeting()} 👋</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Gracias por cuidar hoy a nuestros abuelos. Tu trabajo hace la diferencia.
+            </p>
           </div>
 
           {/* Form card */}
@@ -211,6 +194,10 @@ const Login = () => {
                 </button>
               </form>
             )}
+          </div>
+
+          <div className="mt-4">
+            <InstallAppButton variant="card" />
           </div>
 
           <p className="text-center text-[10px] text-muted-foreground mt-6 font-medium">

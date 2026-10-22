@@ -40,7 +40,7 @@ serve(async (req) => {
     const serviceClient = createClient(supabaseUrl, supabaseKey);
     const { data: userRoles } = await serviceClient.from("user_roles").select("role").eq("user_id", user.id);
     const allowedRoles = ["super_admin", "coordinador", "enfermera", "cuidadora"];
-    const hasAccess = !!userRoles?.some((r: any) => allowedRoles.includes(r.role));
+    const hasAccess = !!userRoles?.some((r) => allowedRoles.includes(r.role));
     if (!hasAccess) {
       return new Response(JSON.stringify({ error: "Acceso restringido al personal clínico" }), {
         status: 403,
@@ -150,11 +150,11 @@ serve(async (req) => {
       residentNameFromDb = r?.full_name || null;
     }
 
-    const logsText = (logs || []).map((l: any) =>
+    const logsText = (logs || []).map((l) =>
       `${l.log_date} ${l.shift}: ${l.residents?.full_name || 'Residente'} - Nutrición:${l.nutrition_pct}%, Hidratación:${l.hydration_glasses} vasos, Ánimo:${l.mood}, Eliminación:${l.elimination}, Obs:${l.observations || 'N/A'}`
     ).join("\n");
 
-    const vitalsText = (vitals || []).map((v: any) =>
+    const vitalsText = (vitals || []).map((v) =>
       `${v.record_date}: ${v.residents?.full_name || 'Residente'} - PA:${v.blood_pressure}, FC:${v.heart_rate}, T:${v.temperature}°C, SpO2:${v.spo2}%, Peso:${v.weight}kg, Glicemia:${v.glucose}`
     ).join("\n");
 
@@ -166,19 +166,19 @@ serve(async (req) => {
 - Estado de ánimo: ${liveEntry.mood || 'N/R'}
 - Novedades / observaciones: ${liveEntry.observations || 'Sin novedades'}` : "";
 
-    const incText = (incidents || []).map((i: any) =>
+    const incText = (incidents || []).map((i) =>
       `${i.incident_datetime}: ${i.residents?.full_name} - Tipo:${i.incident_type}, Desc:${i.description}`
     ).join("\n");
 
-    const medText = (medications || []).slice(0, 50).map((m: any) =>
+    const medText = (medications || []).slice(0, 50).map((m) =>
       `${m.admin_datetime}: ${m.residents?.full_name || ''} - ${m.medications?.medication_name || ''} (${m.medications?.dose || ''}) ${m.was_administered ? '✓ Administrado' : `✗ Omitido${m.skip_reason ? ': '+m.skip_reason : ''}`}`
     ).join("\n");
 
-    const apptText = (appointments || []).map((a: any) =>
+    const apptText = (appointments || []).map((a) =>
       `${a.appointment_date}: ${a.residents?.full_name || ''} - ${a.specialty || ''} en ${a.location || 'N/A'} ${a.was_attended ? '(Asistió)' : '(Pendiente)'}`
     ).join("\n");
 
-    const prevText = (prevNotes || []).map((n: any) => n.note).join("\n---\n");
+    const prevText = (prevNotes || []).map((n) => n.note).join("\n---\n");
 
     const residentName = noteType === "grupal"
       ? "TODOS los residentes del turno"

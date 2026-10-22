@@ -13,11 +13,12 @@ import {
   MODULE_INFO 
 } from '@/lib/gerencial-export';
 import { useToast } from '@/hooks/use-toast';
+import type { TableName } from '@/integrations/supabase/tables';
 
 interface HistorialGerencialProps {
   moduleId: string;
   moduleName: string;
-  tableName: string;
+  tableName: TableName;
 }
 
 const HistorialGerencial: React.FC<HistorialGerencialProps> = ({

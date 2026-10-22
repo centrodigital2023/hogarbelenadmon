@@ -55,7 +55,8 @@ const RoomAssignment = ({ onBack }: Props) => {
     for (let i = existing + 1; i <= 20; i++) {
       newRooms.push({ room_number: `H-${String(i).padStart(2, '0')}`, capacity: 2, floor: i <= 10 ? 'Piso 1' : 'Piso 2' });
     }
-    await supabase.from('rooms').insert(newRooms);
+    const { error: dbError } = await supabase.from('rooms').insert(newRooms);
+    if (dbError) { toast({ title: "No se pudo guardar", description: dbError.message, variant: "destructive" }); return; }
     loadData();
     toast({ title: "Habitaciones creadas" });
   };
