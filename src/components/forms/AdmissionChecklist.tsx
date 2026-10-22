@@ -56,7 +56,7 @@ const AdmissionChecklist = ({ onBack }: Props) => {
         if (data) {
           setExistingId(data.id);
           const newChecks: Record<string, boolean> = {};
-          DOCS.forEach(d => { newChecks[d.key] = (data as any)[d.key] ?? false; });
+          DOCS.forEach(d => { newChecks[d.key] = Boolean(data[d.key as keyof typeof data]); });
           setChecks(newChecks);
           setObservations(data.observations || '');
         } else { setExistingId(null); setChecks({}); setObservations(''); }

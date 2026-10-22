@@ -82,7 +82,7 @@ const PerformanceEval = ({ onBack }: Props) => {
             <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map(v => (
                 <button key={v} onClick={() => update(c.key, v)}
-                  className={`w-10 h-10 rounded-xl font-black text-sm ${(form as any)[c.key] === v ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}>
+                  className={`w-10 h-10 rounded-xl font-black text-sm ${form[c.key as keyof typeof form] === v ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}>
                   {v}
                 </button>
               ))}

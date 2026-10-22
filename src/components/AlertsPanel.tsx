@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { AlertTriangle, Heart, Pill, Calendar, Activity, Bell, X, ChevronDown, ChevronUp } from "lucide-react";
+import { vitalIssues } from "@/lib/vital-signs";
 
 interface Alert {
   id: string;
@@ -52,7 +53,7 @@ const AlertsPanel = () => {
         id: `fall-${i.id}`, type: 'fall', severity: 'critical',
         title: `⚠️ ${i.incident_type}`,
         description: i.description?.slice(0, 80) || 'Sin descripción',
-        residentName: (i.residents as any)?.full_name,
+        residentName: i.residents?.full_name,
         timestamp: i.incident_datetime,
       });
     });
@@ -64,18 +65,19 @@ const AlertsPanel = () => {
       .select('id, resident_id, spo2, temperature, heart_rate, glucose, blood_pressure, residents(full_name)')
       .gte('created_at', yesterday.toISOString()).limit(50);
 
-    vitals?.forEach(v => {
-      const issues: string[] = [];
-      if (v.spo2 && v.spo2 < 90) issues.push(`SpO2: ${v.spo2}%`);
-      if (v.temperature && (v.temperature > 38 || v.temperature < 35)) issues.push(`Temp: ${v.temperature}°C`);
-      if (v.heart_rate && (v.heart_rate > 100 || v.heart_rate < 50)) issues.push(`FC: ${v.heart_rate}`);
-      if (v.glucose && (v.glucose > 200 || v.glucose < 70)) issues.push(`Glucemia: ${v.glucose}`);
+    // HB-F16 records vitals in their own table; include them too
+    const { data: vitalSigns } = await supabase.from('vital_signs')
+      .select('id, resident_id, spo2, temperature, heart_rate, glucose, blood_pressure, residents(full_name)')
+      .gte('created_at', yesterday.toISOString()).limit(50);
+
+    [...(vitals ?? []), ...(vitalSigns ?? [])].forEach(v => {
+      const issues = vitalIssues(v);
       if (issues.length > 0) {
         newAlerts.push({
           id: `vitals-${v.id}`, type: 'vitals', severity: 'critical',
           title: '🔴 Signos vitales fuera de rango',
           description: issues.join(' · '),
-          residentName: (v.residents as any)?.full_name,
+          residentName: v.residents?.full_name,
           timestamp: new Date().toISOString(),
         });
       }
@@ -96,7 +98,7 @@ const AlertsPanel = () => {
         id: `appt-${a.id}`, type: 'appointment', severity: 'info',
         title: `📅 Cita: ${a.specialty || 'Médica'}`,
         description: `${a.appointment_date} ${a.appointment_time || ''}`,
-        residentName: (a.residents as any)?.full_name,
+        residentName: a.residents?.full_name,
         timestamp: a.appointment_date, entityId: a.id,
       });
     });
@@ -116,7 +118,7 @@ const AlertsPanel = () => {
         id: `med-${m.id}`, type: 'medication', severity: 'warning',
         title: `💊 Medicamento por vencer: ${m.medication_name}`,
         description: `Vence: ${m.expiry_date}`,
-        residentName: (m.residents as any)?.full_name,
+        residentName: m.residents?.full_name,
         timestamp: m.expiry_date || '',
       });
     });

@@ -28,7 +28,7 @@ const FinanceModule = ({ onBack }: Props) => {
     const [txRes, invRes, vcRes, residentsRes, appointmentsRes] = await Promise.all([
       supabase.from('financial_transactions').select('*').order('transaction_date', { ascending: false }).limit(100),
       supabase.from('invoices').select('*, residents(full_name)').order('created_at', { ascending: false }).limit(50),
-      supabase.from('payment_vouchers' as any).select('*').order('created_at', { ascending: false }).limit(50),
+      supabase.from('payment_vouchers').select('*').order('created_at', { ascending: false }).limit(50),
       supabase.from('residents').select('*', { count: 'exact', head: true }),
       supabase.from('medical_appointments').select('*', { count: 'exact', head: true }),
     ]);
@@ -233,7 +233,7 @@ const FinanceModule = ({ onBack }: Props) => {
             <tbody>{invoices.map(inv => (
               <tr key={inv.id} className="border-b border-border/50 hover:bg-muted/30">
                 <td className="p-3 font-mono">{inv.invoice_number}</td>
-                <td className="p-3">{(inv.residents as any)?.full_name || '-'}</td>
+                <td className="p-3">{inv.residents?.full_name || '-'}</td>
                 <td className="p-3">{inv.period}</td>
                 <td className="p-3 text-right font-bold">${(inv.total || 0).toLocaleString()}</td>
                 <td className="p-3"><span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md ${inv.status === 'pagada' ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>{inv.status}</span></td>

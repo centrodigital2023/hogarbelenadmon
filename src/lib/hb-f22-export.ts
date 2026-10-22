@@ -675,7 +675,7 @@ export async function exportHBF22PDF(report: HBF22Report, fileName: string = "In
     if (logoDataUrl) {
       try {
         pdf.addImage(logoDataUrl, "PNG", margin, 3, 20, 20);
-      } catch {}
+      } catch { /* logo is optional; continue without it */ }
     }
 
     // Texto encabezado

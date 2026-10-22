@@ -10,6 +10,7 @@ import SmartReportSection from "@/components/SmartReportSection";
 import SignaturePad from "@/components/SignaturePad";
 import { ActivityHistory } from "@/components/ActivityHistory";
 import { History, Loader2 } from "lucide-react";
+import { errorMessage } from "@/lib/errors";
 
 interface Props { onBack: () => void; }
 interface Resident { id: string; full_name: string; }
@@ -69,8 +70,8 @@ const TherapyRecords = ({ onBack }: Props) => {
       toast({ title: "✅ Terapias registradas con firma" });
       setEntries({});
       setSignature(null);
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } catch (e) {
+      toast({ title: "Error", description: errorMessage(e), variant: "destructive" });
     }
     setSaving(false);
   };

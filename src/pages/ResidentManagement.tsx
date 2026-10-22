@@ -225,7 +225,7 @@ const ResidentManagement = ({ onBack }: { onBack: () => void }) => {
             {FIELDS.map(f => (
               <div key={f.key}>
                 <label className="text-[10px] font-bold text-muted-foreground uppercase">{f.label}</label>
-                <input type={f.type || 'text'} value={(form as any)[f.key]}
+                <input type={f.type || 'text'} value={form[f.key as keyof typeof form]}
                   onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
                   className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm"
                   required={f.required} />
@@ -264,7 +264,7 @@ const ResidentManagement = ({ onBack }: { onBack: () => void }) => {
             ].map(f => (
               <div key={f.key}>
                 <label className="text-[10px] font-bold text-muted-foreground uppercase">{f.label}</label>
-                <input type="text" value={(form as any)[f.key]}
+                <input type="text" value={form[f.key as keyof typeof form]}
                   onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
                   className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm" />
               </div>

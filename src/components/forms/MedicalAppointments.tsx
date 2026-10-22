@@ -105,7 +105,7 @@ const MedicalAppointments = ({ onBack }: Props) => {
   };
 
   const getApptData = () => appointments.map(a => ({
-    Residente: (a.residents as any)?.full_name, Especialidad: a.specialty,
+    Residente: a.residents?.full_name, Especialidad: a.specialty,
     Fecha: a.appointment_date, Hora: a.appointment_time, Lugar: a.location,
     Asistió: a.was_attended ? 'Sí' : 'No',
   }));
@@ -171,7 +171,7 @@ const MedicalAppointments = ({ onBack }: Props) => {
         {appointments.map(a => (
           <div key={a.id} className="bg-card border border-border rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 shadow-sm hover:border-primary/20 transition-all">
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-foreground">{(a.residents as any)?.full_name}</p>
+              <p className="text-sm font-bold text-foreground">{a.residents?.full_name}</p>
               <p className="text-xs text-muted-foreground">{a.specialty} — {a.appointment_date} {a.appointment_time}</p>
               <p className="text-xs text-muted-foreground">{a.location}</p>
             </div>

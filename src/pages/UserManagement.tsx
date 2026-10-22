@@ -7,6 +7,7 @@ import { UserPlus, Trash2, Shield, Edit, Key, Search, X, Plus } from "lucide-rea
 
 import type { AppRole } from "@/hooks/useAuth";
 import { ROLE_LABELS } from "@/hooks/usePermissions";
+import { errorMessage } from "@/lib/errors";
 
 const ROLE_COLORS: Record<string, string> = {
   super_admin: 'bg-destructive/10 text-destructive',
@@ -70,7 +71,7 @@ const UserManagement = ({ onBack }: { onBack: () => void }) => {
     try {
       const data = await callAdmin({ action: 'list' });
       if (data?.users) setUsers(data.users);
-    } catch (e: any) {
+    } catch (e) {
       // Fallback to direct query
       const { data: profiles } = await supabase.from('profiles').select('user_id, full_name, phone');
       const { data: allRoles } = await supabase.from('user_roles').select('user_id, role');
@@ -99,8 +100,8 @@ const UserManagement = ({ onBack }: { onBack: () => void }) => {
       toast({ title: "✅ Usuario creado", description: `${newName} registrado como ${ROLE_LABELS[newRole]}` });
       setNewEmail(""); setNewName(""); setNewPhone(""); setNewPassword(""); setShowCreate(false);
       fetchUsers();
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } catch (e) {
+      toast({ title: "Error", description: errorMessage(e), variant: "destructive" });
     }
     setCreating(false);
   };
@@ -111,8 +112,8 @@ const UserManagement = ({ onBack }: { onBack: () => void }) => {
       await callAdmin({ action: 'delete', user_id: userId });
       toast({ title: "Usuario eliminado" });
       fetchUsers();
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } catch (e) {
+      toast({ title: "Error", description: errorMessage(e), variant: "destructive" });
     }
   };
 
@@ -122,8 +123,8 @@ const UserManagement = ({ onBack }: { onBack: () => void }) => {
       toast({ title: "Perfil actualizado" });
       setEditingUser(null);
       fetchUsers();
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } catch (e) {
+      toast({ title: "Error", description: errorMessage(e), variant: "destructive" });
     }
   };
 
@@ -136,8 +137,8 @@ const UserManagement = ({ onBack }: { onBack: () => void }) => {
       await callAdmin({ action: 'reset_password', user_id: resetUserId, new_password: resetPassword });
       toast({ title: "Contraseña actualizada" });
       setResetUserId(null); setResetPassword("");
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } catch (e) {
+      toast({ title: "Error", description: errorMessage(e), variant: "destructive" });
     }
   };
 
@@ -147,8 +148,8 @@ const UserManagement = ({ onBack }: { onBack: () => void }) => {
       await callAdmin({ action: 'remove_role', user_id: userId, role });
       toast({ title: "Rol eliminado" });
       fetchUsers();
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } catch (e) {
+      toast({ title: "Error", description: errorMessage(e), variant: "destructive" });
     }
   };
 
@@ -159,8 +160,8 @@ const UserManagement = ({ onBack }: { onBack: () => void }) => {
       toast({ title: "Rol asignado" });
       setAddRoleUserId(null);
       fetchUsers();
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } catch (e) {
+      toast({ title: "Error", description: errorMessage(e), variant: "destructive" });
     }
   };
 

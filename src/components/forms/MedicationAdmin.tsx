@@ -98,8 +98,8 @@ const MedicationAdmin = ({ onBack }: Props) => {
                   { key: 'check_route', label: 'Vía ✓' },
                   { key: 'check_time', label: 'Hora ✓' },
                 ].map(c => (
-                  <label key={c.key} className={`flex items-center gap-1 text-xs px-3 py-2 rounded-lg border cursor-pointer ${(rec as any)[c.key] ? 'border-cat-nutritional/30 bg-cat-nutritional/10 text-cat-nutritional' : 'border-border'}`}>
-                    <input type="checkbox" checked={(rec as any)[c.key] || false}
+                  <label key={c.key} className={`flex items-center gap-1 text-xs px-3 py-2 rounded-lg border cursor-pointer ${rec[c.key as keyof typeof rec] ? 'border-cat-nutritional/30 bg-cat-nutritional/10 text-cat-nutritional' : 'border-border'}`}>
+                    <input type="checkbox" checked={Boolean(rec[c.key as keyof typeof rec])}
                       onChange={e => updateRecord(med.id, c.key, e.target.checked)} className="w-4 h-4 accent-primary" />
                     {c.label}
                   </label>

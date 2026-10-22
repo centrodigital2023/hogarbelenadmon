@@ -70,7 +70,7 @@ const FoodIntake = ({ onBack }: Props) => {
               { key: 'temperature_ok', label: 'Temperatura OK' },
             ].map(c => (
               <label key={c.key} className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={(w as any)[c.key]}
+                <input type="checkbox" checked={Boolean(w[c.key as keyof typeof w])}
                   onChange={e => updateWeek(idx, c.key, e.target.checked)}
                   className="w-4 h-4 accent-primary" />
                 {c.label}

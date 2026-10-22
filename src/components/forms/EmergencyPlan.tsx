@@ -31,12 +31,12 @@ const EmergencyPlan = ({ onBack }: Props) => {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from('emergency_plans' as any).insert({
+    const { error } = await supabase.from('emergency_plans').insert({
       period_semester: semester, period_year: year, responsible,
       brigade_members: brigade, drills, equipment_inspections: equipment,
       evacuation_routes: routes, emergency_numbers: emergencyNumbers,
       action_plan: actionPlan, created_by: user.id,
-    } as any);
+    });
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else { toast({ title: "HB-G05 guardado" }); onBack(); }
     setSaving(false);

@@ -11,6 +11,8 @@ import SignaturePad from "@/components/SignaturePad";
 import { Sparkles, History, Loader2, AlertTriangle, User, FileText, Send } from "lucide-react";
 import FormHistory from "@/components/FormHistory";
 import type { HistoryColumn } from "@/components/FormHistory";
+import { errorMessage } from "@/lib/errors";
+import { isVitalAbnormal, vitalIssues } from "@/lib/vital-signs";
 
 interface Props { onBack: () => void; }
 interface Resident { id: string; full_name: string; }
@@ -89,14 +91,6 @@ const DailyLog = ({ onBack }: Props) => {
     }));
   };
 
-  const isAbnormal = (field: string, val: number) => {
-    if (field === 'spo2' && val > 0 && val < 90) return true;
-    if (field === 'temperature' && val > 0 && (val < 35 || val > 38)) return true;
-    if (field === 'glucose' && val > 0 && (val < 70 || val > 180)) return true;
-    if (field === 'heart_rate' && val > 0 && (val < 50 || val > 120)) return true;
-    return false;
-  };
-
   const handleGenerateAI = async () => {
     if (!user || Object.keys(entries).length === 0) return;
     setGeneratingAI(true);
@@ -107,8 +101,8 @@ const DailyLog = ({ onBack }: Props) => {
       if (error) throw error;
       if (data?.note) setAiNote(data.note);
       else toast({ title: "Sin datos previos", description: "Guarde primero la bitácora y luego genere la nota con IA.", variant: "destructive" });
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message || "Error generando nota", variant: "destructive" });
+    } catch (e) {
+      toast({ title: "Error", description: errorMessage(e, "Error generando nota"), variant: "destructive" });
     }
     setGeneratingAI(false);
   };
@@ -117,7 +111,7 @@ const DailyLog = ({ onBack }: Props) => {
   const historyColumns: HistoryColumn[] = [
     { key: 'log_date', label: 'Fecha' },
     { key: 'shift', label: 'Turno' },
-    { key: 'resident_name', label: 'Residente', render: (_v, row) => (row.residents as any)?.full_name || '-' },
+    { key: 'resident_name', label: 'Residente', render: (_v, row) => row.residents?.full_name || '-' },
     { key: 'responsible_name', label: 'Responsable' },
     { key: 'blood_pressure', label: 'T.A.' },
     { key: 'spo2', label: 'SpO2' },
@@ -142,7 +136,7 @@ const DailyLog = ({ onBack }: Props) => {
 
   const historyExportTransform = (h: any) => ({
     Fecha: h.log_date, Turno: h.shift,
-    Residente: (h.residents as any)?.full_name || '',
+    Residente: h.residents?.full_name || '',
     Responsable: h.responsible_name || '',
     'T.A.': h.blood_pressure || '', 'SpO2': h.spo2 || '', 'Temp °C': h.temperature || '',
     Glucemia: h.glucose || '', FC: h.heart_rate || '', 'Peso kg': h.weight || '',
@@ -201,8 +195,8 @@ const DailyLog = ({ onBack }: Props) => {
         return;
       }
       setSingleReport(data.note);
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } catch (e) {
+      toast({ title: "Error", description: errorMessage(e), variant: "destructive" });
     }
     setGeneratingSingle(false);
   };
@@ -311,7 +305,7 @@ const DailyLog = ({ onBack }: Props) => {
         <div className="space-y-4 mb-6">
           {residents.map(r => {
             const e = entries[r.id] || { ...emptyEntry };
-            const hasAlert = isAbnormal('spo2', e.spo2) || isAbnormal('temperature', e.temperature) || isAbnormal('glucose', e.glucose) || isAbnormal('heart_rate', e.heart_rate);
+            const hasAlert = vitalIssues(e).length > 0;
             return (
               <div key={r.id} className={`bg-card border-2 rounded-2xl p-5 ${hasAlert ? 'border-destructive/40' : 'border-border'}`}>
                 <div className="flex items-center justify-between mb-3">
@@ -333,11 +327,11 @@ const DailyLog = ({ onBack }: Props) => {
                   ].map(f => (
                     <div key={f.key}>
                       <label className="text-[9px] font-bold text-muted-foreground uppercase">{f.label}</label>
-                      <input type={f.type} value={(e as any)[f.key] || ''}
+                      <input type={f.type} value={e[f.key as keyof typeof e] || ''}
                         onChange={ev => updateEntry(r.id, f.key, f.type === 'number' ? parseFloat(ev.target.value) || 0 : ev.target.value)}
                         placeholder={f.placeholder}
                         className={`mt-1 w-full px-2 py-2 rounded-lg border text-sm text-center ${
-                          f.type === 'number' && isAbnormal(f.key, (e as any)[f.key]) ? 'border-destructive bg-destructive/5' : 'border-input bg-background'
+                          f.type === 'number' && isVitalAbnormal(f.key, e[f.key as keyof typeof e]) ? 'border-destructive bg-destructive/5' : 'border-input bg-background'
                         }`} />
                     </div>
                   ))}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
@@ -51,7 +51,7 @@ const ResidentTimeline = ({ onBack, onNavigateForm, initialResidentId }: Props) 
       .then(({ data }) => { if (data) setResidents(data); });
   }, []);
 
-  const loadTimeline = async () => {
+  const loadTimeline = useCallback(async () => {
     if (!selectedResident) return;
     setLoading(true);
     const cutoff = new Date();
@@ -117,7 +117,7 @@ const ResidentTimeline = ({ onBack, onNavigateForm, initialResidentId }: Props) 
 
     medAdmin.data?.forEach((m: any) => results.push({
       id: m.id, source: 'medication_admin', sourceLabel: cfg.medication_admin.label,
-      date: m.admin_datetime?.split('T')[0] || '', summary: `${(m.medications as any)?.medication_name || 'Med.'} — ${m.dose_given || ''} — ${m.was_administered ? '✅' : '❌ No admin.'}`,
+      date: m.admin_datetime?.split('T')[0] || '', summary: `${m.medications?.medication_name || 'Med.'} — ${m.dose_given || ''} — ${m.was_administered ? '✅' : '❌ No admin.'}`,
       residentName, residentId: selectedResident, icon: cfg.medication_admin.icon, color: cfg.medication_admin.color,
     }));
 
@@ -130,11 +130,11 @@ const ResidentTimeline = ({ onBack, onNavigateForm, initialResidentId }: Props) 
     results.sort((a, b) => b.date.localeCompare(a.date));
     setEntries(results);
     setLoading(false);
-  };
+  }, [selectedResident, days, filterSources, residents]);
 
   useEffect(() => {
     if (selectedResident) loadTimeline();
-  }, [selectedResident, days, filterSources]);
+  }, [loadTimeline, selectedResident, days, filterSources]);
 
   const toggleSource = (src: string) => {
     setFilterSources(prev =>

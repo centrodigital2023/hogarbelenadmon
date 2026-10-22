@@ -36,11 +36,11 @@ const TherapySessionForm = ({ onBack }: Props) => {
       resident_id: id, resident_name: residents.find(r => r.id === id)?.full_name,
       attended: true, observations: attendeeObs[id] || '',
     }));
-    const { error } = await supabase.from('therapy_sessions' as any).insert({
+    const { error } = await supabase.from('therapy_sessions').insert({
       therapy_name: `${therapyType}: ${therapyName}`, session_date: sessionDate,
       session_time: sessionTime, days_of_week: selectedDays, frequency,
       attendees, observations, created_by: user.id,
-    } as any);
+    });
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else { toast({ title: "Sesión de terapia guardada" }); onBack(); }
     setSaving(false);

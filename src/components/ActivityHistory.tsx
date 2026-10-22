@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { fromTable, type TableName } from "@/integrations/supabase/tables";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, ChevronRight, Download, Eye, Trash2, Loader2 } from "lucide-react";
+import { errorMessage } from "@/lib/errors";
 
 interface ActivityHistoryProps {
   tableName: TableName;
@@ -34,7 +35,7 @@ export const ActivityHistory = ({
   const [exporting, setExporting] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
 
-  const loadRecords = async () => {
+  const loadRecords = useCallback(async () => {
     setLoading(true);
     try {
       const offset = (currentPage - 1) * pageSize;
@@ -51,29 +52,29 @@ export const ActivityHistory = ({
       if (error) throw error;
       setRecords(data || []);
       setTotalRecords(count || 0);
-    } catch (e: any) {
+    } catch (e) {
       toast({
         title: "Error",
-        description: e.message || "No se pudieron cargar los registros",
+        description: errorMessage(e, "No se pudieron cargar los registros"),
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, residentId, pageSize, tableName, toast]);
 
   useEffect(() => {
     loadRecords();
-  }, [currentPage, residentId]);
+  }, [loadRecords]);
 
   const handleReexport = async (id: string, format: 'pdf' | 'word' | 'excel') => {
     setExporting(id);
     try {
       await onReexport(id, format);
-    } catch (e: any) {
+    } catch (e) {
       toast({
         title: "Error",
-        description: e.message || "Error al reexportar",
+        description: errorMessage(e, "Error al reexportar"),
         variant: "destructive",
       });
     } finally {
@@ -90,10 +91,10 @@ export const ActivityHistory = ({
         toast({ title: "Registro eliminado" });
         loadRecords();
       }
-    } catch (e: any) {
+    } catch (e) {
       toast({
         title: "Error",
-        description: e.message,
+        description: errorMessage(e),
         variant: "destructive",
       });
     } finally {

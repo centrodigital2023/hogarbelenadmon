@@ -8,6 +8,7 @@ import ExportButtons from "@/components/ExportButtons";
 import ShareButtons from "@/components/ShareButtons";
 import SignaturePad from "@/components/SignaturePad";
 import { Camera, Sparkles, Loader2, History, ChevronDown, ChevronUp, Upload, User } from "lucide-react";
+import { errorMessage } from "@/lib/errors";
 
 interface Props { onBack: () => void; }
 interface Resident { id: string; full_name: string; }
@@ -105,15 +106,15 @@ const LifeHistory = ({ onBack }: Props) => {
           const updated = { ...prev };
           Object.entries(result.data).forEach(([key, val]) => {
             if (key in updated && val && typeof val === 'string') {
-              (updated as any)[key] = val;
+              updated[key as keyof typeof updated] = val;
             }
           });
           return updated;
         });
         toast({ title: "✨ Historia generada por IA", description: "Revise y ajuste el contenido antes de guardar." });
       }
-    } catch (err: any) {
-      toast({ title: "Error al generar", description: err.message, variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Error al generar", description: errorMessage(err), variant: "destructive" });
     }
     setGenerating(false);
   };
@@ -133,7 +134,7 @@ const LifeHistory = ({ onBack }: Props) => {
     setForm(prev => {
       const updated = { ...prev };
       Object.entries(entry.data).forEach(([key, val]) => {
-        if (key in updated) (updated as any)[key] = String(val || '');
+        if (key in updated) updated[key as keyof typeof updated] = String(val || '');
       });
       return updated;
     });
@@ -236,16 +237,16 @@ const LifeHistory = ({ onBack }: Props) => {
                     <span>{f.icon}</span> {f.label}
                   </label>
                   {f.type === 'textarea' ? (
-                    <textarea value={(form as any)[f.key]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                    <textarea value={form[f.key as keyof typeof form]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
                       rows={4} className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm resize-none" />
                   ) : f.type === 'select' ? (
-                    <select value={(form as any)[f.key]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                    <select value={form[f.key as keyof typeof form]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
                       className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm">
                       <option value="">-- Seleccionar --</option>
                       {f.options?.map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
                   ) : (
-                    <textarea value={(form as any)[f.key]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                    <textarea value={form[f.key as keyof typeof form]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
                       rows={2} className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm resize-none" />
                   )}
                 </div>

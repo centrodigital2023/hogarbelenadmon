@@ -21,7 +21,7 @@ const BlogModule = ({ onBack }: Props) => {
   const [saving, setSaving] = useState(false);
 
   const fetchPosts = async () => {
-    const { data } = await supabase.from('blog_posts' as any).select('*').order('created_at', { ascending: false });
+    const { data } = await supabase.from('blog_posts').select('*').order('created_at', { ascending: false });
     if (data) setPosts(data as any[]);
   };
 
@@ -45,10 +45,10 @@ const BlogModule = ({ onBack }: Props) => {
     if (status === 'publicado' && !editPost?.published_at) payload.published_at = new Date().toISOString();
 
     if (editPost) {
-      await (supabase.from('blog_posts' as any) as any).update(payload).eq('id', editPost.id);
+      await supabase.from('blog_posts').update(payload).eq('id', editPost.id);
     } else {
       payload.created_by = user.id;
-      await (supabase.from('blog_posts' as any) as any).insert(payload);
+      await supabase.from('blog_posts').insert(payload);
     }
     toast({ title: editPost ? "Entrada actualizada" : "Entrada creada" });
     setSaving(false);
@@ -58,7 +58,7 @@ const BlogModule = ({ onBack }: Props) => {
 
   const handleDelete = async (id: string) => {
     if (!confirm('¿Eliminar esta entrada?')) return;
-    await (supabase.from('blog_posts' as any) as any).delete().eq('id', id);
+    await supabase.from('blog_posts').delete().eq('id', id);
     toast({ title: "Entrada eliminada" });
     fetchPosts();
   };

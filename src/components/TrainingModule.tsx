@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -31,17 +31,17 @@ const TrainingModule = ({ onBack }: Props) => {
 
   const canManage = isAdmin || roles.includes('coordinador' as any);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     // Use view that strips quiz answers
-    const { data: c } = await supabase.from('training_courses_public' as any).select('*').order('created_at', { ascending: false });
+    const { data: c } = await supabase.from('training_courses_public').select('*').order('created_at', { ascending: false });
     if (c) setCourses(c as unknown as CourseListItem[]);
     if (user) {
       const { data: r } = await supabase.from('exam_results').select('*').eq('user_id', user.id);
       if (r) setResults(r as ExamResult[]);
     }
-  };
+  }, [user]);
 
-  useEffect(() => { loadData(); }, [user]);
+  useEffect(() => { loadData(); }, [loadData]);
 
   const handleCreate = async () => {
     if (!user || !newTitle.trim()) return;

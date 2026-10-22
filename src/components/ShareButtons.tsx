@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { errorMessage } from "@/lib/errors";
 import { MessageCircle, Mail, Share2, HardDrive, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -85,9 +86,9 @@ const ShareButtons = ({ title, text, getFileBlob }: ShareButtonsProps) => {
       } else {
         throw new Error(data.error || "Error desconocido");
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error("Drive upload error:", e);
-      toast({ title: "Error al subir", description: e.message, variant: "destructive" });
+      toast({ title: "Error al subir", description: errorMessage(e), variant: "destructive" });
     } finally {
       setUploading(false);
     }

@@ -27,12 +27,12 @@ const PestControl = ({ onBack }: Props) => {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from('pest_control' as any).insert({
+    const { error } = await supabase.from('pest_control').insert({
       period_quarter: quarter, period_year: year,
       company_name: company.name, company_nit: company.nit, company_license: company.license,
       schedule_data: schedule, monitoring_data: monitoring, certificates: certs,
       observations, created_by: user.id,
-    } as any);
+    });
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else { toast({ title: "HB-G02 guardado" }); onBack(); }
     setSaving(false);
@@ -58,7 +58,7 @@ const PestControl = ({ onBack }: Props) => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[{k:'name',l:'Nombre'},{k:'nit',l:'NIT'},{k:'license',l:'Licencia Sanitaria'},{k:'contract_date',l:'Fecha Contrato'}].map(f => (
             <div key={f.k}><label className="text-xs font-bold text-muted-foreground uppercase">{f.l}</label>
-              <input value={(company as any)[f.k]} onChange={e => setCompany(p => ({...p,[f.k]:e.target.value}))}
+              <input value={company[f.k as keyof typeof company]} onChange={e => setCompany(p => ({...p,[f.k]:e.target.value}))}
                 type={f.k === 'contract_date' ? 'date' : 'text'}
                 className="mt-1 w-full px-3 py-2 rounded-xl border border-input bg-background text-sm" /></div>
           ))}

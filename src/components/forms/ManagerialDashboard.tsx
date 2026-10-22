@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import FormHeader from "@/components/FormHeader";
@@ -19,13 +19,13 @@ const ManagerialDashboard = ({ onBack }: Props) => {
   const [actions, setActions] = useState([{ accion: '', responsable: '', fecha_limite: '', estado: 'pendiente' }]);
   const [loading, setLoading] = useState(false);
 
-  const loadIndicators = async () => {
+  const loadIndicators = useCallback(async () => {
     setLoading(true);
     const [residents, incidents, appointments, trainings, invoices, pqrsf] = await Promise.all([
       supabase.from('residents').select('id').in('status', ['permanente', 'prueba']),
       supabase.from('incidents').select('id').gte('incident_datetime', `${year}-${String(month).padStart(2,'0')}-01`),
       supabase.from('medical_appointments').select('id, was_attended').gte('appointment_date', `${year}-${String(month).padStart(2,'0')}-01`),
-      supabase.from('training_courses' as any).select('id'),
+      supabase.from('training_courses').select('id'),
       supabase.from('invoices').select('id, total, status'),
       supabase.from('pqrsf').select('id').gte('record_date', `${year}-${String(month).padStart(2,'0')}-01`),
     ]);
@@ -45,9 +45,9 @@ const ManagerialDashboard = ({ onBack }: Props) => {
       pqrsf_mes: pqrsf.data?.length || 0,
     });
     setLoading(false);
-  };
+  }, [month, year]);
 
-  useEffect(() => { loadIndicators(); }, [month, year]);
+  useEffect(() => { loadIndicators(); }, [loadIndicators]);
 
   return (
     <div className="animate-fade-in space-y-6">

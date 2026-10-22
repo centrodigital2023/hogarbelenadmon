@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { errorMessage } from "@/lib/errors";
 import { FileText, FileSpreadsheet, FileType, Loader2, HardDrive, CheckCircle2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -36,10 +37,10 @@ const ExportButtons = ({ contentRef, title, fileName, data, textContent, signatu
       await fn();
       setButtonStatus(key, "success");
       toast({ title: "✅ Exportado", description: `${fileName}.${key} generado correctamente` });
-    } catch (e: any) {
+    } catch (e) {
       console.error(`Export ${key} error:`, e);
       setButtonStatus(key, "error");
-      toast({ title: "Error al exportar", description: e?.message || "Intente de nuevo", variant: "destructive" });
+      toast({ title: "Error al exportar", description: errorMessage(e, "Intente de nuevo"), variant: "destructive" });
     } finally {
       setExporting(null);
     }

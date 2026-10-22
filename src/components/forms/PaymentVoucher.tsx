@@ -37,14 +37,14 @@ const PaymentVoucher = ({ onBack }: Props) => {
     if (!user) return;
     setSaving(true);
     const voucherNumber = `P-${y}-${String(Date.now()).slice(-4)}`;
-    const { error } = await supabase.from('payment_vouchers' as any).insert({
+    const { error } = await supabase.from('payment_vouchers').insert({
       voucher_number: voucherNumber, payment_date: paymentDate,
       provider_name: provider.name, provider_document: provider.document,
       provider_role: provider.role, provider_bank: provider.bank,
       provider_account: provider.account, items, subtotal,
       retentions: parseFloat(retentions) || 0, net_paid: netPaid,
       payment_method: paymentMethod, created_by: user.id,
-    } as any);
+    });
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
     else { toast({ title: `Comprobante ${voucherNumber} creado` }); onBack(); }
     setSaving(false);
@@ -59,7 +59,7 @@ const PaymentVoucher = ({ onBack }: Props) => {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {[{k:'name',l:'Nombre'},{k:'document',l:'Documento'},{k:'role',l:'Cargo'},{k:'bank',l:'Banco'},{k:'account',l:'Cuenta'}].map(f => (
             <div key={f.k}><label className="text-xs font-bold text-muted-foreground uppercase">{f.l}</label>
-              <input value={(provider as any)[f.k]} onChange={e => setProvider(p => ({...p,[f.k]:e.target.value}))}
+              <input value={provider[f.k as keyof typeof provider]} onChange={e => setProvider(p => ({...p,[f.k]:e.target.value}))}
                 className="mt-1 w-full px-3 py-2 rounded-xl border border-input bg-background text-sm" /></div>
           ))}
         </div>

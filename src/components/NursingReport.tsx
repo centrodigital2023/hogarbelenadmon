@@ -7,6 +7,7 @@ import ExportButtons from "@/components/ExportButtons";
 import ShareButtons from "@/components/ShareButtons";
 import SignaturePad from "@/components/SignaturePad";
 import { Sparkles, Loader2, Calendar, BarChart3, Users, HeartPulse, AlertTriangle, Pill, Pencil, Save } from "lucide-react";
+import { errorMessage } from "@/lib/errors";
 
 interface Props { onBack: () => void; }
 
@@ -46,8 +47,8 @@ const NursingReport = ({ onBack }: Props) => {
       } else {
         toast({ title: "Sin datos", description: "No se encontraron registros para el período seleccionado.", variant: "destructive" });
       }
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message || "Error generando informe", variant: "destructive" });
+    } catch (e) {
+      toast({ title: "Error", description: errorMessage(e, "Error generando informe"), variant: "destructive" });
     }
     setGenerating(false);
   };

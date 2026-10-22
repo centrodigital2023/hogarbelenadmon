@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -6,6 +6,7 @@ import FormHeader from "@/components/FormHeader";
 import ExportButtons from "@/components/ExportButtons";
 import SignaturePad from "@/components/SignaturePad";
 import { Sparkles, Loader2, Save, Calendar, ChevronDown, ChevronUp, Share2, Mail, MessageCircle } from "lucide-react";
+import { errorMessage } from "@/lib/errors";
 
 interface Props { onBack: () => void; }
 interface Resident { id: string; full_name: string; }
@@ -35,7 +36,7 @@ const NursingNotes = ({ onBack }: Props) => {
       .order('full_name').then(({ data }) => { if (data) setResidents(data); });
   }, []);
 
-  const loadHistory = () => {
+  const loadHistory = useCallback(() => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
@@ -57,12 +58,12 @@ const NursingNotes = ({ onBack }: Props) => {
     }
 
     query.then(({ data }) => { if (data) setHistory(data); });
-  };
+  }, [selectedResident, isConsolidated]);
 
   useEffect(() => {
     if (!selectedResident && !isConsolidated) return;
     loadHistory();
-  }, [selectedResident, isConsolidated]);
+  }, [loadHistory, selectedResident, isConsolidated]);
 
   const generateNote = async () => {
     if (!user) return;
@@ -74,8 +75,8 @@ const NursingNotes = ({ onBack }: Props) => {
       if (error) throw error;
       if (data?.note) setNote(data.note);
       else toast({ title: "Sin datos", description: "No se encontraron registros para generar la nota. Guarde primero la bitácora.", variant: "destructive" });
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message || "Error generando nota", variant: "destructive" });
+    } catch (e) {
+      toast({ title: "Error", description: errorMessage(e, "Error generando nota"), variant: "destructive" });
     }
     setGenerating(false);
   };

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import FormHeader from "@/components/FormHeader";
 import ExportButtons from "@/components/ExportButtons";
@@ -13,11 +13,8 @@ const IndicatorsDashboard = ({ onBack }: Props) => {
   const [stats, setStats] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadStats();
-  }, [month, year]);
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     setLoading(true);
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
     const endDate = month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, '0')}-01`;
@@ -57,7 +54,11 @@ const IndicatorsDashboard = ({ onBack }: Props) => {
       appointmentRate: appointments ? Math.round(((appointmentsAttended || 0) / appointments) * 100) : 0,
     });
     setLoading(false);
-  };
+  }, [month, year]);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
 
   const indicators = [
     { label: 'Residentes activos', value: stats.residents, icon: Users, color: 'text-primary' },

@@ -28,7 +28,7 @@ async function getDynamicLogoUrl(): Promise<string | null> {
   if (logoLookupDone) return cachedDynamicLogoUrl;
   logoLookupDone = true;
   try {
-    const { data } = await (supabase as any).from("system_settings").select("value").eq("key", "logo_url").maybeSingle();
+    const { data } = await supabase.from("system_settings").select("value").eq("key", "logo_url").maybeSingle();
     if (data?.value && typeof data.value === "string") {
       cachedDynamicLogoUrl = data.value;
     }
@@ -140,7 +140,7 @@ export async function exportPDF(opts: {
     pdf.setFillColor(r, g, b);
     pdf.rect(0, 0, pageW, headerH, "F");
     if (logoDataUrl) {
-      try { pdf.addImage(logoDataUrl, "PNG", margin, 2, 24, 24); } catch {}
+      try { pdf.addImage(logoDataUrl, "PNG", margin, 2, 24, 24); } catch { /* logo is optional; continue without it */ }
     }
     pdf.setFontSize(14);
     pdf.setFont("helvetica", "bold");
@@ -239,7 +239,7 @@ export async function exportPDF(opts: {
       pdf.setFont("helvetica", "bold");
       pdf.setTextColor(40, 40, 40);
       pdf.text("Firma del Responsable:", margin, y + 4);
-      try { pdf.addImage(opts.signatureDataUrl, "PNG", margin, y + 6, 40, 20); } catch {}
+      try { pdf.addImage(opts.signatureDataUrl, "PNG", margin, y + 6, 40, 20); } catch { /* logo is optional; continue without it */ }
       y += 32;
     }
 
@@ -361,7 +361,7 @@ export async function exportWord(opts: {
       bodyChildren.push(new Paragraph({
         children: [new ImageRun({ data: sigBuf, transformation: { width: 150, height: 60 }, type: "png", altText: { title: "Firma", description: "Firma digital", name: "firma" } })],
       }));
-    } catch {}
+    } catch { /* logo is optional; continue without it */ }
   }
 
   const doc = new Document({
