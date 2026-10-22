@@ -10,6 +10,7 @@
     "sync:lovable": "bash lovable-export/sync.sh",
     "watch:lovable": "node lovable-export/watch-sync.js",
     "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"
