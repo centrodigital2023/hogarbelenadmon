@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions, MODULE_PERMISSION_MAP, type Module } from "@/hooks/usePermissions";
@@ -5,63 +6,65 @@ import CrossNavigation from "@/components/CrossNavigation";
 import Login from "@/pages/Login";
 import AppLayout from "@/components/AppLayout";
 import IngresoSubMenu from "@/components/IngresoSubMenu";
-import ValoracionGeriatrica from "@/components/ValoracionGeriatrica";
 import FormHeader from "@/components/FormHeader";
-import UserManagement from "@/pages/UserManagement";
-import ResidentManagement from "@/pages/ResidentManagement";
 import DashboardView from "@/components/DashboardView";
 import ModulePlaceholder from "@/components/ModulePlaceholder";
 import ProtectedModule from "@/components/ProtectedModule";
-import AdmissionChecklist from "@/components/forms/AdmissionChecklist";
-import BelongingsInventory from "@/components/forms/BelongingsInventory";
-import LifeHistory from "@/components/forms/LifeHistory";
-import DailyLog from "@/components/forms/DailyLog";
-import KitchenChecklist from "@/components/forms/KitchenChecklist";
-import FridgeTemps from "@/components/forms/FridgeTemps";
-import FoodIntake from "@/components/forms/FoodIntake";
-import DisinfectionRecord from "@/components/forms/DisinfectionRecord";
-import VitalSigns from "@/components/forms/VitalSigns";
-import MedicationList from "@/components/forms/MedicationList";
-import MedicationAdmin from "@/components/forms/MedicationAdmin";
-import TherapyRecords from "@/components/forms/TherapyRecords";
-import IncidentReport from "@/components/forms/IncidentReport";
-import MedicalAppointments from "@/components/forms/MedicalAppointments";
-import TrainingRecord from "@/components/forms/TrainingRecord";
-import PerformanceEval from "@/components/forms/PerformanceEval";
-import PQRSFRecord from "@/components/forms/PQRSFRecord";
-import HygieneKit from "@/components/forms/HygieneKit";
-import RoomAssignment from "@/components/RoomAssignment";
-import DocumentManager from "@/components/DocumentManager";
-import LogoSettings from "@/components/LogoSettings";
-import TrainingModule from "@/components/TrainingModule";
-import NursingNotes from "@/components/NursingNotes";
-import NursingReport from "@/components/NursingReport";
-import IndicatorsDashboard from "@/components/IndicatorsDashboard";
-import BillingModule from "@/components/BillingModule";
-import CarePlanGenerator from "@/components/CarePlanGenerator";
-import FinanceModule from "@/components/FinanceModule";
-import BlogModule from "@/components/BlogModule";
-import SocialMediaModule from "@/components/SocialMediaModule";
-import AuditReport from "@/components/AuditReport";
-import ResidentTimeline from "@/components/ResidentTimeline";
-import InstitutionModule from "@/components/InstitutionModule";
-import UnifiedKitchen from "@/components/forms/UnifiedKitchen";
-import PsychosocialRecord from "@/components/forms/PsychosocialRecord";
-import SpiritualRecord from "@/components/forms/SpiritualRecord";
-import TherapySessionForm from "@/components/forms/TherapySessionForm";
-import WasteManagement from "@/components/forms/WasteManagement";
-import PestControl from "@/components/forms/PestControl";
-import HazardousWaste from "@/components/forms/HazardousWaste";
-import SanitationRecord from "@/components/forms/SanitationRecord";
-import EmergencyPlan from "@/components/forms/EmergencyPlan";
-import ManagerialDashboard from "@/components/forms/ManagerialDashboard";
-import PaymentVoucher from "@/components/forms/PaymentVoucher";
 import {
   ClipboardList, Stethoscope, Utensils, Heart, Activity,
   ShieldCheck, AlertTriangle, LogOut, Briefcase, TrendingUp, Settings,
   BookOpen, Share2, DollarSign, FileText
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+
+// Screens load on demand so the app opens fast on phones
+const ValoracionGeriatrica = lazy(() => import("@/components/ValoracionGeriatrica"));
+const UserManagement = lazy(() => import("@/pages/UserManagement"));
+const ResidentManagement = lazy(() => import("@/pages/ResidentManagement"));
+const AdmissionChecklist = lazy(() => import("@/components/forms/AdmissionChecklist"));
+const BelongingsInventory = lazy(() => import("@/components/forms/BelongingsInventory"));
+const LifeHistory = lazy(() => import("@/components/forms/LifeHistory"));
+const DailyLog = lazy(() => import("@/components/forms/DailyLog"));
+const KitchenChecklist = lazy(() => import("@/components/forms/KitchenChecklist"));
+const FridgeTemps = lazy(() => import("@/components/forms/FridgeTemps"));
+const FoodIntake = lazy(() => import("@/components/forms/FoodIntake"));
+const DisinfectionRecord = lazy(() => import("@/components/forms/DisinfectionRecord"));
+const VitalSigns = lazy(() => import("@/components/forms/VitalSigns"));
+const MedicationList = lazy(() => import("@/components/forms/MedicationList"));
+const MedicationAdmin = lazy(() => import("@/components/forms/MedicationAdmin"));
+const TherapyRecords = lazy(() => import("@/components/forms/TherapyRecords"));
+const IncidentReport = lazy(() => import("@/components/forms/IncidentReport"));
+const MedicalAppointments = lazy(() => import("@/components/forms/MedicalAppointments"));
+const TrainingRecord = lazy(() => import("@/components/forms/TrainingRecord"));
+const PerformanceEval = lazy(() => import("@/components/forms/PerformanceEval"));
+const PQRSFRecord = lazy(() => import("@/components/forms/PQRSFRecord"));
+const HygieneKit = lazy(() => import("@/components/forms/HygieneKit"));
+const RoomAssignment = lazy(() => import("@/components/RoomAssignment"));
+const DocumentManager = lazy(() => import("@/components/DocumentManager"));
+const LogoSettings = lazy(() => import("@/components/LogoSettings"));
+const TrainingModule = lazy(() => import("@/components/TrainingModule"));
+const NursingNotes = lazy(() => import("@/components/NursingNotes"));
+const NursingReport = lazy(() => import("@/components/NursingReport"));
+const IndicatorsDashboard = lazy(() => import("@/components/IndicatorsDashboard"));
+const BillingModule = lazy(() => import("@/components/BillingModule"));
+const CarePlanGenerator = lazy(() => import("@/components/CarePlanGenerator"));
+const FinanceModule = lazy(() => import("@/components/FinanceModule"));
+const BlogModule = lazy(() => import("@/components/BlogModule"));
+const SocialMediaModule = lazy(() => import("@/components/SocialMediaModule"));
+const AuditReport = lazy(() => import("@/components/AuditReport"));
+const ResidentTimeline = lazy(() => import("@/components/ResidentTimeline"));
+const InstitutionModule = lazy(() => import("@/components/InstitutionModule"));
+const UnifiedKitchen = lazy(() => import("@/components/forms/UnifiedKitchen"));
+const PsychosocialRecord = lazy(() => import("@/components/forms/PsychosocialRecord"));
+const SpiritualRecord = lazy(() => import("@/components/forms/SpiritualRecord"));
+const TherapySessionForm = lazy(() => import("@/components/forms/TherapySessionForm"));
+const WasteManagement = lazy(() => import("@/components/forms/WasteManagement"));
+const PestControl = lazy(() => import("@/components/forms/PestControl"));
+const HazardousWaste = lazy(() => import("@/components/forms/HazardousWaste"));
+const SanitationRecord = lazy(() => import("@/components/forms/SanitationRecord"));
+const EmergencyPlan = lazy(() => import("@/components/forms/EmergencyPlan"));
+const ManagerialDashboard = lazy(() => import("@/components/forms/ManagerialDashboard"));
+const PaymentVoucher = lazy(() => import("@/components/forms/PaymentVoucher"));
 
 const MODULE_INFO: Record<string, { title: string; subtitle: string; icon: LucideIcon; forms: { id: string; label: string }[] }> = {
   '3': { title: '3. Alimentación', subtitle: 'Nutrición y cocina', icon: Utensils, forms: [
@@ -148,6 +151,12 @@ const FORM_COMPONENTS: Record<string, React.FC<{ onBack: () => void }>> = {
   'HB-G01': WasteManagement, 'HB-G02': PestControl, 'HB-G03': HazardousWaste,
   'HB-G04': SanitationRecord, 'HB-G05': EmergencyPlan, 'HB-G06': ManagerialDashboard,
 };
+
+const ScreenLoader = () => (
+  <div className="flex justify-center py-16" role="status" aria-label="Cargando">
+    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -253,7 +262,7 @@ const Index = () => {
 
   return (
     <AppLayout activeModule={view} onModuleChange={setView}>
-      {renderContent()}
+      <Suspense fallback={<ScreenLoader />}>{renderContent()}</Suspense>
     </AppLayout>
   );
 };
