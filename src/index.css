@@ -175,4 +175,14 @@
   .safe-top {
     padding-top: env(safe-area-inset-top, 0px);
   }
+
+  /* Notas de enfermería: barra de guardar sobre la navegación móvil */
+  .above-mobile-nav {
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+  }
+  @media (min-width: 1024px) {
+    .above-mobile-nav {
+      bottom: 0;
+    }
+  }
 }
