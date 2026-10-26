@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePermissions, ROLE_LABELS } from "@/hooks/usePermissions";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import InstallAppButton from "@/components/InstallAppButton";
+import NotificationBell from "@/components/NotificationBell";
 import logo from "@/assets/logo.png";
 import {
   Users, ClipboardList, Utensils, Heart, Activity,
@@ -178,6 +179,7 @@ const AppLayout = ({ children, activeModule, onModuleChange }: AppLayoutProps) =
           </button>
           <div className="flex items-center gap-2 text-xs ml-auto">
             <InstallAppButton />
+            <NotificationBell />
             <span
               className={`w-2 h-2 rounded-full ${online ? 'bg-cat-nutritional' : 'bg-destructive animate-pulse'}`}
               aria-hidden
