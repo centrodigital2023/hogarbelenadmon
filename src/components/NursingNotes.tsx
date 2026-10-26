@@ -3,14 +3,14 @@ import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { useDictation } from "@/hooks/useDictation";
 import { ROLE_LABELS } from "@/hooks/usePermissions";
 import FormHeader from "@/components/FormHeader";
 import ExportButtons from "@/components/ExportButtons";
 import ShareButtons from "@/components/ShareButtons";
 import SignaturePad from "@/components/SignaturePad";
+import DictationTextarea from "@/components/DictationTextarea";
 import {
-  Sparkles, Loader2, Save, Calendar, ChevronDown, ChevronUp, Search, Check, AlertTriangle, Mic, MicOff,
+  Sparkles, Loader2, Save, Calendar, ChevronDown, ChevronUp, Search, Check, AlertTriangle,
   Wand2, Undo2, Eye, Pencil, Minus, Plus, X, Users, User, Heart, Activity, MessageSquareText, FileText,
   ArrowRight, Copy, ShieldAlert, Utensils,
 } from "lucide-react";
@@ -198,8 +198,6 @@ const NursingNotes = ({ onBack }: Props) => {
     set('observations', appendPhrase(entry.observations, text));
     if (warning) setWarnings(prev => prev.includes(warning) ? prev : [...prev, warning]);
   };
-
-  const dictation = useDictation(text => setEntry(prev => ({ ...prev, observations: appendPhrase(prev.observations, text) })));
 
   const replaceNote = (text: string, source: "ai" | "quick") => {
     if (note.trim()) setPreviousNote(note);
@@ -522,18 +520,8 @@ const NursingNotes = ({ onBack }: Props) => {
                     </div>
                   ))}
                 </div>
-                <div className="relative">
-                  <textarea value={entry.observations} onChange={e => set('observations', e.target.value)} rows={4}
-                    placeholder="Escribe o dicta lo que pasó en el turno..."
-                    className="w-full rounded-xl border border-input bg-background px-4 py-3 pr-14 text-sm" />
-                  {dictation.supported && (
-                    <button onClick={dictation.toggle} aria-label={dictation.listening ? "Detener dictado" : "Dictar"}
-                      className={`absolute right-2 top-2 flex h-10 w-10 items-center justify-center rounded-full transition ${dictation.listening ? "bg-destructive text-white animate-pulse" : "bg-primary/10 text-primary"}`}>
-                      {dictation.listening ? <MicOff size={18} /> : <Mic size={18} />}
-                    </button>
-                  )}
-                </div>
-                {dictation.listening && <p className="mt-1 text-xs font-bold text-destructive">🎙️ Escuchando... habla con naturalidad.</p>}
+                <DictationTextarea value={entry.observations} onChange={v => set('observations', v)} minRows={4}
+                  join={appendPhrase} placeholder="Escribe o toca Dictar y cuenta lo que pasó en el turno..." />
                 {warnings.map(w => (
                   <p key={w} className="mt-2 flex items-center gap-2 rounded-lg bg-destructive/10 p-2 text-xs font-bold text-destructive">
                     <AlertTriangle size={14} /> {w}

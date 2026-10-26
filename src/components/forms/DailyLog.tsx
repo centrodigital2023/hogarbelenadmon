@@ -8,11 +8,13 @@ import ExportButtons from "@/components/ExportButtons";
 import ShareButtons from "@/components/ShareButtons";
 import SmartReportSection from "@/components/SmartReportSection";
 import SignaturePad from "@/components/SignaturePad";
+import DictationTextarea from "@/components/DictationTextarea";
 import { Sparkles, History, Loader2, AlertTriangle, User, FileText, Send } from "lucide-react";
 import FormHistory from "@/components/FormHistory";
 import type { HistoryColumn } from "@/components/FormHistory";
 import { errorMessage } from "@/lib/errors";
 import { isVitalAbnormal, vitalIssues } from "@/lib/vital-signs";
+import { appendPhrase } from "@/lib/nursing-notes";
 
 interface Props { onBack: () => void; }
 interface Resident { id: string; full_name: string; }
@@ -25,6 +27,16 @@ const SHIFTS = [
   { value: 'noche', label: 'Noche (18-7)' },
 ];
 const RESPONSIBLE_ROLES = ['Auxiliar de Enfermería', 'Cuidadora de Turno'];
+const VITAL_NOTE_PHRASES = ['Toma en reposo.', 'Se repite la toma para confirmar.', 'Se informa al médico tratante.'];
+const NEWS_PHRASES = [
+  { label: 'Sin novedades', text: 'Turno sin novedades, residente estable.' },
+  { label: 'Durmió bien', text: 'Descansó y durmió tranquilo.' },
+  { label: 'Comió completo', text: 'Consume la totalidad de sus alimentos.' },
+  { label: 'Medicación OK', text: 'Recibe medicación formulada sin novedad.' },
+  { label: 'Refiere dolor', text: 'Refiere dolor; se valora y se informa al profesional a cargo.' },
+  { label: 'Visita familiar', text: 'Recibe visita familiar.' },
+];
+const phraseChip = 'shrink-0 min-h-[36px] rounded-full border border-border px-3 text-xs font-bold text-foreground transition hover:border-primary hover:bg-primary/5 active:scale-95 disabled:border-emerald-300 disabled:bg-emerald-50 disabled:text-emerald-700';
 
 interface EntryData {
   nutrition_pct: number;
@@ -315,7 +327,7 @@ const DailyLog = ({ onBack }: Props) => {
 
                 {/* Vital signs row */}
                 <p className="text-[10px] font-bold text-primary uppercase mb-1">Signos Vitales</p>
-                <div className="grid grid-cols-3 sm:grid-cols-7 gap-2 mb-3">
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-3">
                   {[
                     { key: 'blood_pressure', label: 'T.A.', type: 'text', placeholder: '120/80' },
                     { key: 'spo2', label: 'SpO2 %', type: 'number', placeholder: '%' },
@@ -323,7 +335,6 @@ const DailyLog = ({ onBack }: Props) => {
                     { key: 'glucose', label: 'Glucemia', type: 'number', placeholder: 'mg/dl' },
                     { key: 'heart_rate', label: 'FC', type: 'number', placeholder: 'bpm' },
                     { key: 'weight', label: 'Peso kg', type: 'number', placeholder: 'kg' },
-                    { key: 'vital_notes', label: 'Notas SV', type: 'text', placeholder: '...' },
                   ].map(f => (
                     <div key={f.key}>
                       <label className="text-[9px] font-bold text-muted-foreground uppercase">{f.label}</label>
@@ -339,7 +350,7 @@ const DailyLog = ({ onBack }: Props) => {
 
                 {/* Bienestar row */}
                 <p className="text-[10px] font-bold text-accent-foreground uppercase mb-1">Bienestar</p>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                   <div>
                     <label className="text-[9px] font-bold text-muted-foreground uppercase">Nutrición %</label>
                     <select value={e.nutrition_pct} onChange={ev => updateEntry(r.id, 'nutrition_pct', Number(ev.target.value))}
@@ -369,11 +380,35 @@ const DailyLog = ({ onBack }: Props) => {
                       {MOODS.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                   </div>
+                </div>
+
+                {/* Notas amplias con dictado por voz */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[9px] font-bold text-muted-foreground uppercase">Novedades</label>
-                    <input type="text" value={e.observations}
-                      onChange={ev => updateEntry(r.id, 'observations', ev.target.value)}
-                      className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm" placeholder="..." />
+                    <DictationTextarea label="Notas de signos vitales" value={e.vital_notes} minRows={3}
+                      onChange={v => updateEntry(r.id, 'vital_notes', v)}
+                      placeholder="Ej.: toma en reposo, brazo izquierdo. Escribe o toca Dictar." />
+                    <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+                      {VITAL_NOTE_PHRASES.map(p => (
+                        <button key={p} type="button" className={phraseChip} disabled={e.vital_notes.includes(p)}
+                          onClick={() => updateEntry(r.id, 'vital_notes', appendPhrase(e.vital_notes, p))}>
+                          {e.vital_notes.includes(p) ? '✓ ' : '+ '}{p.replace(/\.$/, '')}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <DictationTextarea label="Novedades del turno" value={e.observations} minRows={4}
+                      onChange={v => updateEntry(r.id, 'observations', v)}
+                      placeholder="Cuenta cómo estuvo el residente. Escribe o toca Dictar y habla con naturalidad." />
+                    <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+                      {NEWS_PHRASES.map(p => (
+                        <button key={p.label} type="button" className={phraseChip} disabled={e.observations.includes(p.text)}
+                          onClick={() => updateEntry(r.id, 'observations', appendPhrase(e.observations, p.text))}>
+                          {e.observations.includes(p.text) ? '✓ ' : '+ '}{p.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -393,7 +428,7 @@ const DailyLog = ({ onBack }: Props) => {
               {generatingAI ? 'Generando...' : 'Generar Nota'}
             </button>
           </div>
-          <textarea value={aiNote} onChange={e => setAiNote(e.target.value)} rows={5}
+          <textarea value={aiNote} onChange={e => setAiNote(e.target.value)} rows={8}
             className="w-full px-4 py-3 rounded-xl border border-input bg-background text-sm resize-none"
             placeholder="La nota se generará automáticamente con IA a partir de los registros del turno..." />
         </div>
