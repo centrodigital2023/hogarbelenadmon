@@ -7,18 +7,19 @@ interface FormHeaderProps {
 }
 
 const FormHeader = ({ title, subtitle, onBack }: FormHeaderProps) => (
-  <div className="flex items-center justify-between mb-6">
-    <div>
-      <h2 className="text-2xl font-black text-foreground">{title}</h2>
-      <p className="text-sm text-muted-foreground">{subtitle}</p>
-    </div>
+  <div className="mb-6 flex items-start gap-3">
     <button
       onClick={onBack}
-      className="flex items-center gap-2 bg-secondary text-secondary-foreground px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-primary hover:text-primary-foreground transition-colors min-h-[48px]"
+      aria-label="Volver"
+      className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center gap-2 rounded-xl bg-secondary text-xs font-bold uppercase tracking-widest text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground sm:order-last sm:ml-auto sm:min-h-[48px] sm:px-5"
     >
-      <ArrowLeft size={16} />
-      Volver
+      <ArrowLeft size={18} />
+      <span className="hidden sm:inline">Volver</span>
     </button>
+    <div className="min-w-0">
+      <h2 className="text-xl font-black leading-tight text-foreground sm:text-2xl">{title}</h2>
+      <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>
+    </div>
   </div>
 );
 

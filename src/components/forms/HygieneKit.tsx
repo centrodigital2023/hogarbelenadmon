@@ -1,14 +1,17 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useActiveResidents } from "@/hooks/useActiveResidents";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
 import ExportButtons from "@/components/ExportButtons";
 import ShareButtons from "@/components/ShareButtons";
-import { Package, History } from "lucide-react";
+import { Section, Field, ResidentSelect, Notice, ProgressLine, inputCls } from "@/components/forms/ui";
+import { Check, Minus, Package, Plus } from "lucide-react";
 import type { Row } from "@/integrations/supabase/tables";
 import type { Json } from "@/integrations/supabase/types";
+import { todayLocal, daysBetween, relativeDay } from "@/lib/form-helpers";
 
 interface Props { onBack: () => void; }
 
@@ -29,138 +32,154 @@ const KIT_ITEMS = [
   { key: 'crema_antipañalitis', label: 'Crema antipañalitis', unit: 'und' },
 ];
 
-interface Resident { id: string; full_name: string; }
+type KitItem = { checked: boolean; qty: number; obs: string };
+type KitItems = Record<string, KitItem>;
+
+const emptyItems = (): KitItems => Object.fromEntries(KIT_ITEMS.map(i => [i.key, { checked: false, qty: 1, obs: '' }]));
 
 const HygieneKit = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
-  const [residents, setResidents] = useState<Resident[]>([]);
-  const [selectedResident, setSelectedResident] = useState("");
-  const [kitDate, setKitDate] = useState(new Date().toISOString().split('T')[0]);
-  const [items, setItems] = useState<Record<string, { checked: boolean; qty: number; obs: string }>>({});
+  const { residents, loading } = useActiveResidents();
+  const [residentId, setResidentId] = useState("");
+  const [kitDate, setKitDate] = useState(todayLocal());
+  const [items, setItems] = useState<KitItems>(emptyItems);
   const [observations, setObservations] = useState("");
   const [saving, setSaving] = useState(false);
   const [history, setHistory] = useState<Row<"hygiene_kits">[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
-    supabase.from('residents').select('id, full_name').in('status', ['prueba', 'permanente'])
-      .order('full_name').then(({ data }) => { if (data) setResidents(data); });
-  }, []);
-
-  useEffect(() => {
-    if (!selectedResident) return;
-    const init: Record<string, { checked: boolean; qty: number; obs: string }> = {};
-    KIT_ITEMS.forEach(i => { init[i.key] = { checked: false, qty: 1, obs: '' }; });
-    setItems(init);
-    supabase.from('hygiene_kits').select('*').eq('resident_id', selectedResident)
+    setItems(emptyItems());
+    setObservations('');
+    if (!residentId) { setHistory([]); return; }
+    supabase.from('hygiene_kits').select('*').eq('resident_id', residentId)
       .order('kit_date', { ascending: false }).limit(12)
-      .then(({ data }) => { if (data) setHistory(data); });
-  }, [selectedResident]);
+      .then(({ data }) => setHistory(data ?? []));
+  }, [residentId]);
 
-  const updateItem = (key: string, field: string, value: string | number | boolean) => {
-    setItems(prev => ({ ...prev, [key]: { ...prev[key], [field]: value } }));
-  };
+  const last = history[0];
+  const lastItems = (last?.items ?? {}) as Record<string, Partial<KitItem>>;
+  const daysSinceLast = last?.kit_date ? daysBetween(last.kit_date, todayLocal()) : null;
 
-  const checkedCount = Object.values(items).filter(i => i.checked).length;
-  const residentName = residents.find(r => r.id === selectedResident)?.full_name || '';
+  const updateItem = (key: string, patch: Partial<KitItem>) => setItems(prev => ({ ...prev, [key]: { ...prev[key], ...patch } }));
+
+  // Same articles and quantities as last month, ready to adjust
+  const repeatLast = () => setItems(Object.fromEntries(KIT_ITEMS.map(i => {
+    const prev = lastItems[i.key];
+    return [i.key, { checked: !!prev?.checked, qty: prev?.qty || 1, obs: '' }];
+  })));
+
+  const checked = KIT_ITEMS.filter(i => items[i.key]?.checked);
+  const residentName = residents.find(r => r.id === residentId)?.full_name || '';
+  const missing = [...(residentId ? [] : ['residente']), ...(residentId && !checked.length ? ['artículos entregados'] : [])];
 
   const handleSave = async () => {
-    if (!selectedResident || !user) return;
+    if (!residentId || !user || missing.length) return;
     setSaving(true);
+    const delivered = Object.fromEntries(checked.map(i => [i.key, items[i.key]]));
     const { error } = await supabase.from('hygiene_kits').insert({
-      resident_id: selectedResident, created_by: user.id, kit_date: kitDate, items: items as unknown as Json, observations,
+      resident_id: residentId, created_by: user.id, kit_date: kitDate, items: delivered as unknown as Json, observations: observations.trim() || null,
     });
-    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-    else toast({ title: "Kit guardado", description: `${checkedCount} artículos entregados` });
+    if (error) toast({ title: "No se pudo guardar", description: error.message, variant: "destructive" });
+    else {
+      toast({ title: "Kit entregado ✅", description: `${residentName}: ${checked.length} artículos` });
+      setResidentId('');
+    }
     setSaving(false);
   };
 
+  const summary = `Kit de aseo — ${residentName} — ${kitDate}\n${checked.map(i => `• ${i.label}: ${items[i.key].qty} ${i.unit}${items[i.key].obs ? ` (${items[i.key].obs})` : ''}`).join('\n')}`;
+
   return (
     <div className="animate-fade-in">
-      <FormHeader title="Kit de Aseo Mensual" subtitle="Control de entrega de artículos de higiene personal" onBack={onBack} />
+      <FormHeader title="Kit de Aseo Mensual" subtitle="Entrega de artículos de higiene personal" onBack={onBack} />
       <div ref={contentRef}>
-        <div className="bg-card border border-border rounded-2xl p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Residente</label>
-              <select value={selectedResident} onChange={e => setSelectedResident(e.target.value)}
-                className="mt-2 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm">
-                <option value="">-- Seleccionar --</option>
-                {residents.map(r => <option key={r.id} value={r.id}>{r.full_name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Fecha de entrega</label>
-              <input type="date" value={kitDate} onChange={e => setKitDate(e.target.value)}
-                className="mt-2 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm" />
-            </div>
+        <Section>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Residente" required>
+              <ResidentSelect residents={residents} loading={loading} value={residentId} onChange={setResidentId} />
+            </Field>
+            <Field label="Fecha de entrega">
+              <input type="date" value={kitDate} max={todayLocal()} onChange={e => setKitDate(e.target.value)} className={inputCls} />
+            </Field>
           </div>
-        </div>
-        {selectedResident && (
-          <>
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm font-bold text-foreground">{checkedCount}/{KIT_ITEMS.length} artículos marcados</p>
-              <button onClick={() => setShowHistory(!showHistory)} className="flex items-center gap-1 text-xs font-bold text-primary hover:underline">
-                <History size={14} /> {showHistory ? 'Ocultar' : 'Ver'} historial
-              </button>
+          {residentId && (
+            <div className="mt-3">
+              {last?.kit_date ? (
+                <Notice tone={daysSinceLast !== null && daysSinceLast < 25 ? 'warning' : 'info'}>
+                  Última entrega {relativeDay(last.kit_date)} ({last.kit_date}).
+                  {daysSinceLast !== null && daysSinceLast < 25 ? ' Aún no se cumple el mes: confirme que se necesita.' : ''}
+                  <button type="button" onClick={repeatLast} className="ml-2 font-bold text-primary underline">Repetir lo de esa vez</button>
+                </Notice>
+              ) : <Notice>Primera entrega registrada para este residente.</Notice>}
             </div>
-            {showHistory && history.length > 0 && (
-              <div className="bg-muted/50 rounded-2xl p-4 mb-6">
-                <h4 className="text-xs font-bold text-muted-foreground uppercase mb-3">Últimas entregas</h4>
-                <div className="space-y-2">
+          )}
+        </Section>
+
+        {residentId && (
+          <>
+            <Section title="Artículos" icon={Package}
+              actions={<button type="button" onClick={() => setItems(prev => Object.fromEntries(KIT_ITEMS.map(i => [i.key, { ...prev[i.key], checked: true }])))}
+                className="min-h-[36px] rounded-xl bg-muted px-3 text-xs font-bold hover:bg-accent">Kit completo</button>}>
+              <div className="mb-3"><ProgressLine done={checked.length} total={KIT_ITEMS.length} label="artículos" /></div>
+              <div className="space-y-2">
+                {KIT_ITEMS.map(item => {
+                  const it = items[item.key];
+                  return (
+                    <div key={item.key} className={`rounded-xl border-2 p-2 transition ${it?.checked ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-border'}`}>
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={() => updateItem(item.key, { checked: !it?.checked })} aria-pressed={it?.checked}
+                          className="flex min-h-[44px] flex-1 items-center gap-3 text-left">
+                          <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 ${it?.checked ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-input'}`}>
+                            {it?.checked && <Check size={16} strokeWidth={3} />}
+                          </span>
+                          <span className="text-sm font-medium">{item.label}</span>
+                        </button>
+                        {it?.checked && (
+                          <div className="flex items-center gap-1">
+                            <button type="button" aria-label="Menos" onClick={() => updateItem(item.key, { qty: Math.max(1, it.qty - 1) })} className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted"><Minus size={14} /></button>
+                            <span className="w-12 text-center text-sm font-black">{it.qty} <span className="text-[10px] font-medium text-muted-foreground">{item.unit}</span></span>
+                            <button type="button" aria-label="Más" onClick={() => updateItem(item.key, { qty: Math.min(99, it.qty + 1) })} className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Plus size={14} /></button>
+                          </div>
+                        )}
+                      </div>
+                      {it?.checked && (
+                        <input placeholder="Observación (opcional)" value={it.obs} onChange={e => updateItem(item.key, { obs: e.target.value })} className={`${inputCls} mt-1`} />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </Section>
+            <Section>
+              <Field label="Observaciones generales">
+                <textarea value={observations} onChange={e => setObservations(e.target.value)} rows={2} className={`${inputCls} resize-none`} placeholder="Ej.: la familia trae el shampoo" />
+              </Field>
+            </Section>
+            {history.length > 1 && (
+              <details className="mb-5">
+                <summary className="cursor-pointer text-sm font-bold text-foreground">Entregas anteriores ({history.length})</summary>
+                <div className="mt-2 space-y-1">
                   {history.map(h => (
-                    <div key={h.id} className="flex items-center justify-between bg-card rounded-xl px-4 py-2 text-xs">
+                    <div key={h.id} className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-2 text-xs">
                       <span className="font-medium">{h.kit_date}</span>
                       <span className="text-muted-foreground">{Object.values((h.items ?? {}) as Record<string, { checked?: boolean }>).filter(i => i.checked).length} artículos</span>
                     </div>
                   ))}
                 </div>
-              </div>
+              </details>
             )}
-            <div className="bg-card border border-border rounded-2xl p-6 mb-6">
-              <h3 className="text-sm font-black text-foreground mb-4 flex items-center gap-2">
-                <Package size={16} className="text-primary" /> Artículos del Kit
-              </h3>
-              <div className="space-y-3">
-                {KIT_ITEMS.map((item) => (
-                  <div key={item.key} className={`grid grid-cols-12 gap-3 items-center p-3 rounded-xl border-2 transition-all ${items[item.key]?.checked ? 'border-primary/30 bg-primary/5' : 'border-border'}`}>
-                    <div className="col-span-1 flex items-center">
-                      <input type="checkbox" checked={items[item.key]?.checked || false}
-                        onChange={e => updateItem(item.key, 'checked', e.target.checked)} className="w-5 h-5 rounded border-2 border-input accent-primary" />
-                    </div>
-                    <div className="col-span-4"><span className="text-sm font-medium">{item.label}</span></div>
-                    <div className="col-span-2">
-                      <input type="number" min={0} max={99} value={items[item.key]?.qty || 1}
-                        onChange={e => updateItem(item.key, 'qty', parseInt(e.target.value) || 0)}
-                        className="w-full px-2 py-1.5 rounded-lg border border-input bg-background text-sm text-center" />
-                      <span className="text-[10px] text-muted-foreground block text-center">{item.unit}</span>
-                    </div>
-                    <div className="col-span-5">
-                      <input type="text" placeholder="Observación..." value={items[item.key]?.obs || ''}
-                        onChange={e => updateItem(item.key, 'obs', e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-lg border border-input bg-background text-sm" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="bg-card border border-border rounded-2xl p-6 mb-6">
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Observaciones generales</label>
-              <textarea value={observations} onChange={e => setObservations(e.target.value)} rows={3}
-                className="mt-2 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm resize-none" placeholder="Notas sobre la entrega del kit..." />
-            </div>
           </>
         )}
       </div>
-      {selectedResident && (
-        <div className="flex flex-wrap items-center gap-3 mb-4">
-          <ExportButtons contentRef={contentRef} title={`Kit Aseo ${residentName}`} fileName={`kit_aseo_${residentName}_${kitDate}`} textContent={`Kit de Aseo - ${residentName} - ${kitDate}\n${checkedCount} artículos entregados`} />
-          <ShareButtons title={`Kit Aseo ${residentName}`} text={`Kit de Aseo - ${residentName} - ${kitDate}\n${checkedCount} artículos entregados`} />
+      {residentId && (
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <ExportButtons contentRef={contentRef} title={`Kit Aseo ${residentName}`} fileName={`kit_aseo_${residentName}_${kitDate}`} textContent={summary} />
+          <ShareButtons title={`Kit Aseo ${residentName}`} text={summary} />
         </div>
       )}
-      <ActionButtons onFinish={handleSave} disabled={saving || !selectedResident} />
+      <ActionButtons onFinish={handleSave} saving={saving} missing={missing} label="Registrar entrega" />
     </div>
   );
 };

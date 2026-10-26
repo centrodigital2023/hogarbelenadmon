@@ -1,4 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useActiveResidents } from "@/hooks/useActiveResidents";
+import { useFormDraft } from "@/hooks/useFormDraft";
+import DraftNotice from "@/components/DraftNotice";
+import VitalInputs, { emptyVitals, hasVitals, vitalColumns, vitalTypos, type VitalValues } from "@/components/forms/VitalInputs";
+import { ChoiceChips } from "@/components/forms/ui";
+import { todayLocal, shiftForHour, numberOrNull } from "@/lib/form-helpers";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -9,15 +15,14 @@ import ShareButtons from "@/components/ShareButtons";
 import SmartReportSection from "@/components/SmartReportSection";
 import SignaturePad from "@/components/SignaturePad";
 import DictationTextarea from "@/components/DictationTextarea";
-import { Sparkles, History, Loader2, AlertTriangle, User, FileText, Send } from "lucide-react";
+import { Sparkles, Loader2, AlertTriangle, User, FileText, CheckCircle2, Minus, Plus } from "lucide-react";
 import FormHistory from "@/components/FormHistory";
 import type { HistoryColumn } from "@/components/FormHistory";
 import { errorMessage } from "@/lib/errors";
-import { isVitalAbnormal, vitalIssues } from "@/lib/vital-signs";
+import { vitalIssues } from "@/lib/vital-signs";
 import { appendPhrase } from "@/lib/nursing-notes";
 
 interface Props { onBack: () => void; }
-interface Resident { id: string; full_name: string; }
 
 const MOODS = ['😊 Alegre', '😌 Tranquilo', '😰 Ansioso', '😢 Triste', '😤 Agitado', '😶 Apático'];
 const ELIMINATIONS = ['Continente', 'Incontinente', 'Estreñimiento', 'Normal', 'Diarrea'];
@@ -26,6 +31,7 @@ const SHIFTS = [
   { value: 'tarde', label: 'Tarde (12-18)' },
   { value: 'noche', label: 'Noche (18-7)' },
 ];
+const NUTRITION_OPTIONS = ['0', '25', '50', '75', '100'].map(v => ({ value: v, label: `${v}%` }));
 const RESPONSIBLE_ROLES = ['Auxiliar de Enfermería', 'Cuidadora de Turno'];
 const VITAL_NOTE_PHRASES = ['Toma en reposo.', 'Se repite la toma para confirmar.', 'Se informa al médico tratante.'];
 const NEWS_PHRASES = [
@@ -38,34 +44,43 @@ const NEWS_PHRASES = [
 ];
 const phraseChip = 'shrink-0 min-h-[36px] rounded-full border border-border px-3 text-xs font-bold text-foreground transition hover:border-primary hover:bg-primary/5 active:scale-95 disabled:border-emerald-300 disabled:bg-emerald-50 disabled:text-emerald-700';
 
-interface EntryData {
-  nutrition_pct: number;
-  hydration_glasses: number;
+interface EntryData extends VitalValues {
+  /** '' until someone chooses a percentage, so an untouched box is not saved as "ate 0 %". */
+  nutrition_pct: string;
+  hydration_glasses: string;
   elimination: string;
   mood: string;
   observations: string;
-  blood_pressure: string;
-  spo2: number;
-  temperature: number;
-  glucose: number;
-  heart_rate: number;
-  weight: number;
   vital_notes: string;
 }
 
-const emptyEntry: EntryData = {
-  nutrition_pct: 0, hydration_glasses: 0, elimination: '', mood: '', observations: '',
-  blood_pressure: '', spo2: 0, temperature: 0, glucose: 0, heart_rate: 0, weight: 0, vital_notes: '',
-};
+const newEntry = (): EntryData => ({
+  ...emptyVitals(), nutrition_pct: '', hydration_glasses: '', elimination: '', mood: '', observations: '', vital_notes: '',
+});
+
+const entryHasData = (e?: EntryData) => !!e && (hasVitals(e) ||
+  [e.nutrition_pct, e.hydration_glasses, e.elimination, e.mood, e.observations, e.vital_notes].some(v => v.trim() !== ''));
+
+/** Values for the ai-nursing-notes function: numbers or null, never empty strings. */
+const toLive = (e: EntryData) => ({
+  ...vitalColumns(e), vital_notes: e.vital_notes, observations: e.observations, mood: e.mood, elimination: e.elimination,
+  nutrition_pct: numberOrNull(e.nutrition_pct), hydration_glasses: numberOrNull(e.hydration_glasses),
+});
+
+interface LogDraft { logDate: string; shift: string; entries: Record<string, EntryData> }
+const newDraft = (): LogDraft => ({ logDate: todayLocal(), shift: shiftForHour(new Date().getHours()), entries: {} });
 
 const DailyLog = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
-  const [residents, setResidents] = useState<Resident[]>([]);
-  const [shift, setShift] = useState('mañana');
-  const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
-  const [entries, setEntries] = useState<Record<string, EntryData>>({});
+  const { residents } = useActiveResidents();
+  const [form, setForm] = useState<LogDraft>(newDraft);
+  const { logDate, shift, entries } = form;
+  const setShift = (v: string) => setForm(f => ({ ...f, shift: v }));
+  const setLogDate = (v: string) => setForm(f => ({ ...f, logDate: v }));
+  const draft = useFormDraft('bitacora', form, setForm, d => !Object.values(d.entries).some(entryHasData));
+  const [loggedThisShift, setLoggedThisShift] = useState<Set<string>>(new Set());
   const [responsibleName, setResponsibleName] = useState('');
   const [responsibleRole, setResponsibleRole] = useState(RESPONSIBLE_ROLES[0]);
   const [responsibleManual, setResponsibleManual] = useState(false);
@@ -82,11 +97,12 @@ const DailyLog = ({ onBack }: Props) => {
   const [generatingSingle, setGeneratingSingle] = useState(false);
   const singleReportRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    supabase.from('residents').select('id, full_name')
-      .in('status', ['prueba', 'permanente']).order('full_name')
-      .then(({ data }) => { if (data) setResidents(data); });
+  // Residents already logged in this shift, so the team sees who is still pending
+  const loadLogged = useCallback(async (date: string, s: string) => {
+    const { data } = await supabase.from('daily_logs').select('resident_id').eq('log_date', date).eq('shift', s);
+    setLoggedThisShift(new Set((data ?? []).map(r => r.resident_id)));
   }, []);
+  useEffect(() => { loadLogged(logDate, shift); }, [logDate, shift, loadLogged]);
 
   // Set responsible name from current user
   useEffect(() => {
@@ -96,15 +112,21 @@ const DailyLog = ({ onBack }: Props) => {
     }
   }, [user, responsibleManual]);
 
-  const updateEntry = (rid: string, field: string, val: string | number | boolean) => {
-    setEntries(prev => ({
-      ...prev,
-      [rid]: { ...(prev[rid] || { ...emptyEntry }), [field]: val },
-    }));
+  const updateEntry = (rid: string, field: keyof EntryData, val: string) => {
+    setForm(f => ({ ...f, entries: { ...f.entries, [rid]: { ...(f.entries[rid] ?? newEntry()), [field]: val } } }));
   };
 
+  const filled = Object.entries(entries).filter(([, e]) => entryHasData(e));
+  const typoNames = filled.filter(([, e]) => vitalTypos(e).length > 0)
+    .map(([rid]) => residents.find(r => r.id === rid)?.full_name.split(' ')[0] ?? 'residente');
+  const missing = [
+    ...(filled.length ? [] : ['datos de al menos un residente']),
+    ...(responsibleName.trim() ? [] : ['nombre del responsable']),
+    ...(typoNames.length ? [`revisar signos de ${typoNames.join(', ')}`] : []),
+  ];
+
   const handleGenerateAI = async () => {
-    if (!user || Object.keys(entries).length === 0) return;
+    if (!user) return;
     setGeneratingAI(true);
     try {
       const { data, error } = await supabase.functions.invoke('ai-nursing-notes', {
@@ -156,24 +178,31 @@ const DailyLog = ({ onBack }: Props) => {
     Eliminación: h.elimination, Ánimo: h.mood, Novedades: h.observations,
   });
 
-  // Save
+  // Save: only residents with something written; empty boxes are stored as NULL
   const handleSave = async () => {
-    if (!user) return;
+    if (!user || missing.length) return;
     setSaving(true);
-    const inserts = Object.entries(entries).map(([rid, e]) => ({
+    const inserts = filled.map(([rid, e]) => ({
       resident_id: rid, created_by: user.id, shift, log_date: logDate,
-      nutrition_pct: e.nutrition_pct, hydration_glasses: e.hydration_glasses,
-      elimination: e.elimination, mood: e.mood, observations: e.observations,
-      blood_pressure: e.blood_pressure || null, spo2: e.spo2 || null,
-      temperature: e.temperature || null, glucose: e.glucose || null,
-      heart_rate: e.heart_rate || null, weight: e.weight || null,
-      vital_notes: e.vital_notes || null, ai_nursing_note: aiNote || null,
-      responsible_name: responsibleName, responsible_role: responsibleRole,
+      ...vitalColumns(e),
+      nutrition_pct: numberOrNull(e.nutrition_pct), hydration_glasses: numberOrNull(e.hydration_glasses) ?? 0,
+      elimination: e.elimination || null, mood: e.mood || null, observations: e.observations.trim() || null,
+      vital_notes: e.vital_notes.trim() || null, ai_nursing_note: aiNote || null,
+      responsible_name: responsibleName.trim(), responsible_role: responsibleRole,
       signature: signatureData,
     }));
     const { error } = await supabase.from('daily_logs').insert(inserts);
-    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-    else toast({ title: "Bitácora guardada", description: `${inserts.length} registros del turno ${shift}` });
+    if (error) toast({ title: "No se pudo guardar", description: error.message, variant: "destructive" });
+    else {
+      const alerts = filled.filter(([, e]) => vitalIssues(e).length > 0).length;
+      toast({
+        title: "Bitácora guardada ✅",
+        description: `${inserts.length} residente${inserts.length > 1 ? 's' : ''} · turno ${shift}${alerts ? ` · ${alerts} con signos de alerta` : ''}`,
+      });
+      draft.clear();
+      setForm(f => ({ ...f, entries: {} }));
+      loadLogged(logDate, shift);
+    }
     setSaving(false);
   };
 
@@ -182,7 +211,7 @@ const DailyLog = ({ onBack }: Props) => {
     if (!selectedResident) return;
     setGeneratingSingle(true);
     try {
-      const liveEntry = entries[selectedResident];
+      const liveEntry = entries[selectedResident] ? toLive(entries[selectedResident]) : null;
       const { data, error } = await supabase.functions.invoke('ai-nursing-notes', {
         body: {
           residentId: selectedResident,
@@ -190,7 +219,7 @@ const DailyLog = ({ onBack }: Props) => {
           dateTo: logDate,
           shift,
           isConsolidated: false,
-          liveEntry: liveEntry || null,
+          liveEntry,
           responsibleName,
           responsibleRole,
         },
@@ -225,7 +254,7 @@ const DailyLog = ({ onBack }: Props) => {
 
   const getTextContent = () => {
     const lines = [`HB-F4: Bitácora Diaria - ${logDate} - Turno: ${shift}\nResponsable: ${responsibleName} (${responsibleRole})\n`];
-    Object.entries(entries).forEach(([rid, e]) => {
+    filled.forEach(([rid, e]) => {
       const r = residents.find(res => res.id === rid);
       lines.push(`${r?.full_name}: TA ${e.blood_pressure}, SpO2 ${e.spo2}%, Temp ${e.temperature}°C, Gluc ${e.glucose}, FC ${e.heart_rate}, Peso ${e.weight}kg | Nutrición ${e.nutrition_pct}%, Hidratación ${e.hydration_glasses} vasos, Eliminación: ${e.elimination}, Ánimo: ${e.mood}, Obs: ${e.observations}`);
     });
@@ -233,7 +262,7 @@ const DailyLog = ({ onBack }: Props) => {
     return lines.join('\n');
   };
 
-  const getTableData = () => Object.entries(entries).map(([rid, e]) => {
+  const getTableData = () => filled.map(([rid, e]) => {
     const r = residents.find(res => res.id === rid);
     return {
       Residente: r?.full_name || '', 'T.A.': e.blood_pressure, SpO2: e.spo2, 'Temp °C': e.temperature,
@@ -250,135 +279,113 @@ const DailyLog = ({ onBack }: Props) => {
       <FormHeader title="HB-F4: Bitácora Diaria" subtitle="Registro por turnos de indicadores de salud, bienestar y signos vitales" onBack={onBack} />
 
       <div ref={contentRef}>
+        <DraftNotice restoredAt={draft.restoredAt} onDiscard={() => { draft.clear(); setForm(newDraft()); }} />
         {/* Header: Fecha, Turno, Responsable */}
-        <div className="bg-card border border-border rounded-2xl p-6 mb-6">
-          <div className="flex flex-wrap gap-4 mb-4">
+        <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 mb-6">
+          <div className="grid gap-4 sm:grid-cols-[180px_1fr]">
             <div>
-              <label className="text-xs font-bold text-muted-foreground uppercase">Fecha</label>
-              <input type="date" value={logDate} onChange={e => setLogDate(e.target.value)}
-                className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm" />
+              <label className="text-[11px] font-bold text-muted-foreground uppercase">Fecha</label>
+              <input type="date" value={logDate} max={todayLocal()} onChange={e => setLogDate(e.target.value)}
+                className="mt-1 w-full min-h-[44px] px-3 rounded-xl border border-input bg-background text-base sm:text-sm" />
             </div>
             <div>
-              <label className="text-xs font-bold text-muted-foreground uppercase">Turno</label>
-              <select value={shift} onChange={e => setShift(e.target.value)}
-                className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm">
-                {SHIFTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </select>
-            </div>
-            <div className="flex items-end gap-2">
-              <FormHistory
-                tableName="daily_logs"
-                columns={historyColumns}
-                title="Historial Bitácora Diaria"
-                fileName="historial_bitacora"
-                days={180}
-                dateColumn="log_date"
-                selectClause="*, residents(full_name)"
-                editableFields={historyEditableFields}
-                exportTransform={historyExportTransform}
-              />
+              <span className="text-[11px] font-bold text-muted-foreground uppercase">Turno</span>
+              <ChoiceChips options={SHIFTS} value={shift} onChange={setShift} />
             </div>
           </div>
 
           {/* Responsible */}
-          <div className="border-t border-border pt-4">
+          <div className="border-t border-border pt-4 mt-4">
             <div className="flex items-center gap-2 mb-2">
               <User size={14} className="text-primary" />
-              <label className="text-xs font-bold text-muted-foreground uppercase">Responsable del Turno</label>
+              <span className="text-[11px] font-bold text-muted-foreground uppercase">Responsable del turno</span>
             </div>
-            <div className="flex flex-wrap gap-3 items-end">
-              <div>
-                <label className="text-[10px] text-muted-foreground">Rol</label>
-                <select value={responsibleRole} onChange={e => setResponsibleRole(e.target.value)}
-                  className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm">
-                  {RESPONSIBLE_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-[10px] text-muted-foreground flex items-center gap-1">
-                  <input type="checkbox" checked={responsibleManual} onChange={e => setResponsibleManual(e.target.checked)}
-                    className="rounded" />
-                  Ingresar manualmente
-                </label>
-              </div>
-              <div className="flex-1 min-w-[200px]">
-                <label className="text-[10px] text-muted-foreground">Nombre</label>
+            <div className="grid gap-3 sm:grid-cols-[220px_1fr]">
+              <select value={responsibleRole} onChange={e => setResponsibleRole(e.target.value)}
+                className="w-full min-h-[44px] px-3 rounded-xl border border-input bg-background text-base sm:text-sm">
+                {RESPONSIBLE_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+              <div className="flex gap-2">
                 <input type="text" value={responsibleName}
                   onChange={e => setResponsibleName(e.target.value)}
                   readOnly={!responsibleManual}
-                  className={`mt-1 w-full px-3 py-2 rounded-lg border border-input text-sm ${responsibleManual ? 'bg-background' : 'bg-muted'}`}
+                  className={`w-full min-h-[44px] px-3 rounded-xl border border-input text-base sm:text-sm ${responsibleManual ? 'bg-background' : 'bg-muted'}`}
                   placeholder="Nombre del responsable" />
+                <button type="button" onClick={() => setResponsibleManual(m => !m)}
+                  className="shrink-0 min-h-[44px] px-3 rounded-xl bg-muted text-xs font-bold text-foreground hover:bg-accent">
+                  {responsibleManual ? 'Usar mi nombre' : 'Cambiar'}
+                </button>
               </div>
             </div>
+          </div>
+
+          <div className="border-t border-border pt-3 mt-4 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-bold text-foreground">
+              {residents.filter(r => loggedThisShift.has(r.id)).length} de {residents.length} residentes ya registrados en este turno
+            </p>
+            <FormHistory
+              tableName="daily_logs"
+              columns={historyColumns}
+              title="Historial Bitácora Diaria"
+              fileName="historial_bitacora"
+              days={180}
+              dateColumn="log_date"
+              selectClause="*, residents(full_name)"
+              editableFields={historyEditableFields}
+              exportTransform={historyExportTransform}
+            />
           </div>
         </div>
 
         {/* Resident entries with vital signs */}
         <div className="space-y-4 mb-6">
           {residents.map(r => {
-            const e = entries[r.id] || { ...emptyEntry };
-            const hasAlert = vitalIssues(e).length > 0;
+            const e = entries[r.id] ?? newEntry();
+            const issues = vitalIssues(e);
+            const done = loggedThisShift.has(r.id);
             return (
-              <div key={r.id} className={`bg-card border-2 rounded-2xl p-5 ${hasAlert ? 'border-destructive/40' : 'border-border'}`}>
-                <div className="flex items-center justify-between mb-3">
+              <div key={r.id} className={`bg-card border-2 rounded-2xl p-4 sm:p-5 ${issues.length ? 'border-destructive/40' : entryHasData(e) ? 'border-primary/40' : 'border-border'}`}>
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                   <p className="text-sm font-black text-foreground">{r.full_name}</p>
-                  {hasAlert && <span className="flex items-center gap-1 text-xs font-bold text-destructive"><AlertTriangle size={14} /> Alerta</span>}
+                  <div className="flex items-center gap-2 text-xs font-bold">
+                    {done && <span className="flex items-center gap-1 text-emerald-700"><CheckCircle2 size={14} /> Ya registrado</span>}
+                    {issues.length > 0 && <span className="flex items-center gap-1 text-destructive"><AlertTriangle size={14} /> {issues.join(' · ')}</span>}
+                  </div>
                 </div>
 
-                {/* Vital signs row */}
-                <p className="text-[10px] font-bold text-primary uppercase mb-1">Signos Vitales</p>
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-3">
-                  {[
-                    { key: 'blood_pressure', label: 'T.A.', type: 'text', placeholder: '120/80' },
-                    { key: 'spo2', label: 'SpO2 %', type: 'number', placeholder: '%' },
-                    { key: 'temperature', label: 'Temp °C', type: 'number', placeholder: '36.5' },
-                    { key: 'glucose', label: 'Glucemia', type: 'number', placeholder: 'mg/dl' },
-                    { key: 'heart_rate', label: 'FC', type: 'number', placeholder: 'bpm' },
-                    { key: 'weight', label: 'Peso kg', type: 'number', placeholder: 'kg' },
-                  ].map(f => (
-                    <div key={f.key}>
-                      <label className="text-[9px] font-bold text-muted-foreground uppercase">{f.label}</label>
-                      <input type={f.type} value={e[f.key as keyof typeof e] || ''}
-                        onChange={ev => updateEntry(r.id, f.key, f.type === 'number' ? parseFloat(ev.target.value) || 0 : ev.target.value)}
-                        placeholder={f.placeholder}
-                        className={`mt-1 w-full px-2 py-2 rounded-lg border text-sm text-center ${
-                          f.type === 'number' && isVitalAbnormal(f.key, e[f.key as keyof typeof e]) ? 'border-destructive bg-destructive/5' : 'border-input bg-background'
-                        }`} />
+                <p className="text-[10px] font-bold text-primary uppercase mb-1">Signos vitales</p>
+                <div className="mb-4">
+                  <VitalInputs idPrefix={`log-${r.id}`} value={e} onChange={(k, v) => updateEntry(r.id, k, v)} />
+                </div>
+
+                <p className="text-[10px] font-bold text-primary uppercase mb-1">Bienestar</p>
+                <div className="grid gap-3 sm:grid-cols-2 mb-4">
+                  <div>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">¿Cuánto comió?</span>
+                    <ChoiceChips size="sm" options={NUTRITION_OPTIONS} value={e.nutrition_pct}
+                      onChange={v => updateEntry(r.id, 'nutrition_pct', e.nutrition_pct === v ? '' : v)} />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Hidratación (vasos)</span>
+                    <div className="mt-1 flex items-center gap-2">
+                      <button type="button" aria-label="Un vaso menos"
+                        onClick={() => updateEntry(r.id, 'hydration_glasses', String(Math.max(0, (numberOrNull(e.hydration_glasses) ?? 0) - 1)))}
+                        className="h-11 w-11 rounded-xl bg-muted flex items-center justify-center hover:bg-accent"><Minus size={16} /></button>
+                      <span className="w-10 text-center text-lg font-black">{e.hydration_glasses || '–'}</span>
+                      <button type="button" aria-label="Un vaso más"
+                        onClick={() => updateEntry(r.id, 'hydration_glasses', String(Math.min(20, (numberOrNull(e.hydration_glasses) ?? 0) + 1)))}
+                        className="h-11 w-11 rounded-xl bg-primary text-primary-foreground flex items-center justify-center"><Plus size={16} /></button>
                     </div>
-                  ))}
-                </div>
-
-                {/* Bienestar row */}
-                <p className="text-[10px] font-bold text-accent-foreground uppercase mb-1">Bienestar</p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                  <div>
-                    <label className="text-[9px] font-bold text-muted-foreground uppercase">Nutrición %</label>
-                    <select value={e.nutrition_pct} onChange={ev => updateEntry(r.id, 'nutrition_pct', Number(ev.target.value))}
-                      className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm">
-                      {[0, 25, 50, 75, 100].map(v => <option key={v} value={v}>{v}%</option>)}
-                    </select>
                   </div>
                   <div>
-                    <label className="text-[9px] font-bold text-muted-foreground uppercase">Hidratación</label>
-                    <input type="number" min={0} max={20} value={e.hydration_glasses}
-                      onChange={ev => updateEntry(r.id, 'hydration_glasses', Number(ev.target.value))}
-                      className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm" placeholder="Vasos" />
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Eliminación</span>
+                    <ChoiceChips size="sm" options={ELIMINATIONS.map(v => ({ value: v, label: v }))} value={e.elimination}
+                      onChange={v => updateEntry(r.id, 'elimination', e.elimination === v ? '' : v)} />
                   </div>
                   <div>
-                    <label className="text-[9px] font-bold text-muted-foreground uppercase">Eliminación</label>
-                    <select value={e.elimination} onChange={ev => updateEntry(r.id, 'elimination', ev.target.value)}
-                      className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm">
-                      <option value="">--</option>
-                      {ELIMINATIONS.map(el => <option key={el} value={el}>{el}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-bold text-muted-foreground uppercase">Ánimo</label>
-                    <select value={e.mood} onChange={ev => updateEntry(r.id, 'mood', ev.target.value)}
-                      className="mt-1 w-full px-3 py-2 rounded-lg border border-input bg-background text-sm">
-                      <option value="">--</option>
-                      {MOODS.map(m => <option key={m} value={m}>{m}</option>)}
-                    </select>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Ánimo</span>
+                    <ChoiceChips size="sm" options={MOODS.map(v => ({ value: v, label: v }))} value={e.mood}
+                      onChange={v => updateEntry(r.id, 'mood', e.mood === v ? '' : v)} />
                   </div>
                 </div>
 
@@ -422,7 +429,7 @@ const DailyLog = ({ onBack }: Props) => {
             <h3 className="text-sm font-black text-foreground flex items-center gap-2">
               <Sparkles size={16} className="text-primary" /> Nota de Enfermería con IA
             </h3>
-            <button onClick={handleGenerateAI} disabled={generatingAI || Object.keys(entries).length === 0}
+            <button onClick={handleGenerateAI} disabled={generatingAI}
               className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50 min-h-[36px]">
               {generatingAI ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
               {generatingAI ? 'Generando...' : 'Generar Nota'}
@@ -458,7 +465,6 @@ const DailyLog = ({ onBack }: Props) => {
         dateTo={logDate}
         reportType="grupal"
       />
-      <ActionButtons onFinish={handleSave} disabled={saving || Object.keys(entries).length === 0} />
 
       {/* Single Resident Report */}
       <div className="bg-card border-2 border-accent rounded-2xl p-6 mt-6">
@@ -513,6 +519,7 @@ const DailyLog = ({ onBack }: Props) => {
           </div>
         )}
       </div>
+      <ActionButtons onFinish={handleSave} saving={saving} missing={missing} count={filled.length} draftSavedAt={draft.savedAt} />
     </div>
   );
 };
