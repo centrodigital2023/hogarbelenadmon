@@ -4,6 +4,7 @@ import type { Borders, Workbook } from "exceljs";
 import { saveAs } from "file-saver";
 import logoImg from "@/assets/logo.png";
 import { supabase } from "@/integrations/supabase/client";
+import { signedDocumentUrl } from "@/lib/private-documents";
 
 // ─── Brand Constants ───
 export const BRAND = {
@@ -31,7 +32,7 @@ async function getDynamicLogoUrl(): Promise<string | null> {
   try {
     const { data } = await supabase.from("system_settings").select("value").eq("key", "logo_url").maybeSingle();
     if (data?.value && typeof data.value === "string") {
-      cachedDynamicLogoUrl = data.value;
+      cachedDynamicLogoUrl = await signedDocumentUrl(data.value, 3600);
     }
   } catch { /* fallback to bundled asset */ }
   return cachedDynamicLogoUrl;
@@ -74,6 +75,7 @@ async function getLogoBuffer(): Promise<ArrayBuffer> {
   const dynamicUrl = await getDynamicLogoUrl();
   try {
     const resp = await fetch(dynamicUrl || logoImg);
+    if (!resp.ok) throw new Error("No se pudo cargar el logo");
     cachedLogoBuffer = await resp.arrayBuffer();
     return cachedLogoBuffer;
   } catch {
