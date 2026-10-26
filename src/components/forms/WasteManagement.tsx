@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import ActionButtons from "@/components/ActionButtons";
-import SignaturePad from "@/components/SignaturePad";
+import { PeriodBar, GerencialSignatures, emptySigs, useResponsible, fieldLabel, filledRows, type GerencialSigs } from "@/components/forms/gerencial";
 import HistorialGerencial from "@/components/HistorialGerencial";
 
 interface Props { onBack: () => void; }
@@ -18,7 +18,8 @@ const WasteManagement = ({ onBack }: Props) => {
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
-  const [responsible, setResponsible] = useState("");
+  const [responsible, setResponsible] = useResponsible();
+  const [sigs, setSigs] = useState<GerencialSigs>(emptySigs);
   const [classification, setClassification] = useState<Record<string, Record<string, string>>>(
     Object.fromEntries(AREAS.map(a => [a, { no_peligrosos: '', peligrosos: '', reciclables: '', obs: '' }]))
   );
@@ -29,15 +30,18 @@ const WasteManagement = ({ onBack }: Props) => {
   const [observations, setObservations] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const missing = [...(responsible.trim() ? [] : ['responsable']), ...(sigs.responsible ? [] : ['firma del responsable'])];
+
   const handleSave = async () => {
-    if (!user) return;
+    if (!user || missing.length) return;
     setSaving(true);
     const { error } = await supabase.from('waste_management').insert({
       period_month: month, period_year: year, responsible,
       classification_data: classification, storage_data: storage,
-      disposal_data: disposalRows, observations, created_by: user.id,
+      disposal_data: filledRows(disposalRows), observations, created_by: user.id,
+      signature_responsible: sigs.responsible, signature_coordinator: sigs.coordinator,
     });
-    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+    if (error) toast({ title: "No se pudo guardar", description: error.message, variant: "destructive" });
     else { toast({ title: "HB-G01 guardado correctamente" }); onBack(); }
     setSaving(false);
   };
@@ -46,21 +50,7 @@ const WasteManagement = ({ onBack }: Props) => {
     <div className="animate-fade-in space-y-6">
       <FormHeader title="HB-G01: Plan de Gestión Integral de Residuos (PEGIR)" subtitle="Clasificación, almacenamiento y disposición final" onBack={onBack} />
 
-      <div className="bg-card border border-border rounded-2xl p-6">
-        <div className="grid grid-cols-3 gap-4">
-          <div><label className="text-xs font-bold text-muted-foreground uppercase">Mes</label>
-            <select value={month} onChange={e => setMonth(+e.target.value)} className="mt-1 w-full px-3 py-2 rounded-xl border border-input bg-background text-sm">
-              {Array.from({ length: 12 }, (_, i) => <option key={i} value={i + 1}>{i + 1}</option>)}
-            </select>
-          </div>
-          <div><label className="text-xs font-bold text-muted-foreground uppercase">Año</label>
-            <input type="number" value={year} onChange={e => setYear(+e.target.value)} className="mt-1 w-full px-3 py-2 rounded-xl border border-input bg-background text-sm" />
-          </div>
-          <div><label className="text-xs font-bold text-muted-foreground uppercase">Responsable</label>
-            <input value={responsible} onChange={e => setResponsible(e.target.value)} className="mt-1 w-full px-3 py-2 rounded-xl border border-input bg-background text-sm" />
-          </div>
-        </div>
-      </div>
+      <PeriodBar kind="month" table="waste_management" period={month} year={year} onPeriod={setMonth} onYear={setYear} responsible={responsible} onResponsible={setResponsible} />
 
       {/* Sección 1 – Clasificación por área */}
       <div className="bg-card border border-border rounded-2xl p-6">
@@ -82,7 +72,7 @@ const WasteManagement = ({ onBack }: Props) => {
                     <td key={field} className="py-2 pr-2">
                       <input value={classification[area]?.[field] || ''} onChange={e => setClassification(prev => ({
                         ...prev, [area]: { ...prev[area], [field]: e.target.value }
-                      }))} className="w-full px-2 py-1 rounded-lg border border-input bg-background text-xs" />
+                      }))} className="w-full min-h-[36px] px-2 py-1 rounded-lg border border-input bg-background text-base sm:text-xs" />
                     </td>
                   ))}
                 </tr>
@@ -111,7 +101,7 @@ const WasteManagement = ({ onBack }: Props) => {
                     <td key={field} className="py-2 pr-2">
                       <input value={storage[type]?.[field] || ''} onChange={e => setStorage(prev => ({
                         ...prev, [type]: { ...prev[type], [field]: e.target.value }
-                      }))} className="w-full px-2 py-1 rounded-lg border border-input bg-background text-xs" />
+                      }))} className="w-full min-h-[36px] px-2 py-1 rounded-lg border border-input bg-background text-base sm:text-xs" />
                     </td>
                   ))}
                 </tr>
@@ -127,15 +117,15 @@ const WasteManagement = ({ onBack }: Props) => {
         {disposalRows.map((row, i) => (
           <div key={i} className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-2">
             {Object.entries(row).map(([k, v]) => (
-              <input key={k} placeholder={k} value={v} onChange={e => {
+              <input key={k} placeholder={fieldLabel(k)} value={v} onChange={e => {
                 const updated = [...disposalRows];
                 updated[i] = { ...updated[i], [k]: e.target.value };
                 setDisposalRows(updated);
-              }} className="px-2 py-1.5 rounded-lg border border-input bg-background text-xs" />
+              }} className="min-h-[40px] px-2 py-1.5 rounded-lg border border-input bg-background text-base sm:text-xs" />
             ))}
           </div>
         ))}
-        <button onClick={() => setDisposalRows(prev => [...prev, { fecha: '', empresa: '', tipo: '', cantidad: '', manifiesto: '', recibido: '' }])}
+        <button type="button" onClick={() => setDisposalRows(prev => [...prev, { fecha: '', empresa: '', tipo: '', cantidad: '', manifiesto: '', recibido: '' }])}
           className="text-xs font-bold text-primary hover:underline mt-2">+ Agregar fila</button>
       </div>
 
@@ -143,15 +133,12 @@ const WasteManagement = ({ onBack }: Props) => {
       <div className="bg-card border border-border rounded-2xl p-6">
         <h3 className="text-sm font-black text-foreground mb-4">4. Novedades y Acciones Correctivas</h3>
         <textarea value={observations} onChange={e => setObservations(e.target.value)} rows={4}
-          className="w-full px-4 py-3 rounded-xl border border-input bg-background text-sm resize-none" />
+          className="w-full px-4 py-3 rounded-xl border border-input bg-background text-base sm:text-sm resize-none" />
       </div>
 
-      <div className="bg-card border border-border rounded-2xl p-6 grid grid-cols-2 gap-6">
-        <SignaturePad label="Responsable" />
-        <SignaturePad label="Vo.Bo. Coordinador" />
-      </div>
+      <GerencialSignatures value={sigs} onChange={setSigs} />
 
-      <ActionButtons onFinish={handleSave} disabled={saving} />
+      <ActionButtons onFinish={handleSave} saving={saving} missing={missing} />
 
       <HistorialGerencial 
         moduleId="HB-G01" 

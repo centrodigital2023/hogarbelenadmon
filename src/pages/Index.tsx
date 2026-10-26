@@ -25,8 +25,6 @@ const AdmissionChecklist = lazy(() => import("@/components/forms/AdmissionCheckl
 const BelongingsInventory = lazy(() => import("@/components/forms/BelongingsInventory"));
 const LifeHistory = lazy(() => import("@/components/forms/LifeHistory"));
 const DailyLog = lazy(() => import("@/components/forms/DailyLog"));
-const KitchenChecklist = lazy(() => import("@/components/forms/KitchenChecklist"));
-const FridgeTemps = lazy(() => import("@/components/forms/FridgeTemps"));
 const FoodIntake = lazy(() => import("@/components/forms/FoodIntake"));
 const DisinfectionRecord = lazy(() => import("@/components/forms/DisinfectionRecord"));
 const VitalSigns = lazy(() => import("@/components/forms/VitalSigns"));
@@ -122,6 +120,7 @@ const FORM_MODULE_MAP: Record<string, string> = {
   'HB-F1': 'ingreso', 'HB-F3': 'ingreso', 'HB-F22': 'ingreso',
   'MAPA': 'ingreso', 'HYGIENE-KIT': 'higiene',
   'HB-F4': 'salud', 'HB-F6': 'alimentacion',
+  'HB-F5': 'alimentacion', 'HB-F7': 'alimentacion', 'HB-F8': 'alimentacion',
   'HB-F8a1': 'higiene',
   'HB-F9': 'bienestar', 'HB-F10': 'bienestar', 'HB-F11': 'bienestar',
   'HB-F14': 'salud', 'HB-F15': 'salud', 'HB-F16': 'salud',
@@ -146,7 +145,10 @@ const FORM_COMPONENTS: Record<string, React.FC<{ onBack: () => void }>> = {
   'HYGIENE-KIT': HygieneKit, 'MAPA': RoomAssignment, 'DOCS': DocumentManager,
   'LOGO': LogoSettings, 'TRAINING': TrainingModule, 'NURSING-AI': NursingNotes, 'NURSING-REPORT': NursingReport,
   'HB-F26': IndicatorsDashboard, 'BILLING': BillingModule, 'PAI': CarePlanGenerator,
-  'UNIFIED-KITCHEN': UnifiedKitchen, 'THERAPY-SESSION': TherapySessionForm,
+  'UNIFIED-KITCHEN': UnifiedKitchen,
+  // Old kitchen links now open the unified daily control
+  'HB-F5': UnifiedKitchen, 'HB-F7': UnifiedKitchen, 'HB-F8': UnifiedKitchen,
+  'THERAPY-SESSION': TherapySessionForm,
   'VOUCHER': PaymentVoucher, 'AUDIT': AuditReport,
   'HB-G01': WasteManagement, 'HB-G02': PestControl, 'HB-G03': HazardousWaste,
   'HB-G04': SanitationRecord, 'HB-G05': EmergencyPlan, 'HB-G06': ManagerialDashboard,

@@ -1942,6 +1942,10 @@ export type Database = {
           record_type: string
           resident_id: string | null
           signature: string | null
+          responsible_id: string | null
+          responsible_name: string | null
+          responsible_role: string | null
+          updated_at: string | null
         }
         Insert: {
           attendees?: Json | null
@@ -1957,6 +1961,10 @@ export type Database = {
           record_type: string
           resident_id?: string | null
           signature?: string | null
+          responsible_id?: string | null
+          responsible_name?: string | null
+          responsible_role?: string | null
+          updated_at?: string | null
         }
         Update: {
           attendees?: Json | null
@@ -1972,6 +1980,10 @@ export type Database = {
           record_type?: string
           resident_id?: string | null
           signature?: string | null
+          responsible_id?: string | null
+          responsible_name?: string | null
+          responsible_role?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -2224,6 +2236,12 @@ export type Database = {
           observations: string | null
           record_date: string
           topic: string | null
+          responsible_id: string | null
+          responsible_name: string | null
+          responsible_role: string | null
+          signature: string | null
+          updated_at: string | null
+          resident_id: string | null
         }
         Insert: {
           activity_type?: string | null
@@ -2235,6 +2253,12 @@ export type Database = {
           observations?: string | null
           record_date?: string
           topic?: string | null
+          responsible_id?: string | null
+          responsible_name?: string | null
+          responsible_role?: string | null
+          signature?: string | null
+          updated_at?: string | null
+          resident_id?: string | null
         }
         Update: {
           activity_type?: string | null
@@ -2246,6 +2270,12 @@ export type Database = {
           observations?: string | null
           record_date?: string
           topic?: string | null
+          responsible_id?: string | null
+          responsible_name?: string | null
+          responsible_role?: string | null
+          signature?: string | null
+          updated_at?: string | null
+          resident_id?: string | null
         }
         Relationships: []
       }
@@ -2394,6 +2424,11 @@ export type Database = {
           resident_id: string
           therapy_type: string | null
           week_start: string
+          responsible_id: string | null
+          responsible_name: string | null
+          responsible_role: string | null
+          signature: string | null
+          updated_at: string | null
         }
         Insert: {
           attended_friday?: boolean | null
@@ -2407,6 +2442,11 @@ export type Database = {
           resident_id: string
           therapy_type?: string | null
           week_start: string
+          responsible_id?: string | null
+          responsible_name?: string | null
+          responsible_role?: string | null
+          signature?: string | null
+          updated_at?: string | null
         }
         Update: {
           attended_friday?: boolean | null
@@ -2420,6 +2460,11 @@ export type Database = {
           resident_id?: string
           therapy_type?: string | null
           week_start?: string
+          responsible_id?: string | null
+          responsible_name?: string | null
+          responsible_role?: string | null
+          signature?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {

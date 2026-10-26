@@ -44,13 +44,28 @@ const LifeHistory = ({ onBack }: Props) => {
     supabase.from('residents').select('id, full_name').order('full_name').then(({ data }) => { if (data) setResidents(data); });
   }, []);
 
+  const loadVersions = async (lifeHistoryId: string | null) => {
+    if (!lifeHistoryId) { setHistory([]); return; }
+    const { data } = await supabase.from('life_history_versions').select('*')
+      .eq('life_history_id', lifeHistoryId)
+      .order('version', { ascending: false }).limit(20);
+    setHistory((data ?? []).map(v => ({
+      date: new Date(v.created_at).toLocaleString('es-CO'),
+      data: v.data as unknown as Record<string, string>,
+      version: v.version,
+    })));
+  };
+
   useEffect(() => {
+    setPhotos([]);
+    setSignature(null);
     if (!selectedResident) return;
     supabase.from('life_histories').select('*').eq('resident_id', selectedResident)
       .order('updated_at', { ascending: false }).limit(1)
       .then(({ data: rows }) => {
         const data = rows?.[0];
         setExistingId(data?.id ?? null);
+        loadVersions(data?.id ?? null);
         setAvatarPreview(null);
         if (!data) setForm(EMPTY_LIFE_FORM);
         if (data) {
@@ -66,28 +81,26 @@ const LifeHistory = ({ onBack }: Props) => {
           if (photoArr && photoArr.length > 0) setAvatarPreview(photoArr[0]);
         }
       });
-    // Load version history
-    supabase.from('life_history_versions').select('*')
-      .eq('life_history_id', selectedResident)
-      .order('version', { ascending: false }).limit(20)
-      .then(({ data }) => {
-        if (data) {
-          setHistory(data.map(v => ({
-            date: new Date(v.created_at).toLocaleString('es-CO'),
-            data: v.data as unknown as Record<string, string>,
-            version: v.version,
-          })));
-        }
-      });
   }, [selectedResident]);
 
+  // The portrait is kept small (max 480 px JPEG) so the record stays light on phones
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => setAvatarPreview(ev.target?.result as string);
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, 480 / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d')?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        setAvatarPreview(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.src = ev.target?.result as string;
+    };
     reader.readAsDataURL(file);
-    setPhotos([file]);
   };
 
   const handleAIGenerate = async () => {
@@ -133,12 +146,42 @@ const LifeHistory = ({ onBack }: Props) => {
     setSaving(true);
     const payload: TablesInsert<"life_histories"> = { resident_id: selectedResident, created_by: user.id, ...form };
     if (avatarPreview) payload.photos = [avatarPreview];
+    // Before overwriting, keep the previous text as a version that can be restored
+    if (existingId) {
+      const { data: current } = await supabase.from('life_histories').select('*').eq('id', existingId).single();
+      if (current) {
+        const { photos: _photos, ...previousData } = current;
+        await supabase.from('life_history_versions').insert({
+          life_history_id: existingId, modified_by: user.id,
+          version: (history[0]?.version ?? 0) + 1, data: previousData,
+        });
+      }
+    }
     // No hay restricción única por residente en la base: se actualiza el registro existente o se crea uno
     const { data, error } = existingId
-      ? await supabase.from('life_histories').update(payload).eq('id', existingId).select('id').single()
+      ? await supabase.from('life_histories').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', existingId).select('id').single()
       : await supabase.from('life_histories').insert(payload).select('id').single();
-    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-    else { setExistingId(data.id); toast({ title: "Historia de vida guardada ✓" }); }
+    if (error) { toast({ title: "No se pudo guardar", description: error.message, variant: "destructive" }); setSaving(false); return; }
+    setExistingId(data.id);
+    loadVersions(data.id);
+
+    // Extra photos go to the resident's documents, where the whole team can see them
+    let uploaded = 0;
+    for (const photo of photos) {
+      const path = `residents/${selectedResident}/${Date.now()}_historia_vida_${photo.name.normalize('NFD').replace(/[^\w.-]+/g, '_')}`;
+      const { error: upErr } = await supabase.storage.from('documents').upload(path, photo, { contentType: photo.type || undefined });
+      if (upErr) continue;
+      const { error: dbErr } = await supabase.from('document_attachments').insert({
+        entity_type: 'resident', entity_id: selectedResident, file_name: `Historia de vida - ${photo.name}`, file_type: 'image', file_url: path, uploaded_by: user.id,
+      });
+      if (!dbErr) uploaded++;
+    }
+    setPhotos([]);
+    toast({
+      title: "Historia de vida guardada ✅",
+      description: photos.length ? `${uploaded} de ${photos.length} fotos quedaron en Documentos del residente.` : undefined,
+      variant: photos.length && uploaded < photos.length ? "destructive" : undefined,
+    });
     setSaving(false);
   };
 
@@ -275,7 +318,7 @@ const LifeHistory = ({ onBack }: Props) => {
                   setPhotos(prev => [...prev, ...files]);
                 }} />
               </label>
-              {photos.length > 0 && <p className="text-xs text-muted-foreground mt-2">{photos.length} foto(s) seleccionada(s)</p>}
+              {photos.length > 0 && <p className="text-xs text-muted-foreground mt-2">{photos.length} foto(s) listas: se guardan en Documentos del residente al tocar Guardar.</p>}
             </div>
 
             {/* Digital Signature */}
@@ -329,7 +372,7 @@ const LifeHistory = ({ onBack }: Props) => {
           <ShareButtons title={`HB-F22 Historia de Vida ${residentName}`} text={`Historia de Vida - ${residentName}`} />
         </div>
       )}
-      <ActionButtons onFinish={handleSave} disabled={saving} />
+      <ActionButtons onFinish={handleSave} saving={saving} missing={selectedResident ? [] : ['residente']} />
     </div>
   );
 };

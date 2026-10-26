@@ -9,6 +9,8 @@ import ShareButtons from "@/components/ShareButtons";
 import SignaturePad from "@/components/SignaturePad";
 import FormHistory from "@/components/FormHistory";
 import { CheckCircle2, AlertCircle, Upload, FileText, Trash2, Download, Eye, Loader2 } from "lucide-react";
+import { useActiveResidents } from "@/hooks/useActiveResidents";
+import { Section, Field, ResidentSelect, inputCls } from "@/components/forms/ui";
 
 interface Props { onBack: () => void; }
 
@@ -26,15 +28,16 @@ const DOCS = [
   { key: 'doc_vacunacion', label: 'Carné de vacunación (COVID-19, Influenza)' },
 ];
 
-interface Resident { id: string; full_name: string; }
 interface StoredFile { name: string; id: string; created_at: string; metadata: Record<string, unknown> | null; }
 
 const AdmissionChecklist = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
-  const [residents, setResidents] = useState<Resident[]>([]);
+  const { residents, loading } = useActiveResidents();
   const [selectedResident, setSelectedResident] = useState("");
+  const [signatureFamily, setSignatureFamily] = useState<string | null>(null);
+  const [signatureCoordinator, setSignatureCoordinator] = useState<string | null>(null);
   const [checks, setChecks] = useState<Record<string, boolean>>({});
   const [observations, setObservations] = useState("");
   const [attachments, setAttachments] = useState<Record<string, File | null>>({});
@@ -43,11 +46,6 @@ const AdmissionChecklist = ({ onBack }: Props) => {
   // Stored documents from cloud storage
   const [storedDocs, setStoredDocs] = useState<Record<string, StoredFile[]>>({});
   const [loadingDocs, setLoadingDocs] = useState(false);
-
-  useEffect(() => {
-    supabase.from('residents').select('id, full_name').eq('status', 'prueba')
-      .order('full_name').then(({ data }) => { if (data) setResidents(data); });
-  }, []);
 
   useEffect(() => {
     if (!selectedResident) return;
@@ -59,7 +57,13 @@ const AdmissionChecklist = ({ onBack }: Props) => {
           DOCS.forEach(d => { newChecks[d.key] = Boolean(data[d.key as keyof typeof data]); });
           setChecks(newChecks);
           setObservations(data.observations || '');
-        } else { setExistingId(null); setChecks({}); setObservations(''); }
+          setSignatureFamily(data.signature_family);
+          setSignatureCoordinator(data.signature_coordinator);
+        } else {
+          setExistingId(null); setChecks({}); setObservations('');
+          setSignatureFamily(null); setSignatureCoordinator(null);
+        }
+        setAttachments({});
       });
     loadStoredDocs(selectedResident);
   }, [selectedResident]);
@@ -95,12 +99,12 @@ const AdmissionChecklist = ({ onBack }: Props) => {
     }
   };
 
+  // The documents bucket is private: open a short-lived signed link
   const previewFile = async (fileName: string) => {
     const path = `admission/${selectedResident}/${fileName}`;
-    const { data } = supabase.storage.from('documents').getPublicUrl(path);
-    if (data?.publicUrl) {
-      window.open(data.publicUrl, '_blank');
-    }
+    const { data, error } = await supabase.storage.from('documents').createSignedUrl(path, 300);
+    if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+    else toast({ title: "No se pudo abrir el archivo", description: error?.message, variant: "destructive" });
   };
 
   const checkedCount = Object.values(checks).filter(Boolean).length;
@@ -108,27 +112,42 @@ const AdmissionChecklist = ({ onBack }: Props) => {
   const isComplete = checkedCount === DOCS.length;
   const residentName = residents.find(r => r.id === selectedResident)?.full_name || '';
 
-  const handleFileChange = (key: string, file: File | null) => setAttachments(prev => ({ ...prev, [key]: file }));
+  // Attaching the document marks it as received; removing the file does not uncheck it
+  const handleFileChange = (key: string, file: File | null) => {
+    setAttachments(prev => ({ ...prev, [key]: file }));
+    if (file) setChecks(prev => ({ ...prev, [key]: true }));
+  };
 
   const handleSave = async () => {
     if (!selectedResident || !user) return;
     setSaving(true);
+    // Upload first so a failed file is reported before the checklist claims the document
+    const failedUploads: string[] = [];
+    for (const [key, file] of Object.entries(attachments)) {
+      if (!file) continue;
+      const safeName = file.name.normalize('NFD').replace(/[^\w.-]+/g, '_');
+      const path = `admission/${selectedResident}/${key}_${Date.now()}_${safeName}`;
+      const { error: uploadError } = await supabase.storage.from('documents').upload(path, file);
+      if (uploadError) failedUploads.push(DOCS.find(d => d.key === key)?.label ?? key);
+    }
     const payload = {
       resident_id: selectedResident, created_by: user.id, observations, folder_status: folderStatus,
+      signature_family: signatureFamily, signature_coordinator: signatureCoordinator,
       ...Object.fromEntries(DOCS.map(d => [d.key, checks[d.key] || false])),
     };
     let error;
-    if (existingId) { ({ error } = await supabase.from('admission_checklists').update(payload).eq('id', existingId)); }
-    else { ({ error } = await supabase.from('admission_checklists').insert(payload)); }
-    for (const [key, file] of Object.entries(attachments)) {
-      if (file) {
-        const path = `admission/${selectedResident}/${key}_${Date.now()}_${file.name}`;
-        await supabase.storage.from('documents').upload(path, file);
-      }
-    }
-    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+    if (existingId) { ({ error } = await supabase.from('admission_checklists').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', existingId)); }
     else {
-      toast({ title: "Checklist guardado ✅", description: `Carpeta: ${folderStatus.toUpperCase()}` });
+      const res = await supabase.from('admission_checklists').insert(payload).select('id').single();
+      error = res.error;
+      if (res.data) setExistingId(res.data.id);
+    }
+    if (error) toast({ title: "No se pudo guardar", description: error.message, variant: "destructive" });
+    else {
+      if (failedUploads.length) {
+        toast({ title: "Algunos archivos no se subieron", description: `Intente de nuevo: ${failedUploads.join(', ')}`, variant: "destructive" });
+      }
+      toast({ title: "Checklist guardado ✅", description: isComplete ? "¡Carpeta completa!" : `Faltan ${DOCS.length - checkedCount} documentos` });
       await supabase.from('audit_log').insert({
         user_id: user.id, action: existingId ? 'update_admission_checklist' : 'create_admission_checklist',
         entity_type: 'admission_checklist', entity_id: selectedResident,
@@ -145,14 +164,11 @@ const AdmissionChecklist = ({ onBack }: Props) => {
       <FormHeader title="HB-F1: Checklist de Ingreso" subtitle="Verificación de documentos legales y clínicos" onBack={onBack} />
       <div ref={contentRef}>
         {/* Resident selector */}
-        <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 mb-6 shadow-sm">
-          <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Residente</label>
-          <select value={selectedResident} onChange={e => setSelectedResident(e.target.value)}
-            className="mt-2 w-full max-w-md px-4 py-3 rounded-xl border border-input bg-background text-sm focus:ring-2 focus:ring-primary/20 transition-all">
-            <option value="">-- Seleccionar residente --</option>
-            {residents.map(r => <option key={r.id} value={r.id}>{r.full_name}</option>)}
-          </select>
-        </div>
+        <Section>
+          <Field label="Residente" required className="max-w-md">
+            <ResidentSelect residents={residents} loading={loading} value={selectedResident} onChange={setSelectedResident} />
+          </Field>
+        </Section>
 
         {selectedResident && (
           <>
@@ -201,9 +217,13 @@ const AdmissionChecklist = ({ onBack }: Props) => {
                               <div key={file.id} className="flex items-center gap-2 text-xs bg-muted/50 rounded-lg px-3 py-2">
                                 <FileText size={12} className="text-primary shrink-0" />
                                 <span className="truncate flex-1 text-foreground font-medium">{file.name}</span>
-                                <button onClick={() => downloadFile(doc.key, file.name)}
-                                  className="text-primary hover:text-primary/80 transition-colors p-1" title="Descargar">
-                                  <Download size={13} />
+                                <button type="button" onClick={() => previewFile(file.name)} aria-label="Ver archivo"
+                                  className="flex h-9 w-9 items-center justify-center rounded-lg text-primary hover:bg-primary/10" title="Ver">
+                                  <Eye size={15} />
+                                </button>
+                                <button type="button" onClick={() => downloadFile(doc.key, file.name)} aria-label="Descargar archivo"
+                                  className="flex h-9 w-9 items-center justify-center rounded-lg text-primary hover:bg-primary/10" title="Descargar">
+                                  <Download size={15} />
                                 </button>
                               </div>
                             ))}
@@ -252,8 +272,8 @@ const AdmissionChecklist = ({ onBack }: Props) => {
             <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 mb-6 shadow-sm">
               <h3 className="text-sm font-black text-foreground mb-4">Firmas electrónicas</h3>
               <div className="flex flex-wrap gap-6 justify-center">
-                <SignaturePad label="Familiar Responsable" />
-                <SignaturePad label="Coordinador" />
+                <SignaturePad label="Familiar Responsable" value={signatureFamily || undefined} onChange={setSignatureFamily} />
+                <SignaturePad label="Coordinador" value={signatureCoordinator || undefined} onChange={setSignatureCoordinator} />
               </div>
             </div>
           </>
@@ -270,6 +290,7 @@ const AdmissionChecklist = ({ onBack }: Props) => {
           </div>
           <FormHistory
             tableName="admission_checklists"
+            filters={[['resident_id', 'eq', selectedResident]]}
             title="Historial Checklists"
             fileName="historial_checklist_ingreso"
             columns={[
@@ -284,7 +305,8 @@ const AdmissionChecklist = ({ onBack }: Props) => {
           />
         </>
       )}
-      <ActionButtons onFinish={handleSave} disabled={saving || !selectedResident} />
+      <ActionButtons onFinish={handleSave} saving={saving} missing={selectedResident ? [] : ['residente']}
+        label={existingId ? 'Actualizar checklist' : 'Guardar checklist'} />
     </div>
   );
 };

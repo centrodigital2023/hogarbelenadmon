@@ -20,11 +20,13 @@ const SignaturePad = ({ label, value, onChange }: SignaturePadProps) => {
     if (!ctx) return;
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    if (value) {
-      const img = new Image();
-      img.onload = () => { ctx.drawImage(img, 0, 0, canvas.width, canvas.height); setHasSignature(true); };
-      img.src = value;
+    if (!value) {
+      setHasSignature(false);
+      return;
     }
+    const img = new Image();
+    img.onload = () => { ctx.drawImage(img, 0, 0, canvas.width, canvas.height); setHasSignature(true); };
+    img.src = value;
   }, [value]);
 
   const getPos = (e: React.TouchEvent | React.MouseEvent) => {
@@ -47,7 +49,7 @@ const SignaturePad = ({ label, value, onChange }: SignaturePadProps) => {
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.strokeStyle = '#1a1a2e';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 4;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
   };
@@ -111,25 +113,26 @@ const SignaturePad = ({ label, value, onChange }: SignaturePadProps) => {
     <div className="flex flex-col items-center gap-2">
       <div className="flex gap-1 mb-1">
         <button type="button" onClick={() => setMode('draw')}
-          className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-colors ${mode === 'draw' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+          className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-colors ${mode === 'draw' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
           <Pen size={10} /> Dibujar
         </button>
         <button type="button" onClick={() => setMode('camera')}
-          className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-colors ${mode === 'camera' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+          className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-colors ${mode === 'camera' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
           <Camera size={10} /> Cámara
         </button>
       </div>
 
       <div className="relative">
-        <canvas ref={canvasRef} width={300} height={120}
-          className="border-2 border-dashed border-border rounded-xl bg-white cursor-crosshair touch-none"
-          style={{ width: 200, height: 80 }}
+        <canvas ref={canvasRef} width={600} height={240}
+          aria-label={`Firma: ${label}`}
+          className="block w-[min(300px,80vw)] h-[120px] border-2 border-dashed border-border rounded-xl bg-white cursor-crosshair touch-none"
           onMouseDown={startDraw} onMouseMove={draw} onMouseUp={endDraw} onMouseLeave={endDraw}
           onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={endDraw} />
         {hasSignature && (
           <button type="button" onClick={clear}
-            className="absolute -top-2 -right-2 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center">
-            <Trash2 size={10} />
+            aria-label="Borrar firma"
+            className="absolute -top-3 -right-3 w-8 h-8 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center shadow">
+            <Trash2 size={14} />
           </button>
         )}
       </div>
@@ -142,7 +145,7 @@ const SignaturePad = ({ label, value, onChange }: SignaturePadProps) => {
       )}
 
       <p className="text-xs text-muted-foreground font-medium">{label}</p>
-      {!hasSignature && <p className="text-[9px] text-muted-foreground/60">Dibuje o capture su firma</p>}
+      {!hasSignature && <p className="text-[11px] text-muted-foreground/70">Firme con el dedo dentro del recuadro</p>}
     </div>
   );
 };

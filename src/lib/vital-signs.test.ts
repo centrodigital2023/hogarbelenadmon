@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isVitalAbnormal, parseBloodPressure, vitalIssues } from "./vital-signs";
+import { isVitalAbnormal, parseBloodPressure, vitalIssues, implausibleVital, weightChange } from "./vital-signs";
 
 describe("signos vitales", () => {
   it("ignora campos vacíos o en cero (no registrados)", () => {
@@ -36,5 +36,22 @@ describe("signos vitales", () => {
       "SpO2: 88%",
       "Temp: 38.4°C",
     ]);
+  });
+});
+
+describe("implausibleVital", () => {
+  it("catches typos before they reach the record", () => {
+    expect(implausibleVital("temperature", "365")).toBe("¿Quisiste decir 36.5 °C?");
+    expect(implausibleVital("temperature", "36.5")).toBeNull();
+    expect(implausibleVital("spo2", 150)).not.toBeNull();
+    expect(implausibleVital("blood_pressure", "120")).not.toBeNull();
+    expect(implausibleVital("blood_pressure", "80/120")).not.toBeNull();
+    expect(implausibleVital("blood_pressure", "120/80")).toBeNull();
+    expect(implausibleVital("weight", "")).toBeNull();
+  });
+
+  it("measures weight change", () => {
+    expect(weightChange(47, 50)).toBeCloseTo(-0.06);
+    expect(weightChange("", 50)).toBeNull();
   });
 });
