@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { currentInstallPlatform, isMobilePlatform } from "@/lib/install-platform";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -8,8 +9,6 @@ interface BeforeInstallPromptEvent extends Event {
 const isStandalone = () =>
   window.matchMedia?.("(display-mode: standalone)").matches ||
   (navigator as Navigator & { standalone?: boolean }).standalone === true;
-
-const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) && !("MSStream" in window);
 
 // Chrome fires beforeinstallprompt once per page load, often before React mounts
 let deferredPrompt: BeforeInstallPromptEvent | null = null;
@@ -28,8 +27,9 @@ if (typeof window !== "undefined") {
 
 /**
  * Exposes whether the app can be installed and a function to install it.
- * On iOS there is no install prompt, so `iosInstructions` tells the UI to explain
- * "Compartir → Agregar a pantalla de inicio" instead.
+ * `canInstall` means the browser offered its own prompt (Chrome, Edge, Samsung).
+ * Elsewhere (iPhone, in-app browsers, or before Chrome decides to offer it) `needsGuide`
+ * tells the UI to show the manual steps for `platform` instead.
  */
 export const useInstallPrompt = () => {
   const [, rerender] = useState(0);
@@ -55,10 +55,14 @@ export const useInstallPrompt = () => {
     return outcome === "accepted";
   };
 
+  const platform = currentInstallPlatform();
+  const canInstall = !installed && deferredPrompt !== null;
+
   return {
     installed,
-    canInstall: !installed && deferredPrompt !== null,
-    iosInstructions: !installed && isIOS(),
+    platform,
+    canInstall,
+    needsGuide: !installed && !canInstall && isMobilePlatform(platform),
     install,
   };
 };

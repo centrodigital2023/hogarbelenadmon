@@ -42,6 +42,13 @@ export default defineConfig(({ mode }) => ({
           { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
           { src: "/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
+        prefer_related_applications: false,
+        // Screenshots enable the richer install sheet on Android and desktop Chrome
+        screenshots: [
+          { src: "/screenshots/inicio-celular.webp", sizes: "540x1099", type: "image/webp", form_factor: "narrow", label: "Inicio de sesión" },
+          { src: "/screenshots/inteligencia-celular.webp", sizes: "540x1099", type: "image/webp", form_factor: "narrow", label: "Centro de Inteligencia Clínica" },
+          { src: "/screenshots/inicio-computador.webp", sizes: "1280x720", type: "image/webp", form_factor: "wide", label: "Hogar Belén en el computador" },
+        ],
         shortcuts: [
           { name: "Bitácora diaria", short_name: "Bitácora", url: "/?modulo=4&form=HB-F4", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
           { name: "Valoración geriátrica", short_name: "Valoración", url: "/?modulo=2", icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }] },
