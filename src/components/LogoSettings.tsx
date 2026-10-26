@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import { Upload, Image, Loader2, Trash2 } from "lucide-react";
+import { signedDocumentUrl } from "@/lib/private-documents";
 
 interface Props { onBack: () => void; }
 
@@ -14,9 +15,21 @@ const LogoSettings = ({ onBack }: Props) => {
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    supabase.from('system_settings').select('value').eq('key', 'logo_url').maybeSingle()
-      .then(({ data }) => { if (data?.value) setLogoUrl(data.value); });
-  }, []);
+    let active = true;
+    const refresh = async () => {
+      try {
+        const { data, error } = await supabase.from('system_settings').select('value').eq('key', 'logo_url').maybeSingle();
+        if (error) throw error;
+        const url = data?.value ? await signedDocumentUrl(data.value, 3600) : null;
+        if (active) setLogoUrl(url);
+      } catch (error) {
+        if (active) toast({ title: "No se pudo mostrar el logo", description: error instanceof Error ? error.message : "Intente de nuevo", variant: "destructive" });
+      }
+    };
+    void refresh();
+    const timer = window.setInterval(refresh, 50 * 60 * 1000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [toast]);
 
   const handleUpload = async (file: File) => {
     if (!user) return;
@@ -29,17 +42,20 @@ const LogoSettings = ({ onBack }: Props) => {
     const { error } = await supabase.storage.from('documents').upload(path, file, { upsert: true });
     if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); setUploading(false); return; }
 
-    const { data: urlData } = supabase.storage.from('documents').getPublicUrl(path);
-    const url = urlData.publicUrl;
-
     // Upsert setting
     const { data: existing } = await supabase.from('system_settings').select('id').eq('key', 'logo_url').maybeSingle();
     const { error: dbError } = existing
-      ? await supabase.from('system_settings').update({ value: url, updated_by: user.id }).eq('key', 'logo_url')
-      : await supabase.from('system_settings').insert({ key: 'logo_url', value: url, updated_by: user.id });
+      ? await supabase.from('system_settings').update({ value: path, updated_by: user.id }).eq('key', 'logo_url')
+      : await supabase.from('system_settings').insert({ key: 'logo_url', value: path, updated_by: user.id });
     if (dbError) { toast({ title: "No se pudo guardar", description: dbError.message, variant: "destructive" }); setUploading(false); return; }
 
-    setLogoUrl(url);
+    try {
+      setLogoUrl(await signedDocumentUrl(path, 3600));
+    } catch (error) {
+      toast({ title: "Logo guardado, pero no se pudo mostrar", description: error instanceof Error ? error.message : "Intente de nuevo", variant: "destructive" });
+      setUploading(false);
+      return;
+    }
     setUploading(false);
     toast({ title: "Logo actualizado" });
   };

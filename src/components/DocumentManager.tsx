@@ -6,6 +6,8 @@ import { useToast } from "@/hooks/use-toast";
 import FormHeader from "@/components/FormHeader";
 import { Upload, Download, Trash2, FileText, FileSpreadsheet, File, Search, Loader2 } from "lucide-react";
 import type { Row } from "@/integrations/supabase/tables";
+import { openPrivateDocument } from "@/lib/private-documents";
+import { Button } from "@/components/ui/button";
 
 interface Props { onBack: () => void; }
 
@@ -53,12 +55,10 @@ const DocumentManager = ({ onBack }: Props) => {
       return;
     }
 
-    const { data: urlData } = supabase.storage.from('documents').getPublicUrl(fileName);
-
     const { error: dbError } = await supabase.from('institutional_documents').insert({
       name: docName || file.name.replace(/\.[^.]+$/, ''),
       original_name: file.name,
-      file_url: urlData.publicUrl,
+      file_url: fileName,
       file_type: ext,
       file_size: file.size,
       uploaded_by: user.id,
@@ -79,8 +79,12 @@ const DocumentManager = ({ onBack }: Props) => {
     loadDocs();
   };
 
-  const handleDownload = (doc: Row<"institutional_documents">) => {
-    window.open(doc.file_url, '_blank');
+  const handleDownload = async (doc: Row<"institutional_documents">) => {
+    try {
+      await openPrivateDocument(doc.file_url);
+    } catch (error) {
+      toast({ title: "No se pudo abrir el archivo", description: error instanceof Error ? error.message : "Intente de nuevo", variant: "destructive" });
+    }
   };
 
   const filtered = docs.filter(d => d.name.toLowerCase().includes(search.toLowerCase()) || d.original_name.toLowerCase().includes(search.toLowerCase()));
@@ -140,10 +144,10 @@ const DocumentManager = ({ onBack }: Props) => {
                 </p>
               </div>
               <div className="flex gap-1 shrink-0">
-                <button onClick={() => handleDownload(doc)}
+                <Button variant="ghost" size="icon" onClick={() => handleDownload(doc)} aria-label={`Descargar ${doc.name}`} title="Descargar"
                   className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20">
                   <Download size={14} />
-                </button>
+                </Button>
                 {isAdmin && (
                   <button onClick={() => handleDelete(doc)}
                     className="w-9 h-9 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive hover:bg-destructive/20">

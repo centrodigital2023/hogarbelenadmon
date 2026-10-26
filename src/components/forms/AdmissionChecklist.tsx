@@ -11,6 +11,7 @@ import FormHistory from "@/components/FormHistory";
 import { CheckCircle2, AlertCircle, Upload, FileText, Trash2, Download, Eye, Loader2 } from "lucide-react";
 import { useActiveResidents } from "@/hooks/useActiveResidents";
 import { Section, Field, ResidentSelect, inputCls } from "@/components/forms/ui";
+import { openPrivateDocument } from "@/lib/private-documents";
 
 interface Props { onBack: () => void; }
 
@@ -102,9 +103,11 @@ const AdmissionChecklist = ({ onBack }: Props) => {
   // The documents bucket is private: open a short-lived signed link
   const previewFile = async (fileName: string) => {
     const path = `admission/${selectedResident}/${fileName}`;
-    const { data, error } = await supabase.storage.from('documents').createSignedUrl(path, 300);
-    if (data?.signedUrl) window.open(data.signedUrl, '_blank');
-    else toast({ title: "No se pudo abrir el archivo", description: error?.message, variant: "destructive" });
+    try {
+      await openPrivateDocument(path);
+    } catch (error) {
+      toast({ title: "No se pudo abrir el archivo", description: error instanceof Error ? error.message : "Intente de nuevo", variant: "destructive" });
+    }
   };
 
   const checkedCount = Object.values(checks).filter(Boolean).length;
