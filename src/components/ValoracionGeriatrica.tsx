@@ -8,6 +8,7 @@ import {
 import { TESTS_GERIATRICOS } from "@/data/tests-geriatricos";
 import { interpretScore } from "@/lib/geriatric-scoring";
 import { supabase } from "@/integrations/supabase/client";
+import { ageFromBirthDate } from "@/lib/resident-age";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import FormHeader from "./FormHeader";
@@ -51,15 +52,6 @@ interface Resident {
   birth_date: string | null;
 }
 
-const ageFromBirthDate = (birthDate: string | null) => {
-  if (!birthDate) return undefined;
-  const birth = new Date(birthDate);
-  if (Number.isNaN(birth.getTime())) return undefined;
-  const now = new Date();
-  let age = now.getFullYear() - birth.getFullYear();
-  if (now < new Date(now.getFullYear(), birth.getMonth(), birth.getDate())) age--;
-  return age;
-};
 
 interface AssessmentHistory {
   id: string;

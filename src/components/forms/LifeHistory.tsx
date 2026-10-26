@@ -17,17 +17,20 @@ interface HistoryEntry { date: string; data: Record<string, string>; version: nu
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
+const EMPTY_LIFE_FORM = {
+  preferred_name: '', occupation: '', marital_status: '', children_info: '',
+  favorite_food: '', favorite_music: '', hobbies: '', morning_or_night: '',
+  spiritual_beliefs: '', most_important_person: '', dislikes: '', dreams: '',
+};
+
 const LifeHistory = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [selectedResident, setSelectedResident] = useState("");
-  const [form, setForm] = useState({
-    preferred_name: '', occupation: '', marital_status: '', children_info: '',
-    favorite_food: '', favorite_music: '', hobbies: '', morning_or_night: '',
-    spiritual_beliefs: '', most_important_person: '', dislikes: '', dreams: '',
-  });
+  const [form, setForm] = useState(EMPTY_LIFE_FORM);
+  const [existingId, setExistingId] = useState<string | null>(null);
   const [photos, setPhotos] = useState<File[]>([]);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -43,8 +46,13 @@ const LifeHistory = ({ onBack }: Props) => {
 
   useEffect(() => {
     if (!selectedResident) return;
-    supabase.from('life_histories').select('*').eq('resident_id', selectedResident).maybeSingle()
-      .then(({ data }) => {
+    supabase.from('life_histories').select('*').eq('resident_id', selectedResident)
+      .order('updated_at', { ascending: false }).limit(1)
+      .then(({ data: rows }) => {
+        const data = rows?.[0];
+        setExistingId(data?.id ?? null);
+        setAvatarPreview(null);
+        if (!data) setForm(EMPTY_LIFE_FORM);
         if (data) {
           setForm({
             preferred_name: data.preferred_name || '', occupation: data.occupation || '',
@@ -125,9 +133,12 @@ const LifeHistory = ({ onBack }: Props) => {
     setSaving(true);
     const payload: TablesInsert<"life_histories"> = { resident_id: selectedResident, created_by: user.id, ...form };
     if (avatarPreview) payload.photos = [avatarPreview];
-    const { error } = await supabase.from('life_histories').upsert(payload, { onConflict: 'resident_id' });
+    // No hay restricción única por residente en la base: se actualiza el registro existente o se crea uno
+    const { data, error } = existingId
+      ? await supabase.from('life_histories').update(payload).eq('id', existingId).select('id').single()
+      : await supabase.from('life_histories').insert(payload).select('id').single();
     if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-    else toast({ title: "Historia de vida guardada ✓" });
+    else { setExistingId(data.id); toast({ title: "Historia de vida guardada ✓" }); }
     setSaving(false);
   };
 
