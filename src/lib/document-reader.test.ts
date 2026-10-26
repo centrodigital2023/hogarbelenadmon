@@ -29,7 +29,7 @@ describe("lector de documentos", () => {
     const zip = new JSZip();
     zip.file("word/document.xml", XML);
     const blob = await zip.generateAsync({ type: "uint8array" });
-    const file = new File([blob], "historia.docx");
+    const file = new File([new Uint8Array(blob)], "historia.docx");
     const doc = await readDocument(file);
     expect(doc.format).toBe("word");
     expect(doc.text).toContain("Sanitas");

@@ -23,24 +23,28 @@ export const BRAND = {
 // ─── Helpers ───
 let cachedLogoDataUrl: string | null = null;
 let cachedLogoBuffer: ArrayBuffer | null = null;
-let cachedDynamicLogoUrl: string | null = null;
-let logoLookupDone = false;
+let cachedLogoReference: string | null = null;
 
 async function getDynamicLogoUrl(): Promise<string | null> {
-  if (logoLookupDone) return cachedDynamicLogoUrl;
-  logoLookupDone = true;
   try {
-    const { data } = await supabase.from("system_settings").select("value").eq("key", "logo_url").maybeSingle();
-    if (data?.value && typeof data.value === "string") {
-      cachedDynamicLogoUrl = await signedDocumentUrl(data.value, 3600);
+    const { data, error } = await supabase.from("system_settings").select("value").eq("key", "logo_url").maybeSingle();
+    if (error) throw error;
+    const reference = typeof data?.value === "string" ? data.value : null;
+    if (reference !== cachedLogoReference) {
+      cachedLogoReference = reference;
+      cachedLogoDataUrl = null;
+      cachedLogoBuffer = null;
     }
+    return reference ? await signedDocumentUrl(reference, 3600) : null;
   } catch { /* fallback to bundled asset */ }
-  return cachedDynamicLogoUrl;
+  cachedLogoDataUrl = null;
+  cachedLogoBuffer = null;
+  return null;
 }
 
 async function getLogoDataUrl(): Promise<string> {
-  if (cachedLogoDataUrl) return cachedLogoDataUrl;
   const dynamicUrl = await getDynamicLogoUrl();
+  if (cachedLogoDataUrl) return cachedLogoDataUrl;
   return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
@@ -48,7 +52,9 @@ async function getLogoDataUrl(): Promise<string> {
       const c = document.createElement("canvas");
       c.width = img.naturalWidth;
       c.height = img.naturalHeight;
-      c.getContext("2d")!.drawImage(img, 0, 0);
+      const context = c.getContext("2d");
+      if (!context) { resolve(""); return; }
+      context.drawImage(img, 0, 0);
       cachedLogoDataUrl = c.toDataURL("image/png");
       resolve(cachedLogoDataUrl);
     };
@@ -59,7 +65,9 @@ async function getLogoDataUrl(): Promise<string> {
         const c = document.createElement("canvas");
         c.width = fb.naturalWidth;
         c.height = fb.naturalHeight;
-        c.getContext("2d")!.drawImage(fb, 0, 0);
+        const context = c.getContext("2d");
+        if (!context) { resolve(""); return; }
+        context.drawImage(fb, 0, 0);
         cachedLogoDataUrl = c.toDataURL("image/png");
         resolve(cachedLogoDataUrl);
       };
@@ -71,8 +79,8 @@ async function getLogoDataUrl(): Promise<string> {
 }
 
 async function getLogoBuffer(): Promise<ArrayBuffer> {
-  if (cachedLogoBuffer) return cachedLogoBuffer;
   const dynamicUrl = await getDynamicLogoUrl();
+  if (cachedLogoBuffer) return cachedLogoBuffer;
   try {
     const resp = await fetch(dynamicUrl || logoImg);
     if (!resp.ok) throw new Error("No se pudo cargar el logo");
