@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -199,6 +200,12 @@ const Login = () => {
           <div className="mt-4">
             <InstallAppButton variant="card" />
           </div>
+
+          <p className="text-center mt-3">
+            <Link to="/instalar" className="text-xs font-bold text-primary hover:underline">
+              Instalar la app o compartirla con el equipo
+            </Link>
+          </p>
 
           <p className="text-center text-[10px] text-muted-foreground mt-6 font-medium">
             Hogar Belén • Gestión Segura • Hecho en Colombia 🇨🇴

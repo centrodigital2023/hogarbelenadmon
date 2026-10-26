@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Download, Share, SquarePlus } from "lucide-react";
+import { Download } from "lucide-react";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
+import { PLATFORM_LABEL } from "@/lib/install-platform";
+import InstallGuide from "@/components/install/InstallGuide";
 import {
   Dialog,
   DialogContent,
@@ -14,17 +16,17 @@ interface InstallAppButtonProps {
 }
 
 /**
- * "Instalar app" call to action. Uses the native prompt on Android/Chrome/Edge and
- * shows step-by-step instructions on iPhone/iPad, where no prompt exists.
- * Renders nothing once the app runs installed.
+ * "Instalar app" call to action. Uses the browser's own prompt when it offers one
+ * (Android Chrome, Samsung, Edge) and otherwise shows the steps for this device.
+ * Renders nothing once the app runs installed, or on a computer without a prompt.
  */
 const InstallAppButton = ({ variant = "compact" }: InstallAppButtonProps) => {
-  const { canInstall, iosInstructions, install } = useInstallPrompt();
-  const [showIOSHelp, setShowIOSHelp] = useState(false);
+  const { canInstall, needsGuide, platform, install } = useInstallPrompt();
+  const [showGuide, setShowGuide] = useState(false);
 
-  if (!canInstall && !iosInstructions) return null;
+  if (!canInstall && !needsGuide) return null;
 
-  const onClick = () => (canInstall ? install() : setShowIOSHelp(true));
+  const onClick = () => (canInstall ? install() : setShowGuide(true));
 
   return (
     <>
@@ -40,7 +42,7 @@ const InstallAppButton = ({ variant = "compact" }: InstallAppButtonProps) => {
           <span>
             <span className="block text-sm font-black text-foreground">Instala Hogar Belén en tu celular</span>
             <span className="block text-xs text-muted-foreground">
-              Ábrela desde tu pantalla de inicio, a pantalla completa y más rápida.
+              Gratis, sin tienda de apps. Ábrela desde tu pantalla de inicio, a pantalla completa.
             </span>
           </span>
         </button>
@@ -55,30 +57,34 @@ const InstallAppButton = ({ variant = "compact" }: InstallAppButtonProps) => {
         </button>
       )}
 
-      <Dialog open={showIOSHelp} onOpenChange={setShowIOSHelp}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Instalar en iPhone o iPad</DialogTitle>
-            <DialogDescription>Son solo dos pasos desde Safari.</DialogDescription>
-          </DialogHeader>
-          <ol className="space-y-3 text-sm text-foreground">
-            <li className="flex items-center gap-3">
-              <span className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                <Share size={16} />
-              </span>
-              Toca el botón <strong>Compartir</strong> en la barra de Safari.
-            </li>
-            <li className="flex items-center gap-3">
-              <span className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                <SquarePlus size={16} />
-              </span>
-              Elige <strong>Agregar a pantalla de inicio</strong> y confirma.
-            </li>
-          </ol>
-        </DialogContent>
-      </Dialog>
+      <InstallGuideDialog open={showGuide} onOpenChange={setShowGuide} platform={platform} />
     </>
   );
 };
+
+export const InstallGuideDialog = ({
+  open,
+  onOpenChange,
+  platform,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  platform: Parameters<typeof InstallGuide>[0]["platform"];
+}) => (
+  <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogContent className="max-w-sm">
+      <DialogHeader>
+        <DialogTitle>Instalar Hogar Belén</DialogTitle>
+        <DialogDescription>
+          Tres pasos en {PLATFORM_LABEL[platform]}. No ocupa casi espacio y no necesita tienda de apps.
+        </DialogDescription>
+      </DialogHeader>
+      <InstallGuide platform={platform} />
+      <a href="/instalar" className="text-xs font-bold text-primary hover:underline text-center pt-1">
+        Ver la guía completa y compartirla con el equipo
+      </a>
+    </DialogContent>
+  </Dialog>
+);
 
 export default InstallAppButton;

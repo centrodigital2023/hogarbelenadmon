@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePermissions, ROLE_LABELS } from "@/hooks/usePermissions";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import InstallAppButton from "@/components/InstallAppButton";
+import InstallBanner from "@/components/install/InstallBanner";
 import NotificationBell from "@/components/NotificationBell";
 import logo from "@/assets/logo.png";
 import {
@@ -194,6 +195,8 @@ const AppLayout = ({ children, activeModule, onModuleChange }: AppLayoutProps) =
             Sin conexión. Los registros no se podrán guardar hasta que vuelva el internet.
           </div>
         )}
+
+        <InstallBanner />
 
         <main className="flex-1 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
           {children}
