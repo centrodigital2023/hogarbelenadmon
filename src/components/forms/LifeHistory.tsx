@@ -10,6 +10,9 @@ import ShareButtons from "@/components/ShareButtons";
 import SignaturePad from "@/components/SignaturePad";
 import { Camera, Sparkles, Loader2, History, ChevronDown, ChevronUp, Upload, User } from "lucide-react";
 import { errorMessage } from "@/lib/errors";
+import DictationTextarea from "@/components/DictationTextarea";
+import LifeHistoryDictation from "@/components/forms/LifeHistoryDictation";
+import { EMPTY_LIFE_FORM, type LifeHistoryForm } from "@/lib/life-history-dictation";
 
 interface Props { onBack: () => void; }
 interface Resident { id: string; full_name: string; }
@@ -17,19 +20,15 @@ interface HistoryEntry { date: string; data: Record<string, string>; version: nu
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
-const EMPTY_LIFE_FORM = {
-  preferred_name: '', occupation: '', marital_status: '', children_info: '',
-  favorite_food: '', favorite_music: '', hobbies: '', morning_or_night: '',
-  spiritual_beliefs: '', most_important_person: '', dislikes: '', dreams: '',
-};
-
 const LifeHistory = ({ onBack }: Props) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [selectedResident, setSelectedResident] = useState("");
-  const [form, setForm] = useState(EMPTY_LIFE_FORM);
+  const [form, setForm] = useState<LifeHistoryForm>(EMPTY_LIFE_FORM);
+  /** Campos que llegaron del dictado y aún no se han revisado a mano. */
+  const [fromDictation, setFromDictation] = useState<Set<string>>(new Set());
   const [existingId, setExistingId] = useState<string | null>(null);
   const [photos, setPhotos] = useState<File[]>([]);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -59,6 +58,7 @@ const LifeHistory = ({ onBack }: Props) => {
   useEffect(() => {
     setPhotos([]);
     setSignature(null);
+    setFromDictation(new Set());
     if (!selectedResident) return;
     supabase.from('life_histories').select('*').eq('resident_id', selectedResident)
       .order('updated_at', { ascending: false }).limit(1)
@@ -164,6 +164,7 @@ const LifeHistory = ({ onBack }: Props) => {
     if (error) { toast({ title: "No se pudo guardar", description: error.message, variant: "destructive" }); setSaving(false); return; }
     setExistingId(data.id);
     loadVersions(data.id);
+    setFromDictation(new Set());
 
     // Extra photos go to the resident's documents, where the whole team can see them
     let uploaded = 0;
@@ -198,6 +199,16 @@ const LifeHistory = ({ onBack }: Props) => {
 
   const residentName = residents.find(r => r.id === selectedResident)?.full_name || '';
 
+  const setField = (key: string, value: string) => {
+    setForm(prev => ({ ...prev, [key]: value }));
+    setFromDictation(prev => { if (!prev.has(key)) return prev; const next = new Set(prev); next.delete(key); return next; });
+  };
+
+  const applyDictation = (values: Partial<LifeHistoryForm>) => {
+    setForm(prev => ({ ...prev, ...values }));
+    setFromDictation(prev => new Set([...prev, ...Object.keys(values)]));
+  };
+
   const fields = [
     { key: 'preferred_name', label: '¿Cómo le gusta que lo llamen?', icon: '👤', section: '¿Quién soy yo?' },
     { key: 'occupation', label: 'Oficio / Profesión de vida', icon: '💼' },
@@ -215,7 +226,7 @@ const LifeHistory = ({ onBack }: Props) => {
 
   return (
     <div className="animate-fade-in">
-      <FormHeader title="HB-F22: Historia de Vida" subtitle="Información biográfica y preferencias del residente • Generación inteligente con IA" onBack={onBack} />
+      <FormHeader title="HB-F22: Historia de Vida" subtitle="Información biográfica y preferencias del residente • Dicte la historia por voz y la IA la organiza" onBack={onBack} />
       <div ref={contentRef}>
         {/* Resident selector */}
         <div className="bg-card border border-border rounded-2xl p-6 mb-6">
@@ -229,6 +240,8 @@ const LifeHistory = ({ onBack }: Props) => {
 
         {selectedResident && (
           <>
+            <LifeHistoryDictation key={selectedResident} residentId={selectedResident} residentName={residentName} form={form} onApply={applyDictation} />
+
             {/* Avatar + AI Keywords Section */}
             <div className="bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/20 rounded-2xl p-6 mb-6">
               <div className="flex flex-col md:flex-row gap-6">
@@ -287,22 +300,23 @@ const LifeHistory = ({ onBack }: Props) => {
                     {f.section}
                   </h3>
                 )}
-                <div className="bg-card border border-border rounded-2xl p-4 mb-3">
-                  <label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5">
-                    <span>{f.icon}</span> {f.label}
-                  </label>
-                  {f.type === 'textarea' ? (
-                    <textarea value={form[f.key as keyof typeof form]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
-                      rows={4} className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm resize-none" />
-                  ) : f.type === 'select' ? (
-                    <select value={form[f.key as keyof typeof form]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                <div className={`bg-card border rounded-2xl p-4 mb-3 transition ${fromDictation.has(f.key) ? 'border-primary/50 ring-2 ring-primary/10' : 'border-border'}`}>
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5">
+                      <span>{f.icon}</span> {f.label}
+                    </span>
+                    {fromDictation.has(f.key) && (
+                      <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-black text-primary">✨ Del dictado · revise</span>
+                    )}
+                  </div>
+                  {f.type === 'select' ? (
+                    <select value={form[f.key as keyof typeof form]} onChange={e => setField(f.key, e.target.value)} aria-label={f.label}
                       className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm">
                       <option value="">-- Seleccionar --</option>
                       {f.options?.map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
                   ) : (
-                    <textarea value={form[f.key as keyof typeof form]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
-                      rows={2} className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-sm resize-none" />
+                    <DictationTextarea value={form[f.key as keyof typeof form]} onChange={v => setField(f.key, v)} minRows={f.type === 'textarea' ? 3 : 1} />
                   )}
                 </div>
               </div>
