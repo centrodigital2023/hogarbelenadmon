@@ -13,6 +13,8 @@ interface Props {
   aiError?: string | null;
   onApply: (proposals: Proposal[]) => Promise<ApplyResult[]>;
   onClose: () => void;
+  /** Texto del botón de cierre cuando hay más documentos en fila. */
+  nextLabel?: string;
 }
 
 const STATUS_BADGE: Record<Proposal["status"], { label: string; cls: string }> = {
@@ -26,7 +28,7 @@ const SOURCE_LABEL = { ia: "Analizado con IA", "ia+local": "IA + lector intelige
 const ALERT_STYLE = { alta: "border-destructive/30 bg-destructive/10 text-destructive", media: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400", baja: "border-primary/30 bg-primary/10 text-primary" };
 
 /** Revisión humana de lo que la IA encontró: nada se guarda sin confirmar. */
-const AIProposalReview = ({ extraction, proposalSet, fileName, aiError, onApply, onClose }: Props) => {
+const AIProposalReview = ({ extraction, proposalSet, fileName, aiError, onApply, onClose, nextLabel }: Props) => {
   const [items, setItems] = useState<Proposal[]>(proposalSet.proposals);
   const [results, setResults] = useState<Record<string, ApplyResult>>({});
   const [saving, setSaving] = useState(false);
@@ -161,7 +163,7 @@ const AIProposalReview = ({ extraction, proposalSet, fileName, aiError, onApply,
       <div className="flex gap-2 sticky bottom-0 bg-background/95 py-3">
         <button type="button" onClick={onClose}
           className="flex-1 py-3 rounded-xl text-xs font-bold bg-muted text-muted-foreground min-h-[48px]">
-          {savedCount > 0 || items.length === 0 ? "Listo" : "Cerrar"}
+          {nextLabel ?? (savedCount > 0 || items.length === 0 ? "Listo" : "Cerrar")}
         </button>
         {pending.length > 0 && (
           <button type="button" onClick={apply} disabled={saving}
