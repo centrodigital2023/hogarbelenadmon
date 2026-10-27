@@ -107,6 +107,8 @@ export interface ExtractedField { value: string; confidence: number; evidence?: 
 export interface ExtractedMedication {
   medication_name: string; concentration?: string; dose?: string; route?: string; schedule?: string;
   prescription_date?: string; confidence: number; evidence?: string;
+  /** "suspendido" cuando el médico ordena retirarlo. */
+  status?: "activo" | "suspendido";
 }
 export interface ExtractedAppointment {
   appointment_date: string; appointment_time?: string; specialty?: string; location?: string; notes?: string;
@@ -119,6 +121,12 @@ export interface ExtractedHospitalization {
 }
 export interface ExtractedWellbeing { reason?: string; evolution?: string; recommendations?: string; confidence: number; evidence?: string }
 export interface ExtractedFall { date?: string; description: string; evidence?: string }
+export interface ExtractedVitals {
+  date?: string; weight?: number; height?: number; blood_pressure?: string; heart_rate?: number;
+  temperature?: number; spo2?: number; glucose?: number; evidence?: string;
+}
+export interface ExtractedLab { name: string; value: string; unit?: string; flag?: "alto" | "bajo" | "normal"; date?: string }
+export interface ExtractedVaccine { name: string; date?: string; dose?: string }
 
 export interface DocumentExtraction {
   documentKind: DocumentKind;
@@ -135,10 +143,47 @@ export interface DocumentExtraction {
   scales: ExtractedScale[];
   hospitalization: ExtractedHospitalization | null;
   wellbeing: ExtractedWellbeing | null;
+  vitals: ExtractedVitals | null;
+  labs: ExtractedLab[];
+  vaccines: ExtractedVaccine[];
   hygieneNeeds: string[];
   safety: { fallRisk: boolean; notes: string[]; falls: ExtractedFall[] };
   source: "ia" | "local" | "ia+local";
 }
+
+/** Rangos fisiológicamente posibles: lo que esté fuera se descarta como error de lectura. */
+const VITAL_LIMITS = {
+  weight: [20, 250], height: [100, 220], heart_rate: [20, 250], temperature: [30, 45], spo2: [50, 100], glucose: [20, 900],
+} as const;
+const num = (v: unknown, [min, max]: readonly [number, number]) => {
+  const n = typeof v === "number" ? v : parseFloat(String(v ?? "").replace(",", "."));
+  return Number.isFinite(n) && n >= min && n <= max ? Math.round(n * 10) / 10 : undefined;
+};
+
+export function parseVitals(raw: unknown): ExtractedVitals | null {
+  const o = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
+  // La talla puede venir en metros (1,58) o en centímetros (158)
+  const rawHeight = parseFloat(String(o.height ?? "").replace(",", "."));
+  const height = rawHeight >= 0.9 && rawHeight <= 2.2 ? Math.round(rawHeight * 100) : num(o.height, VITAL_LIMITS.height);
+  const bp = typeof o.blood_pressure === "string" ? /^(\d{2,3})\s*\/\s*(\d{2,3})$/.exec(o.blood_pressure.trim()) : null;
+  const v: ExtractedVitals = {
+    date: normalizeDate(o.date) ?? undefined,
+    weight: num(o.weight, VITAL_LIMITS.weight),
+    height,
+    blood_pressure: bp && +bp[1] >= 60 && +bp[1] <= 260 && +bp[2] >= 30 && +bp[2] <= 160 ? `${bp[1]}/${bp[2]}` : undefined,
+    heart_rate: num(o.heart_rate, VITAL_LIMITS.heart_rate),
+    temperature: num(o.temperature, VITAL_LIMITS.temperature),
+    spo2: num(o.spo2, VITAL_LIMITS.spo2),
+    glucose: num(o.glucose, VITAL_LIMITS.glucose),
+    evidence: typeof o.evidence === "string" ? o.evidence.slice(0, 160) : undefined,
+  };
+  const measured = (["weight", "height", "blood_pressure", "heart_rate", "temperature", "spo2", "glucose"] as const).some((k) => v[k] !== undefined);
+  return measured ? v : null;
+}
+
+/** Índice de masa corporal con una decimal, si hay peso y talla. */
+export const bmi = (weight?: number, heightCm?: number) =>
+  weight && heightCm ? Math.round((weight / (heightCm / 100) ** 2) * 10) / 10 : undefined;
 
 // ───────────────────────── Normalizadores ─────────────────────────
 
@@ -288,6 +333,7 @@ export function parseExtraction(raw: unknown): DocumentExtraction {
       medication_name: name.slice(0, 120), concentration: str(m.concentration), dose: str(m.dose), route: str(m.route),
       schedule: str(m.schedule ?? m.frequency), prescription_date: normalizeDate(m.prescription_date) ?? undefined,
       confidence: clampConfidence(m.confidence), evidence: str(m.evidence),
+      status: /suspend|retir|descontinu/i.test(String(m.status ?? "")) ? "suspendido" : "activo",
     }];
   });
 
@@ -333,7 +379,7 @@ export function parseExtraction(raw: unknown): DocumentExtraction {
     return [{ severity, message }];
   });
 
-  return {
+  return withDerivedAlerts({
     documentKind: kind in DOCUMENT_KINDS ? kind : "otro",
     documentTitle: str(o.document_title) ?? DOCUMENT_KINDS[kind in DOCUMENT_KINDS ? kind : "otro"],
     documentDate: normalizeDate(o.document_date),
@@ -348,6 +394,18 @@ export function parseExtraction(raw: unknown): DocumentExtraction {
     scales,
     hospitalization,
     wellbeing,
+    vitals: parseVitals(o.vitals),
+    labs: asArray(o.labs).map(asObject).flatMap((l): ExtractedLab[] => {
+      const name = str(l.name);
+      const value = str(l.value);
+      if (!name || !value) return [];
+      const flag = ["alto", "bajo", "normal"].includes(String(l.flag)) ? l.flag as ExtractedLab["flag"] : undefined;
+      return [{ name: name.slice(0, 60), value: value.slice(0, 30), unit: str(l.unit), flag, date: normalizeDate(l.date) ?? undefined }];
+    }).slice(0, 40),
+    vaccines: asArray(o.vaccines).map(asObject).flatMap((v): ExtractedVaccine[] => {
+      const name = str(v.name);
+      return name ? [{ name: name.slice(0, 80), date: normalizeDate(v.date) ?? undefined, dose: str(v.dose) }] : [];
+    }).slice(0, 30),
     hygieneNeeds: asArray(o.hygiene_needs).map((x) => str(x)).filter((x): x is string => !!x),
     safety: {
       fallRisk: safety.fall_risk === true,
@@ -358,7 +416,23 @@ export function parseExtraction(raw: unknown): DocumentExtraction {
       }),
     },
     source: "ia",
-  };
+  });
+}
+
+/** Alertas que se deducen de los datos aunque la IA no las haya escrito. */
+export function withDerivedAlerts(ex: DocumentExtraction): DocumentExtraction {
+  const alerts = [...ex.alerts];
+  const has = (text: string) => alerts.some((a) => normalizeText(a.message).includes(normalizeText(text)));
+  ex.labs.filter((l) => l.flag === "alto" || l.flag === "bajo").forEach((l) => {
+    const msg = `Laboratorio fuera de rango: ${l.name} ${l.value}${l.unit ? ` ${l.unit}` : ""} (${l.flag})`;
+    if (!has(l.name)) alerts.push({ severity: "media", message: msg });
+  });
+  const imc = bmi(ex.vitals?.weight, ex.vitals?.height);
+  if (imc !== undefined && imc < 18.5 && !has("IMC")) alerts.push({ severity: "alta", message: `Bajo peso: IMC ${imc}. Considere valoración nutricional (MNA).` });
+  ex.medications.filter((m) => m.status === "suspendido").forEach((m) => {
+    if (!has(m.medication_name)) alerts.push({ severity: "media", message: `El documento indica suspender ${m.medication_name}.` });
+  });
+  return { ...ex, alerts };
 }
 
 // ───────────────────────── Lector local ─────────────────────────
@@ -438,6 +512,7 @@ export function localExtract(text: string): DocumentExtraction {
     documentKind: kind, documentTitle: DOCUMENT_KINDS[kind], documentDate: null,
     summary: "", nameOnDocument: null, alerts: [], resident, lifeHistory: {}, diagnoses: [],
     medications: [], appointments: [], scales: [], hospitalization: null, wellbeing: null,
+    vitals: null, labs: [], vaccines: [],
     hygieneNeeds: [], safety: { fallRisk: false, notes: [], falls: [] }, source: "local",
   };
 }
@@ -482,7 +557,8 @@ export type ProposalOp =
   | { type: "checklist"; field: ChecklistField }
   | { type: "emergency_folder"; field: EmergencyFolderField }
   | { type: "medication_insert"; data: { medication_name: string; concentration?: string; dose?: string; route?: string; schedule?: string; prescription_date?: string } }
-  | { type: "medication_update"; id: string; data: { concentration?: string; dose?: string; route?: string; schedule?: string } }
+  | { type: "medication_update"; id: string; data: { concentration?: string; dose?: string; route?: string; schedule?: string; is_active?: boolean } }
+  | { type: "vitals_insert"; data: { record_date: string; weight?: number; blood_pressure?: string; heart_rate?: number; temperature?: number; spo2?: number; glucose?: number; notes: string } }
   | { type: "appointment_insert"; data: { appointment_date: string; appointment_time?: string; specialty?: string; location?: string; notes?: string } }
   | { type: "assessment_insert"; data: { test_key: string; test_name: string; score: number; max_score: number; assessment_date: string; interpretation: string } }
   | { type: "post_hospitalization_insert"; data: { hospital_admission_date?: string; hospital_discharge_date?: string; diagnosis?: string; new_instructions?: string; followup_date?: string } }
@@ -513,6 +589,8 @@ export interface ProposalContext {
   appointments: { appointment_date: string; specialty?: string | null }[];
   assessments: { test_key: string; assessment_date: string }[];
   incidents: { incident_datetime: string }[];
+  /** Fechas (YYYY-MM-DD) con signos vitales ya registrados. */
+  vitalDates?: string[];
   fileName: string;
   today?: Date;
 }
@@ -683,6 +761,15 @@ export function buildProposals(ex: DocumentExtraction, ctx: ProposalContext): Pr
     seenMeds.add(key);
     const summary = [m.medication_name, m.concentration, m.dose, m.route, m.schedule].filter(Boolean).join(" · ");
     const existing = ctx.medications.find((e) => sameMedication(e.medication_name, m.medication_name));
+    if (m.status === "suspendido") {
+      // Retirar un medicamento es una decisión clínica: se propone, pero nunca marcado
+      if (existing) add({
+        section: "sistema_salud", label: `HB-F14 · Suspender ${existing.medication_name}`,
+        current: "Activo", proposed: "Suspendido según el documento", op: { type: "medication_update", id: existing.id, data: { is_active: false } },
+        confidence: m.confidence, evidence: m.evidence, status: "conflicto", editable: false, selected: false,
+      });
+      return;
+    }
     if (existing) {
       const changes: Record<string, string> = {};
       (["concentration", "dose", "route", "schedule"] as const).forEach((k) => {
@@ -751,6 +838,43 @@ export function buildProposals(ex: DocumentExtraction, ctx: ProposalContext): Pr
       proposed: [w.reason && `Motivo: ${w.reason}`, w.evolution && `Evolución: ${w.evolution}`, w.recommendations && `Recomendaciones: ${w.recommendations}`].filter(Boolean).join(" · "),
       op: { type: "psychosocial_insert", data: { record_date: ex.documentDate ?? todayStr, reason: w.reason, evolution: w.evolution, recommendations: w.recommendations } },
       confidence: w.confidence, evidence: w.evidence, status: "nuevo", editable: false,
+    });
+  }
+
+  // Medidas y signos vitales (HB-F16): peso y talla alimentan la valoración nutricional
+  if (ex.vitals) {
+    const v = ex.vitals;
+    const date = v.date ?? ex.documentDate ?? todayStr;
+    const imc = bmi(v.weight, v.height);
+    const measured = [
+      v.weight !== undefined && `Peso ${v.weight} kg`, v.height !== undefined && `Talla ${v.height} cm`, imc && `IMC ${imc}`,
+      v.blood_pressure && `PA ${v.blood_pressure}`, v.heart_rate !== undefined && `FC ${v.heart_rate}`,
+      v.temperature !== undefined && `T ${v.temperature} °C`, v.spo2 !== undefined && `SpO2 ${v.spo2}%`, v.glucose !== undefined && `Glucemia ${v.glucose}`,
+    ].filter(Boolean).join(" · ");
+    if (!ctx.vitalDates?.includes(date)) add({
+      section: "valoracion", label: `HB-F16 · Medidas del ${date}`, current: null, proposed: measured,
+      op: { type: "vitals_insert", data: {
+        record_date: date, weight: v.weight, blood_pressure: v.blood_pressure, heart_rate: v.heart_rate, temperature: v.temperature, spo2: v.spo2, glucose: v.glucose,
+        notes: [`Tomado de ${docLabel}`, v.height !== undefined && `Talla ${v.height} cm`, imc && `IMC ${imc}`].filter(Boolean).join(" · "),
+      } },
+      confidence: 0.8, evidence: v.evidence, status: "nuevo", editable: false,
+    });
+  }
+
+  if (ex.labs.length > 0) {
+    const date = ex.labs.find((l) => l.date)?.date ?? ex.documentDate ?? todayStr;
+    const line = `Laboratorios (${date}): ${ex.labs.map((l) => `${l.name} ${l.value}${l.unit ? ` ${l.unit}` : ""}${l.flag && l.flag !== "normal" ? ` (${l.flag})` : ""}`).join("; ")}`;
+    if (appendLine(ctx.resident.notes, line)) add({
+      section: "sistema_salud", label: "Resultados de laboratorio", current: null, proposed: line,
+      op: { type: "resident", field: "notes", mode: "append" }, confidence: 0.8, status: "complemento", editable: true,
+    });
+  }
+
+  if (ex.vaccines.length > 0) {
+    const line = `Vacunas: ${ex.vaccines.map((v) => [v.name, v.dose, v.date && `(${v.date})`].filter(Boolean).join(" ")).join("; ")}`;
+    if (appendLine(ctx.resident.notes, line)) add({
+      section: "sistema_salud", label: "Esquema de vacunación", current: null, proposed: line,
+      op: { type: "resident", field: "notes", mode: "append" }, confidence: 0.8, status: "complemento", editable: true,
     });
   }
 

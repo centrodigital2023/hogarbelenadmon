@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
-import { Camera, Loader2, Trash2, ScanLine, Palette, FileText } from "lucide-react";
+import { Camera, Loader2, Trash2, ScanLine, Palette, FileText, RotateCw } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { imageToJpeg, pagesToPdf, type ReadDocument } from "@/lib/document-reader";
+import { imageToJpeg, MAX_IMAGES, pagesToPdf, type ReadDocument } from "@/lib/document-reader";
 import type { ScanMode } from "@/lib/scan-enhance";
 import { errorMessage } from "@/lib/errors";
 
@@ -19,11 +19,12 @@ const DocumentScanner = ({ open, onOpenChange, onComplete }: Props) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [originals, setOriginals] = useState<File[]>([]);
   const [pages, setPages] = useState<string[]>([]);
+  const [rotations, setRotations] = useState<number[]>([]);
   const [mode, setMode] = useState<ScanMode>("documento");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const reset = () => { setOriginals([]); setPages([]); setError(null); setBusy(null); };
+  const reset = () => { setOriginals([]); setPages([]); setRotations([]); setError(null); setBusy(null); };
 
   const addPhotos = async (files: FileList | null) => {
     if (!files?.length) return;
@@ -34,6 +35,7 @@ const DocumentScanner = ({ open, onOpenChange, onComplete }: Props) => {
       const processed = await Promise.all(list.map((f) => imageToJpeg(f, mode)));
       setOriginals((prev) => [...prev, ...list]);
       setPages((prev) => [...prev, ...processed]);
+      setRotations((prev) => [...prev, ...list.map(() => 0)]);
     } catch (e) {
       setError(errorMessage(e));
     }
@@ -45,13 +47,27 @@ const DocumentScanner = ({ open, onOpenChange, onComplete }: Props) => {
     setMode(next);
     if (originals.length === 0) return;
     setBusy("Aplicando filtro…");
-    setPages(await Promise.all(originals.map((f) => imageToJpeg(f, next))));
+    setPages(await Promise.all(originals.map((f, i) => imageToJpeg(f, next, rotations[i]))));
+    setBusy(null);
+  };
+
+  const rotate = async (i: number) => {
+    const angle = (rotations[i] + 90) % 360;
+    setBusy("Girando la página…");
+    try {
+      const page = await imageToJpeg(originals[i], mode, angle);
+      setRotations((prev) => prev.map((r, j) => (j === i ? angle : r)));
+      setPages((prev) => prev.map((p, j) => (j === i ? page : p)));
+    } catch (e) {
+      setError(errorMessage(e));
+    }
     setBusy(null);
   };
 
   const remove = (i: number) => {
     setOriginals((prev) => prev.filter((_, j) => j !== i));
     setPages((prev) => prev.filter((_, j) => j !== i));
+    setRotations((prev) => prev.filter((_, j) => j !== i));
   };
 
   const finish = async () => {
@@ -59,7 +75,7 @@ const DocumentScanner = ({ open, onOpenChange, onComplete }: Props) => {
     try {
       const stamp = new Date().toLocaleDateString("es-CO").replace(/\//g, "-");
       const file = await pagesToPdf(pages, `Escaneo_${stamp}_${pages.length}pag.pdf`);
-      onComplete(file, { text: "", images: pages.slice(0, 4), pages: pages.length, format: "pdf" });
+      onComplete(file, { text: "", images: pages.slice(0, MAX_IMAGES), pages: pages.length, format: "pdf" });
       reset();
       onOpenChange(false);
     } catch (e) {
@@ -93,6 +109,10 @@ const DocumentScanner = ({ open, onOpenChange, onComplete }: Props) => {
             <div key={i} className="relative rounded-xl overflow-hidden border border-border bg-muted aspect-[3/4]">
               <img src={src} alt={`Página ${i + 1}`} className="w-full h-full object-cover" />
               <span className="absolute bottom-1 left-1 text-[10px] font-black bg-background/90 rounded-md px-1.5">{i + 1}</span>
+              <button type="button" onClick={() => rotate(i)} disabled={!!busy} aria-label={`Girar página ${i + 1}`}
+                className="absolute top-1 left-1 w-7 h-7 rounded-lg bg-background/90 text-foreground flex items-center justify-center">
+                <RotateCw size={13} />
+              </button>
               <button type="button" onClick={() => remove(i)} aria-label={`Quitar página ${i + 1}`}
                 className="absolute top-1 right-1 w-7 h-7 rounded-lg bg-background/90 text-destructive flex items-center justify-center">
                 <Trash2 size={13} />

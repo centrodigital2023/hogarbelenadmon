@@ -148,6 +148,9 @@ export async function applyProposals(client: Client, input: ApplyInput): Promise
       case "medication_update":
         error = updated(await client.from("medications").update(op.data).eq("id", op.id).select("id"));
         break;
+      case "vitals_insert":
+        ({ error } = await client.from("vital_signs").insert({ ...op.data, resident_id: residentId, created_by: userId }));
+        break;
       case "appointment_insert":
         ({ error } = await client.from("medical_appointments").insert({ ...op.data, resident_id: residentId, created_by: userId, was_attended: false }));
         break;

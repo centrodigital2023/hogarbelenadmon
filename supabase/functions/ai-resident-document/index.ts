@@ -8,7 +8,7 @@ const corsHeaders = {
 const LOVABLE_API_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 // El modelo más preciso primero; si no responde, el rápido
 const MODELS = ["google/gemini-2.5-pro", "google/gemini-2.5-flash"];
-const MAX_IMAGES = 4;
+const MAX_IMAGES = 6;
 const MAX_TEXT = 60_000;
 
 const json = (body: unknown, status = 200) =>
@@ -44,11 +44,14 @@ const OUTPUT_SPEC = `Devuelve un JSON con esta forma (omite las claves sin infor
     // hobbies, morning_or_night, spiritual_beliefs, most_important_person, dislikes, dreams
   },
   "diagnoses": ["diagnóstico activo con código CIE-10 si aparece"],
-  "medications": [{"medication_name": "", "concentration": "", "dose": "", "route": "Oral|Subcutánea|...", "schedule": "frecuencia u horario", "prescription_date": "YYYY-MM-DD", "confidence": 0.9, "evidence": ""}],
+  "medications": [{"medication_name": "", "concentration": "", "dose": "", "route": "Oral|Subcutánea|...", "schedule": "frecuencia u horario", "prescription_date": "YYYY-MM-DD", "status": "activo|suspendido", "confidence": 0.9, "evidence": ""}],
   "appointments": [{"appointment_date": "YYYY-MM-DD", "appointment_time": "HH:MM", "specialty": "", "location": "", "notes": "", "confidence": 0.9, "evidence": ""}],
   "scales": [{"test_key": "barthel|lawton|pfeiffer|yesavage|tinetti|mna|fried|gijon|braden|mmse|charlson|zarit", "score": 0, "assessment_date": "YYYY-MM-DD", "confidence": 0.9, "evidence": ""}],
   "hospitalization": {"hospital_admission_date": "YYYY-MM-DD", "hospital_discharge_date": "YYYY-MM-DD", "diagnosis": "", "new_instructions": "", "followup_date": "YYYY-MM-DD", "confidence": 0.9, "evidence": ""},
   "wellbeing": {"reason": "", "evolution": "", "recommendations": "", "confidence": 0.8, "evidence": ""},
+  "vitals": {"date": "YYYY-MM-DD", "weight": 0, "height": 0, "blood_pressure": "120/80", "heart_rate": 0, "temperature": 0, "spo2": 0, "glucose": 0, "evidence": ""},
+  "labs": [{"name": "Hemoglobina", "value": "11.2", "unit": "g/dL", "flag": "alto|bajo|normal", "date": "YYYY-MM-DD"}],
+  "vaccines": [{"name": "Influenza", "dose": "1ra dosis|refuerzo", "date": "YYYY-MM-DD"}],
   "hygiene_needs": ["necesidades de higiene o cuidado de piel: pañal, incontinencia, baño asistido, cuidado de úlceras..."],
   "safety": {"fall_risk": true, "notes": ["riesgos: caídas, deambulación errática, disfagia, anticoagulación, oxígeno..."], "falls": [{"date": "YYYY-MM-DD", "description": "", "evidence": ""}]}
 }
@@ -58,7 +61,10 @@ Reglas:
 - "appointments" solo citas o controles con fecha concreta.
 - "hospitalization" solo para epicrisis o egresos hospitalarios.
 - "wellbeing" solo para informes de psicología, trabajo social o bienestar.
-- Los contactos de familiares van como emergency_contact_* y responsible_family_*.`;
+- Los contactos de familiares van como emergency_contact_* y responsible_family_*.
+- "vitals": peso en kg, talla en cm, signos de la última toma registrada. Omite lo que no esté medido.
+- "labs": solo resultados con valor; "flag" según el rango de referencia del documento.
+- "medications": marca "suspendido" cuando el documento ordena suspender o retirar el medicamento.`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -83,7 +89,7 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
-    const { residentName, residentContext, fileName, text, images } = await req.json();
+    const { residentName, residentContext, fileName, text, images, documentHint } = await req.json();
     const cleanText = typeof text === "string" ? text.slice(0, MAX_TEXT) : "";
     const cleanImages = Array.isArray(images)
       ? images.filter((i: unknown) => typeof i === "string" && /^data:image\/(jpeg|png|webp);base64,/.test(i)).slice(0, MAX_IMAGES)
@@ -96,7 +102,7 @@ Deno.serve(async (req) => {
       type: "text",
       text: `Residente al que se adjunta el documento: ${residentName || "No especificado"}
 Datos ya registrados (para no repetir y detectar diferencias): ${JSON.stringify(residentContext ?? {}).slice(0, 4000)}
-Archivo: ${fileName || "sin nombre"}
+Archivo: ${fileName || "sin nombre"}${typeof documentHint === "string" && documentHint ? `\nEl personal indica que el documento es: ${documentHint.slice(0, 80)} (verifícalo).` : ""}
 
 ${OUTPUT_SPEC}
 

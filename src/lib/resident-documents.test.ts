@@ -188,3 +188,45 @@ describe("buildProposals", () => {
     expect(proposals.some((p) => p.section === "hb_f22")).toBe(false);
   });
 });
+
+describe("signos vitales, laboratorios, vacunas y suspensiones", () => {
+  const ex = parseExtraction({
+    document_kind: "historia_clinica", document_date: "2026-10-20",
+    vitals: { weight: "41,5", height: 1.58, blood_pressure: "150/95", heart_rate: 300, spo2: 93, evidence: "Peso 41.5 kg talla 1.58" },
+    labs: [{ name: "Hemoglobina", value: "9.8", unit: "g/dL", flag: "bajo" }, { name: "Creatinina", value: "0.9", flag: "normal" }, { name: "", value: "1" }],
+    vaccines: [{ name: "Influenza", date: "01/04/2026" }, { name: "COVID-19", dose: "refuerzo" }],
+    medications: [{ medication_name: "Metformina", status: "Suspender", confidence: 0.9 }, { medication_name: "Omeprazol", status: "suspendido" }],
+  });
+
+  it("descarta medidas imposibles y convierte la talla a cm", () => {
+    expect(ex.vitals).toMatchObject({ weight: 41.5, height: 158, blood_pressure: "150/95", spo2: 93 });
+    expect(ex.vitals?.heart_rate).toBeUndefined();
+    expect(ex.labs).toHaveLength(2);
+    expect(ex.vaccines[0].date).toBe("2026-04-01");
+  });
+
+  it("deduce alertas: bajo peso, laboratorio alterado y medicamento suspendido", () => {
+    const msgs = ex.alerts.map((a) => a.message);
+    expect(msgs).toContain("Bajo peso: IMC 16.6. Considere valoración nutricional (MNA).");
+    expect(msgs.some((m) => m.includes("Hemoglobina 9.8 g/dL (bajo)"))).toBe(true);
+    expect(msgs).toContain("El documento indica suspender Metformina.");
+  });
+
+  it("propone HB-F16, laboratorios, vacunas y suspender solo lo que existe", () => {
+    const { proposals } = buildProposals(ex, ctx({ medications: [{ id: "m9", medication_name: "Metformina", dose: "850 mg" }] }));
+    const vit = proposals.find((p) => p.op.type === "vitals_insert")!;
+    expect(vit.proposed).toBe("Peso 41.5 kg · Talla 158 cm · IMC 16.6 · PA 150/95 · SpO2 93%");
+    expect(vit.op).toMatchObject({ data: { record_date: "2026-10-20", weight: 41.5, notes: "Tomado de «historia.pdf» · Talla 158 cm · IMC 16.6" } });
+    expect(proposals.find((p) => p.label === "Resultados de laboratorio")?.proposed).toBe("Laboratorios (2026-10-20): Hemoglobina 9.8 g/dL (bajo); Creatinina 0.9");
+    expect(proposals.find((p) => p.label === "Esquema de vacunación")?.proposed).toBe("Vacunas: Influenza (2026-04-01); COVID-19 refuerzo");
+    const stop = proposals.filter((p) => p.op.type === "medication_update");
+    expect(stop).toHaveLength(1);
+    expect(stop[0]).toMatchObject({ label: "HB-F14 · Suspender Metformina", selected: false, op: { data: { is_active: false } } });
+    expect(proposals.some((p) => p.op.type === "medication_insert")).toBe(false);
+  });
+
+  it("no repite signos vitales del mismo día", () => {
+    const { proposals } = buildProposals(ex, ctx({ vitalDates: ["2026-10-20"] }));
+    expect(proposals.some((p) => p.op.type === "vitals_insert")).toBe(false);
+  });
+});
