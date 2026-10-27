@@ -16,7 +16,7 @@ export interface ReadDocument {
 
 export const ACCEPTED_FILES = ".pdf,.docx,.txt,image/*";
 export const MAX_FILE_MB = 15;
-const MAX_IMAGES = 4;
+export const MAX_IMAGES = 6;
 const MAX_TEXT = 60_000;
 const IMAGE_MAX_SIDE = 1600;
 
@@ -62,16 +62,23 @@ const loadImage = (src: string) => new Promise<HTMLImageElement>((resolve, rejec
 });
 
 /** Dibuja la imagen reducida (y opcionalmente en modo escáner) y la devuelve como JPEG. */
-export async function imageToJpeg(source: Blob | string, scan?: ScanMode): Promise<string> {
+export async function imageToJpeg(source: Blob | string, scan?: ScanMode, rotation = 0): Promise<string> {
   const url = typeof source === "string" ? source : URL.createObjectURL(source);
   try {
     const img = await loadImage(url);
     const ratio = Math.min(1, IMAGE_MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
     const canvas = document.createElement("canvas");
-    canvas.width = Math.round(img.naturalWidth * ratio);
-    canvas.height = Math.round(img.naturalHeight * ratio);
+    const w = Math.round(img.naturalWidth * ratio);
+    const h = Math.round(img.naturalHeight * ratio);
+    const quarter = ((Math.round(rotation / 90) % 4) + 4) % 4;
+    canvas.width = quarter % 2 ? h : w;
+    canvas.height = quarter % 2 ? w : h;
     const ctx = canvas.getContext("2d")!;
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    // Girar la página (fotos tomadas de lado)
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate((quarter * Math.PI) / 2);
+    ctx.drawImage(img, -w / 2, -h / 2, w, h);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     if (scan) {
       const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
       enhanceScan(data.data, scan);
