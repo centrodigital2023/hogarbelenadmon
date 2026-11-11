@@ -3,8 +3,8 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import loginHero from "@/assets/login-hero.webp";
-import logo from "@/assets/logo.png";
+import loginHero from "@/assets/login-hero-optimized.webp";
+import logo from "@/assets/logo.webp";
 import InstallAppButton from "@/components/InstallAppButton";
 
 const friendlyAuthError = (message: string) => {
@@ -59,13 +59,18 @@ const Login = () => {
     <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Hero */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+        <picture>
+          <source media="(min-width: 1024px)" srcSet={loginHero} />
         <img
-          src={loginHero}
+          src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
           alt="Cuidado geriátrico profesional"
           className="absolute inset-0 w-full h-full object-cover"
+          width={1200}
+          height={800}
           loading="eager"
           fetchPriority="high"
         />
+        </picture>
         <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent" />
         <div className="relative z-10 flex flex-col justify-end p-10 xl:p-14 text-primary-foreground">
           <h2 className="text-3xl xl:text-4xl font-black leading-tight mb-3">Cuidamos con<br />amor y dignidad</h2>
@@ -95,7 +100,7 @@ const Login = () => {
       <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 bg-background safe-top safe-bottom">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <img src={logo} alt="Hogar Belén" className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 rounded-2xl shadow-sm" loading="eager" />
+            <img src={logo} alt="Hogar Belén" width={415} height={450} className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 rounded-2xl shadow-sm" loading="eager" />
             <h1 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">HOGAR BELÉN</h1>
             <p className="text-xs text-muted-foreground mt-1 font-medium">Buesaco S.A.S. • Sistema de Gestión Geriátrica</p>
           </div>

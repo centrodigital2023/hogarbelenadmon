@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 import { PLATFORM_LABEL, type InstallPlatform } from "@/lib/install-platform";
 import InstallGuide from "@/components/install/InstallGuide";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo.webp";
 
 const TABS: { platform: InstallPlatform; label: string }[] = [
   { platform: "android", label: "Android" },
