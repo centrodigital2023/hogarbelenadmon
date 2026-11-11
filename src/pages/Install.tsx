@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 import { PLATFORM_LABEL, type InstallPlatform } from "@/lib/install-platform";
 import InstallGuide from "@/components/install/InstallGuide";
-import logo from "@/assets/logo.webp";
+import logo from "@/assets/logo-160.webp";
 
 const TABS: { platform: InstallPlatform; label: string }[] = [
   { platform: "android", label: "Android" },
@@ -42,7 +42,8 @@ const Install = () => {
   const shareText = "Instala la app de Hogar Belén en tu celular:";
 
   useEffect(() => {
-    QRCode.toDataURL(url, { width: 480, margin: 1, color: { dark: "#3B0A12", light: "#FFFFFF" } })
+    // Vector QR: sharp at any size and lighter than a picture
+    QRCode.toString(url, { type: "svg", margin: 1, color: { dark: "#3B0A12", light: "#FFFFFF" } })
       .then(setQr)
       .catch(() => setQr(null));
   }, [url]);
@@ -82,7 +83,7 @@ const Install = () => {
     <div className="min-h-screen bg-background">
       <div className="max-w-xl mx-auto px-4 py-8 safe-top safe-bottom">
         <header className="text-center">
-          <img src={logo} alt="Hogar Belén" className="w-20 h-20 mx-auto rounded-2xl bg-card shadow-sm object-contain p-2" />
+          <img src={logo} alt="Hogar Belén" width={148} height={160} className="w-20 h-20 mx-auto rounded-2xl bg-card shadow-sm object-contain p-2" />
           <h1 className="mt-4 text-2xl font-black text-foreground">Hogar Belén en tu celular</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Instala la app del equipo en menos de un minuto. Funciona en Android, iPhone y computador.
@@ -143,13 +144,13 @@ const Install = () => {
         </ul>
 
         <section className="mt-6 rounded-2xl border border-border bg-card p-5 flex flex-col sm:flex-row items-center gap-5">
-          {qr && (
-            <img
-              src={qr}
-              alt="Código QR para abrir esta página en el celular"
-              className="w-40 h-40 rounded-xl border border-border bg-white p-1"
-            />
-          )}
+          {/* Space is kept while the code is drawn so the page doesn't jump */}
+          <div
+            role="img"
+            aria-label="Código QR para abrir esta página en el celular"
+            className="w-40 h-40 shrink-0 rounded-xl border border-border bg-white p-1 [&>svg]:w-full [&>svg]:h-full"
+            dangerouslySetInnerHTML={qr ? { __html: qr } : undefined}
+          />
           <div className="flex-1 text-center sm:text-left">
             <h2 className="text-sm font-black text-foreground">Compártela con el equipo</h2>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -160,7 +161,7 @@ const Install = () => {
                 href={`https://wa.me/?text=${encodeURIComponent(`${shareText} ${url}`)}`}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black text-white hover:opacity-90"
+                className="flex items-center gap-1.5 rounded-xl bg-emerald-700 px-3 py-2 text-xs font-black text-white hover:opacity-90"
               >
                 <Share2 size={14} />
                 WhatsApp

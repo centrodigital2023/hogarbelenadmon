@@ -1,10 +1,11 @@
 <!doctype html>
-<html lang="es">
+<html lang="es-CO">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5" />
     <title>Hogar Belén Buesaco | Gestión geriátrica en Nariño</title>
-    <meta name="description" content="Hogar Belén Buesaco S.A.S., Nariño, Colombia. Acceso seguro al sistema de gestión geriátrica para el cuidado y bienestar de las personas mayores.">
+    <!-- data-rh lets the in-app metadata (src/components/PageMetadata.tsx) replace these instead of duplicating them -->
+    <meta name="description" content="Hogar Belén Buesaco S.A.S., Nariño, Colombia. Acceso seguro al sistema de gestión geriátrica para el cuidado y bienestar de las personas mayores." data-rh="true">
     <meta name="author" content="Hogar Belén Buesaco S.A.S." />
     <meta name="theme-color" content="#9B1B30" />
     <meta name="color-scheme" content="light dark" />
@@ -19,36 +20,151 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&amp;display=optional" media="print" onload="this.media='all'" />
-    <link rel="dns-prefetch" href="https://epmgtekcbyavrflbwobc.supabase.co" />
+    <link rel="preconnect" href="https://epmgtekcbyavrflbwobc.supabase.co" crossorigin />
+    <!-- Desktop login photo: fetch it with the page, not after the app code -->
+    <link rel="preload" as="image" href="/src/assets/login-hero-optimized.webp" type="image/webp" media="(min-width: 1024px)" fetchpriority="high" />
 
     <!-- OG & Twitter -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Hogar Belén Buesaco | Gestión geriátrica en Nariño">
-    <meta property="og:description" content="Hogar Belén Buesaco S.A.S., Nariño, Colombia. Acceso seguro al sistema de gestión geriátrica para el cuidado y bienestar de las personas mayores.">
-    <meta property="og:url" content="https://hogarbelen.online/">
+    <meta property="og:title" content="Hogar Belén Buesaco | Gestión geriátrica en Nariño" data-rh="true">
+    <meta property="og:description" content="Hogar Belén Buesaco S.A.S., Nariño, Colombia. Acceso seguro al sistema de gestión geriátrica para el cuidado y bienestar de las personas mayores." data-rh="true">
+    <meta property="og:url" content="https://hogarbelen.online/" data-rh="true">
+    <meta property="og:site_name" content="Hogar Belén Buesaco" />
+    <meta property="og:locale" content="es_CO" />
     <meta property="og:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/by83e414n8UPCFS2jdMA7XsGHGX2/social-images/social-1773949014623-1c34217cb2391e5e8a9b6dfb6883af4b-EuI9iHhl.webp">
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Hogar Belén Buesaco | Gestión geriátrica en Nariño">
-    <meta name="twitter:description" content="Hogar Belén Buesaco S.A.S., Nariño, Colombia. Acceso seguro al sistema de gestión geriátrica para el cuidado y bienestar de las personas mayores.">
+    <meta name="twitter:title" content="Hogar Belén Buesaco | Gestión geriátrica en Nariño" data-rh="true">
+    <meta name="twitter:description" content="Hogar Belén Buesaco S.A.S., Nariño, Colombia. Acceso seguro al sistema de gestión geriátrica para el cuidado y bienestar de las personas mayores." data-rh="true">
     <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/by83e414n8UPCFS2jdMA7XsGHGX2/social-images/social-1773949014623-1c34217cb2391e5e8a9b6dfb6883af4b-EuI9iHhl.webp">
 
     <!-- JSON-LD -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "Organization",
-      "name": "Hogar Belén Buesaco S.A.S.",
-      "url": "https://hogarbelen.online/",
-      "description": "Centro de cuidado geriátrico integral en Buesaco, Nariño, Colombia",
-      "telephone": "+573117015258",
-      "email": "hogarbelen2022@gmail.com",
-      "address": { "@type": "PostalAddress", "addressLocality": "Buesaco", "addressRegion": "Nariño", "addressCountry": "CO" }
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://hogarbelen.online/#organizacion",
+          "name": "Hogar Belén Buesaco S.A.S.",
+          "alternateName": "Hogar Belén",
+          "url": "https://hogarbelen.online/",
+          "logo": "https://hogarbelen.online/icons/icon-512.png",
+          "description": "Centro de cuidado geriátrico integral en Buesaco, Nariño, Colombia",
+          "telephone": "+573117015258",
+          "email": "hogarbelen2022@gmail.com",
+          "address": { "@type": "PostalAddress", "addressLocality": "Buesaco", "addressRegion": "Nariño", "addressCountry": "CO" },
+          "areaServed": "Nariño, Colombia"
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://hogarbelen.online/#sitio",
+          "name": "Hogar Belén Buesaco",
+          "url": "https://hogarbelen.online/",
+          "inLanguage": "es-CO",
+          "publisher": { "@id": "https://hogarbelen.online/#organizacion" }
+        }
+      ]
     }
     </script>
   </head>
 
   <body>
     <div id="root"></div>
+    <!--
+      Instant first screen: a static copy of src/pages/Login.tsx that paints before the
+      app code downloads (fast first load on phones, real content for search engines).
+      React removes it once its own screen is ready (src/lib/app-shell.ts).
+      If you change the login layout, mirror the change here.
+    -->
+    <div id="app-shell">
+      <div class="min-h-screen flex flex-col lg:flex-row">
+        <div class="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+          <picture>
+            <source media="(min-width: 1024px)" srcset="/src/assets/login-hero-optimized.webp" />
+            <img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="Cuidado geriátrico profesional" class="absolute inset-0 w-full h-full object-cover" width="1200" height="800" fetchpriority="high" />
+          </picture>
+          <div class="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent"></div>
+          <div class="relative z-10 flex flex-col justify-end p-10 xl:p-14 text-primary-foreground">
+            <h2 class="text-3xl xl:text-4xl font-black leading-tight mb-3">Cuidamos con<br />amor y dignidad</h2>
+            <p class="text-sm text-primary-foreground/80 max-w-md">Sistema integral de gestión para el cuidado geriátrico. Hogar Belén Buesaco S.A.S. — Nariño, Colombia.</p>
+            <div class="flex items-center gap-6 mt-8">
+              <div class="flex items-center gap-6"><div class="text-center"><p class="text-2xl font-black">12</p><p class="text-[10px] uppercase tracking-widest text-primary-foreground/60">Cupos</p></div></div>
+              <div class="flex items-center gap-6"><div class="w-px h-10 bg-primary-foreground/20"></div><div class="text-center"><p class="text-2xl font-black">26</p><p class="text-[10px] uppercase tracking-widest text-primary-foreground/60">Formatos</p></div></div>
+              <div class="flex items-center gap-6"><div class="w-px h-10 bg-primary-foreground/20"></div><div class="text-center"><p class="text-2xl font-black">12</p><p class="text-[10px] uppercase tracking-widest text-primary-foreground/60">Protocolos</p></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 bg-background safe-top safe-bottom">
+          <div class="w-full max-w-md">
+            <div class="text-center mb-8">
+              <img id="shell-logo" src="/src/assets/logo-160.webp" alt="Hogar Belén" width="148" height="160" class="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 rounded-2xl shadow-sm object-contain" />
+              <h1 class="text-xl sm:text-2xl font-black text-foreground tracking-tight">HOGAR BELÉN</h1>
+              <p class="text-xs text-muted-foreground mt-1 font-medium">Buesaco S.A.S. • Sistema de Gestión Geriátrica</p>
+            </div>
+            <div class="mb-6 rounded-2xl bg-primary/5 border border-primary/15 px-4 py-3 text-center">
+              <p class="text-sm font-black text-foreground"><span id="shell-greeting">Bienvenido</span> 👋</p>
+              <p class="text-xs text-muted-foreground mt-0.5">Gracias por cuidar hoy a nuestros abuelos. Tu trabajo hace la diferencia.</p>
+            </div>
+            <div class="bg-card border border-border rounded-2xl p-6 sm:p-8 shadow-[var(--shadow-card)]">
+              <form class="space-y-4" onsubmit="return false">
+                <div>
+                  <label for="shell-email" class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Correo electrónico</label>
+                  <input id="shell-email" type="email" class="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:ring-2 focus:ring-ring focus:border-primary focus:outline-none transition-shadow" placeholder="usuario@hogarbelen.com" autocomplete="email" inputmode="email" />
+                </div>
+                <div>
+                  <label for="shell-password" class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Contraseña</label>
+                  <div class="relative mt-1">
+                    <input id="shell-password" type="password" class="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:ring-2 focus:ring-ring focus:border-primary focus:outline-none transition-shadow pr-12" placeholder="••••••••" autocomplete="current-password" />
+                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground p-1"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg></span>
+                  </div>
+                </div>
+                <button type="submit" class="w-full bg-primary text-primary-foreground py-3 rounded-xl text-sm font-black uppercase tracking-widest min-h-[48px]">Ingresar</button>
+                <p class="w-full text-center text-xs text-primary font-bold py-2">¿Olvidó su contraseña?</p>
+              </form>
+            </div>
+            <p class="text-center mt-3">
+              <a href="/instalar" class="text-xs font-bold text-primary hover:underline">Instalar la app o compartirla con el equipo</a>
+            </p>
+            <p class="text-center text-[10px] text-muted-foreground mt-6 font-medium">Hogar Belén • Gestión Segura • Hecho en Colombia 🇨🇴</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      // Keep Chrome's one-time "install app" offer until the app code is ready (src/hooks/useInstallPrompt.ts)
+      window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); window.__installPrompt = e; });
+      window.addEventListener("appinstalled", function () { window.__installPrompt = null; });
+      // Signed-in staff and other pages get a loader instead of the login copy
+      (function () {
+        var shell = document.getElementById("app-shell");
+        var path = location.pathname.replace(/\/+$/, "") || "/";
+        var signedIn = false;
+        try {
+          for (var i = 0; i < localStorage.length; i++) {
+            if (/^sb-.+-auth-token$/.test(localStorage.key(i) || "")) { signedIn = true; break; }
+          }
+        } catch (e) {}
+        // Start downloading the code this page needs right away (list written by vite.config.ts)
+        var files = (window.__routePreloads || {})[path] || [];
+        for (var f = 0; f < files.length; f++) {
+          var link = document.createElement("link");
+          link.rel = "modulepreload";
+          link.crossOrigin = "";
+          link.href = files[f];
+          document.head.appendChild(link);
+        }
+        if (path === "/login" || (path === "/" && !signedIn)) {
+          var h = new Date().getHours();
+          document.getElementById("shell-greeting").textContent = h < 12 ? "Buenos días" : h < 19 ? "Buenas tardes" : "Buenas noches";
+        } else if (path === "/instalar") {
+          // Same header as src/pages/Install.tsx
+          var logo = document.getElementById("shell-logo").getAttribute("src");
+          shell.innerHTML = '<div class="min-h-screen bg-background"><div class="max-w-xl mx-auto px-4 py-8 safe-top safe-bottom"><header class="text-center"><img src="' + logo + '" alt="Hogar Belén" width="148" height="160" class="w-20 h-20 mx-auto rounded-2xl bg-card shadow-sm object-contain p-2" /><h1 class="mt-4 text-2xl font-black text-foreground">Hogar Belén en tu celular</h1><p class="mt-1 text-sm text-muted-foreground">Instala la app del equipo en menos de un minuto. Funciona en Android, iPhone y computador.</p></header></div></div>';
+        } else {
+          shell.innerHTML = '<div class="min-h-screen flex items-center justify-center bg-background"><div class="text-center"><div class="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3"></div><p class="text-xs text-muted-foreground font-medium">Cargando…</p></div></div>';
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

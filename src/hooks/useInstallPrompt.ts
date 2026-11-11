@@ -10,8 +10,11 @@ const isStandalone = () =>
   window.matchMedia?.("(display-mode: standalone)").matches ||
   (navigator as Navigator & { standalone?: boolean }).standalone === true;
 
-// Chrome fires beforeinstallprompt once per page load, often before React mounts
-let deferredPrompt: BeforeInstallPromptEvent | null = null;
+// Chrome fires beforeinstallprompt once per page load, often before this code has even
+// downloaded, so index.html catches it early and leaves it in window.__installPrompt
+type EarlyWindow = Window & { __installPrompt?: BeforeInstallPromptEvent | null };
+let deferredPrompt: BeforeInstallPromptEvent | null =
+  typeof window !== "undefined" ? (window as EarlyWindow).__installPrompt ?? null : null;
 const listeners = new Set<() => void>();
 if (typeof window !== "undefined") {
   window.addEventListener("beforeinstallprompt", (e) => {

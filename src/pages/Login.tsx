@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import loginHero from "@/assets/login-hero-optimized.webp";
-import logo from "@/assets/logo.webp";
+import logo from "@/assets/logo-160.webp";
+import { readShellLoginValues } from "@/lib/app-shell";
 import InstallAppButton from "@/components/InstallAppButton";
 
 const friendlyAuthError = (message: string) => {
@@ -22,9 +23,26 @@ const greeting = () => {
   return "Buenas noches";
 };
 
+// Start downloading the app while the person types, so it opens right after "Ingresar"
+let appPrefetched = false;
+const prefetchApp = () => {
+  if (appPrefetched) return;
+  appPrefetched = true;
+  void import("@/pages/Index");
+};
+
 const Login = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  // Keep whatever was typed in the instant first screen from index.html
+  const [shell] = useState(readShellLoginValues);
+  const [email, setEmail] = useState(shell.email);
+  const [password, setPassword] = useState(shell.password);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  useLayoutEffect(() => {
+    if (shell.focus === "email") emailRef.current?.focus();
+    if (shell.focus === "password") passwordRef.current?.focus();
+    if (shell.email || shell.password || shell.focus) prefetchApp();
+  }, [shell]);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<'login' | 'reset'>('login');
@@ -100,7 +118,7 @@ const Login = () => {
       <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 bg-background safe-top safe-bottom">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <img src={logo} alt="Hogar Belén" width={415} height={450} className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 rounded-2xl shadow-sm" loading="eager" />
+            <img src={logo} alt="Hogar Belén" width={148} height={160} className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 rounded-2xl shadow-sm object-contain" loading="eager" decoding="async" />
             <h1 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">HOGAR BELÉN</h1>
             <p className="text-xs text-muted-foreground mt-1 font-medium">Buesaco S.A.S. • Sistema de Gestión Geriátrica</p>
           </div>
@@ -118,11 +136,14 @@ const Login = () => {
             {mode === 'login' ? (
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Correo electrónico</label>
+                  <label htmlFor="login-email" className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Correo electrónico</label>
                   <input
                     type="email"
+                    ref={emailRef}
+                    id="login-email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
+                    onFocus={prefetchApp}
                     className="mt-1 w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:ring-2 focus:ring-ring focus:border-primary focus:outline-none transition-shadow"
                     placeholder="usuario@hogarbelen.com"
                     required
@@ -131,11 +152,14 @@ const Login = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Contraseña</label>
+                  <label htmlFor="login-password" className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Contraseña</label>
                   <div className="relative mt-1">
                     <input
+                      ref={passwordRef}
+                      id="login-password"
                       type={showPassword ? "text" : "password"}
                       value={password}
+                      onFocus={prefetchApp}
                       onChange={e => setPassword(e.target.value)}
                       className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground text-sm focus:ring-2 focus:ring-ring focus:border-primary focus:outline-none transition-shadow pr-12"
                       placeholder="••••••••"

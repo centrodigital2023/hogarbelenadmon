@@ -1,13 +1,14 @@
 import { Helmet } from "react-helmet-async";
 import { useLocation } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { hasStoredSession } from "@/lib/app-shell";
 import { getPageSeo } from "@/lib/page-seo";
 
 export default function PageMetadata() {
   const { pathname, search } = useLocation();
-  const { user } = useAuth();
+  // Read from storage instead of the live session so public pages don't need the database code
+  const signedIn = hasStoredSession();
   const params = new URLSearchParams(search);
-  const seo = getPageSeo(pathname, params.has("modulo") || params.has("form"), Boolean(user));
+  const seo = getPageSeo(pathname, params.has("modulo") || params.has("form"), signedIn);
   return (
     <Helmet>
       <title>{seo.title}</title>

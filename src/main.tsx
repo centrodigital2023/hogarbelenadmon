@@ -2,6 +2,14 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { registerPWA } from "./lib/pwa";
+import { hasStoredSession } from "./lib/app-shell";
+
+// Start the screen this visit needs right away instead of after the app starts.
+// Signed-in staff go straight to the dashboard.
+if (window.location.pathname !== "/instalar") {
+  void import("./app/SignedArea");
+  if (hasStoredSession() && window.location.pathname === "/") void import("./pages/Index");
+}
 
 const root = document.getElementById("root");
 if (root) createRoot(root).render(<App />);
